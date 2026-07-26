@@ -3,7 +3,8 @@
 GSFEN is the canonical text serialization of a Gungi
 [Game State](BUSINESS_RULES.md#game-state), modeled on SFEN (Shogi
 Forsyth-Edwards Notation). A single string covers both mid-
-[Deploy Phase](BUSINESS_RULES.md#deploy-phase) states and regular-play
+[Deploy Phase](BUSINESS_RULES.md#deploy-phase) states and
+[Battle Phase](BUSINESS_RULES.md#battle-phase)
 Game States. This document is the normative specification of the
 notation; rule references (BR-xxx) point to `BUSINESS_RULES.md`.
 
@@ -89,7 +90,8 @@ A single token encoding the phase and who acts next:
 
 Tokens with both players Done, or with the placing player Done, cannot
 occur: the Deploy Phase ends at that boundary (BR-DEPLOY-009) and the
-resulting state is a regular Game State. A player who has placed all 25
+resulting state is a [Battle Phase](BUSINESS_RULES.md#battle-phase)
+Game State. A player who has placed all 25
 Pieces needs no flag — that condition is derivable from an empty Hand.
 
 ## Field 3 — Hands
@@ -108,14 +110,16 @@ Marshal) are listed in the Hands field.
 ## Field 4 — Turn counter
 
 A positive integer: the turn number **within the current phase**,
-starting at 1. Deployment turns count 1, 2, 3, … from White's first
-placement; the counter resets to 1 on White's first regular turn.
+starting at 1. [Placements](BUSINESS_RULES.md#placement) count 1, 2, 3, …
+from White's first [Placement](BUSINESS_RULES.md#placement); the counter
+resets to 1 on White's first [Battle Phase](BUSINESS_RULES.md#battle-phase)
+turn.
 
 ## startpos
 
 The reserved keyword `startpos` (lowercase, exact) is an alias for the
 fixed game-start state — empty board, full 25-piece Hands, White's first
-deployment turn:
+[Placement](BUSINESS_RULES.md#placement):
 
 ```
 startpos
@@ -193,7 +197,8 @@ denote a terminal Game State — e.g. [Checkmate](BUSINESS_RULES.md#checkmate)
   grammar and C1–C7.
 - **V2 — Stack size.** Every stack contains 1–3 pieces (BR-STACK-001).
 - **V3 — Marshal integrity.** A Marshal on the board is always the last
-  (top) letter of its stack group (BR-STACK-004). In regular states
+  (top) letter of its stack group (BR-STACK-004). In
+[Battle Phase](BUSINESS_RULES.md#battle-phase) states
   (`w`/`b`), each player's Marshal appears exactly once on the board and
   never in a Hand (BR-DEPLOY-003, BR-DEPLOY-011). In deploy states, each
   player's Marshal either appears once on the board as a group-top
@@ -237,7 +242,7 @@ startpos
 9/9/9/9/9/9/9/9/9 dw 2AC3E2FG2JLM2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 1
 ```
 
-### 2. White's first deployment made (Marshal at 5-9); Black to deploy
+### 2. White's first Placement made (Marshal at 5-9); Black to place
 
 ```
 9/9/9/9/9/9/9/9/4,M,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2
@@ -254,8 +259,8 @@ pieces (no `M`).
 ```
 
 Black's Marshal at 5-2 and General at 5-1; White's General at 5-8 and
-Marshal at 5-9. Four deployments have been made, so White's placement
-is deployment turn 5.
+Marshal at 5-9. Four [Placements](BUSINESS_RULES.md#placement) have been
+made, so White's Placement is Placement 5.
 
 ### 4. Regular play with a mixed-ownership stack; White to move, turn 12
 

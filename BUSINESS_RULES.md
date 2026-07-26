@@ -98,18 +98,31 @@ at size 3 the bonus is +2. This bonus applies to all allowed
 [Movement](<#movement>) patterns.
 
 #### Deploy Phase
-The initial phase of a [Game](<#game>) where [Players](<#player>) alternately
-place their [Pieces](<#piece>) on the [Board](<#board>). Undeployed
+The opening phase where [Players](<#player>) alternately place their unplaced
+[Pieces](<#piece>) on the [Board](<#board>) via **Placements**. Undeployed
 [Pieces](<#piece>) remain in the [Player's](<#player>) [Hand](<#hand>) and may
-be introduced later via [Arata](<#arata>). See
+be introduced later via [Arata](<#arata>). [Check](<#check>),
+[Self Check](<#self-check>), and [Terminal Conditions](<#terminal-condition>)
+are not evaluated during this phase. The only terminal evaluation at this
+boundary is [Exposure](<#exposure>). See
 [BR-DEPLOY](<#br-deploy---deploy-phase-rules>) for full rules.
 
-#### Deployment
+#### Battle Phase
+The main phase of the [Game](<#game>) following the
+[Deploy Phase](<#deploy-phase>). Consists of alternating **Turns**, each
+requiring exactly one **Play** ([Move](<#move>) or [Arata](<#arata>)).
+[Terminal Conditions](<#terminal-condition>) ([Checkmate](<#checkmate>),
+[Stalemate](<#stalemate>), [Repetition](<#repetition>)) are evaluated before
+each [Turn](<#turn>). [Exposure](<#exposure>) is evaluated exactly once, at
+the [Deploy](<#deploy-phase>)→[Battle](<#battle-phase>) boundary.
+[BR-TERMINATION](<#br-termination---game-termination-rules>).
+
+#### Placement
 An [Action](<#action>) available only during the
 [Deploy Phase](<#deploy-phase>): placing one unplaced [Piece](<#piece>) on an
 empty [Square](<#square>) of the [Player's](<#player>) deploy zone, or on top
 of a friendly [Stack](<#stack>) there (never on a [Marshal](<#marshal>),
-[Stack Size](<#stack-size>) permitting). [Deployments](<#deployment>) are not
+[Stack Size](<#stack-size>) permitting). [Placements](<#placement>) are not
 [Plays](<#play>); [Self Check](<#self-check>) and
 [Terminal Condition](<#terminal-condition>) evaluation do not apply during
 the [Deploy Phase](<#deploy-phase>). See
@@ -117,21 +130,22 @@ the [Deploy Phase](<#deploy-phase>). See
 
 #### Action
 Any interaction that a [Player](<#player>) can have with the [Game](<#game>).
-An [Action](<#action>) is either a [Deployment](<#deployment>), a
+An [Action](<#action>) is either a [Placement](<#placement>), a
 [Play](<#play>) or a [Resignation](<#resignation>).
 
 #### Play
 An [Action](<#action>) that a [Player](<#player>) performs during their
-[Turn](<#turn>). In Gungi, a [Play](<#play>) is either a [Move](<#move>) or an
-[Arata](<#arata>). Captured [Pieces](<#piece>) are removed
-from the [Game](<#game>) entirely and never return.
+[Turn](<#turn>). Either a [Move](<#move>) or an [Arata](<#arata>). Captured
+[Pieces](<#piece>) are removed from the [Game](<#game>) entirely and never
+return.
 
 #### Hand
-An inventory unique to each [Player](<#player>) that stores
-[Pieces](<#piece>) that were not deployed during the
-[Deploy Phase](<#deploy-phase>). A [Player](<#player>) may
-[Arata](<#arata>) a [Piece](<#piece>) from their [Hand](<#hand>) to the
-[Board](<#board>) instead of performing a [Move](<#move>).
+A [Player's](<#player>) inventory of [Pieces](<#piece>) not currently on the
+[Board](<#board>). Starts full (25 [Pieces](<#piece>) per
+[Player](<#player>)). Shrinks via [Placements](<#placement>) during the
+[Deploy Phase](<#deploy-phase>) and via [Arata](<#arata>) during the
+[Battle Phase](<#battle-phase>). Captured [Pieces](<#piece>) are removed from
+the [Game](<#game>) entirely and never enter a [Hand](<#hand>).
 
 #### Arata
 An [Action](<#action>) that a [Player](<#player>) performs during their
@@ -169,8 +183,11 @@ A [Play](<#play>) that satisfies all applicable rules.
 A [Play](<#play>) that does not satisfy at least one applicable rule.
 
 #### Turn
-A phase in the [Game](<#game>) where the [Active Player](<#active player>)
-must do exactly one [Play](<#play>).
+A unit of the [Battle Phase](<#battle-phase>) where the
+[Active Player](<#active player>) must do exactly one [Play](<#play>). Ends
+immediately after the [Play](<#play>); the
+[Active Player](<#active player>) passes to the
+[Opponent](<#opponent>).
 
 #### Game
 A formal contest between two [Players](<#player>) that progresses in
@@ -240,10 +257,11 @@ resigning [Player](<#player>). It can be submitted at any time --- a
 #### Repetition
 A draw declared when the same [Game State](<#game-state>) (same
 [Active Player](<#active player>), same [Position](<#position>) and same
-[Hands](<#hand>) contents) occurs for the fourth time in a
-[Game](<#game>), not necessarily consecutively. The initial
-[Game State](<#game-state>) after the [Deploy Phase](<#deploy-phase>)
-counts as the first occurrence.
+[Hands](<#hand>) contents) occurs for the fourth time in the
+[Battle Phase](<#battle-phase>) of a [Game](<#game>), not necessarily
+consecutively. [Deploy Phase](<#deploy-phase>) states are never counted.
+The initial [Game State](<#game-state>) at the start of the
+[Battle Phase](<#battle-phase>) counts as the first occurrence.
 
 #### Exposure
 A [Terminal Condition](<#terminal-condition>) evaluated once, immediately
@@ -265,11 +283,12 @@ applies to [Attack](<#attack>) just as it does to
 [Stack Size](<#stack-size>) attacks its extended destinations.
 [Obstructions](<#obstruction>) and [Board](<#board>) boundaries are considered
 as defined by [Movement](<#movement>). For threat evaluation against a
-[Marshal](<#marshal>), the prohibition on placing a [Piece](<#piece>) on top of
-a [Marshal](<#marshal>) ([BR-STACK-004](<#br-stack-004---stacking-on-marshal-is-forbidden>))
-is disregarded --- a [Marshal](<#marshal>) is never actually captured because
-[Checkmate](<#checkmate>) ends the [Game](<#game>) first. The stack size
-landing restriction
+[Marshal](<#marshal>), the restriction on landing on the
+[Marshal's](<#marshal>) [Square](<#square>) is disregarded --- a
+[Marshal](<#marshal>) is never actually [Captured](<#capture>) because
+[Checkmate](<#checkmate>) ends the [Game](<#game>) first (see
+[BR-STACK-004](<#br-stack-004---stacking-on-marshal-is-forbidden>)). The
+stack size landing restriction
 ([BR-MOVE-005](<#br-move-005---stack-size-landing-restriction>)) still
 applies: a [Piece](<#piece>) cannot attack a [Square](<#square>) whose
 [Stack Size](<#stack-size>) exceeds its own source
@@ -536,9 +555,10 @@ A [Game](<#game>) begins with the [Deploy Phase](<#deploy-phase>). During this
 phase, [Players](<#player>) alternately place their [Pieces](<#piece>) on the
 [Board](<#board>).
 
-#### BR-DEPLOY-002 - Deploy turn order
-[White](<#player>) takes the first deployment turn. [Players](<#player>)
-alternate thereafter, placing exactly one unplaced [Piece](<#piece>) per turn.
+#### BR-DEPLOY-002 - Placement order
+[White](<#player>) takes the first [Placement](<#placement>).
+[Players](<#player>) alternate thereafter, placing exactly one unplaced
+[Piece](<#piece>) per [Placement](<#placement>).
 
 #### BR-DEPLOY-003 - Marshal first
 Each [Player](<#player>) must deploy their [Marshal](<#marshal>) as their very
@@ -562,40 +582,45 @@ A [Piece](<#piece>) may also be placed on an empty [Square](<#square>) within
 the [Player's](<#player>) deploy zone.
 
 #### BR-DEPLOY-007 - Done declaration
-After placing a [Piece](<#piece>) during their deployment turn, a
+After placing a [Piece](<#piece>) during their [Placement](<#placement>), a
 [Player](<#player>) may declare themselves **Done**. A [Player](<#player>) who
 declares Done ceases deploying; any remaining unplaced [Pieces](<#piece>)
 remain in their [Hand](<#hand>) and may be used later via [Arata](<#arata>).
 
 #### BR-DEPLOY-008 - Opponent continues after Done
 If a [Player](<#player>) declares Done, the [Opponent](<#opponent>) may
-continue deploying on their turns until they also declare Done or have placed
-all their [Pieces](<#piece>).
+continue deploying on their [Placements](<#placement>) until they also declare
+Done or have placed all their [Pieces](<#piece>).
 
 #### BR-DEPLOY-009 - Deploy phase end
 The [Deploy Phase](<#deploy-phase>) ends when both [Players](<#player>) have
 either placed all their [Pieces](<#piece>) or declared Done.
 
-#### BR-DEPLOY-010 - First regular turn
-After the [Deploy Phase](<#deploy-phase>) ends, the regular [Turn](<#turn>)
-sequence begins with [White](<#player>) as the [Active Player](<#active player>).
+#### BR-DEPLOY-010 - First Battle Phase turn
+After the [Deploy Phase](<#deploy-phase>) ends, the [Battle Phase](<#battle-phase>)
+begins with [White](<#player>) as the [Active Player](<#active player>) for the
+first [Turn](<#turn>).
 
 #### BR-DEPLOY-011 - Hand contents after deploy
 After the [Deploy Phase](<#deploy-phase>) ends, each [Player's](<#player>)
 [Hand](<#hand>) contains all of their [Pieces](<#piece>) that were not placed
-on the [Board](<#board>) during the phase. The [Marshal](<#marshal>) is never
-in a [Hand](<#hand>) since it must always be deployed first.
+on the [Board](<#board>) during the phase. Once the
+[Deploy Phase](<#deploy-phase>) has ended, the
+[Marshal](<#marshal>) is never in a [Hand](<#hand>) since it must always be
+deployed first. (During the [Deploy Phase](<#deploy-phase>), an undeployed
+[Marshal](<#marshal>) resides in the [Hand](<#hand>) until its
+[Placement](<#placement>).)
 
 #### BR-DEPLOY-012 - Exposure evaluation
 When the [Deploy Phase](<#deploy-phase>) ends, both [Marshals](<#marshal>)
-are evaluated for [Exposure](<#exposure>) before the regular [Turn](<#turn>)
-sequence begins:
+are evaluated for [Exposure](<#exposure>) before the [Battle Phase](<#battle-phase>)
+[Turn](<#turn>) sequence begins:
 - If exactly one [Player's](<#player>) [Marshal](<#marshal>) is under
   [Attack](<#attack>), that [Player](<#player>) loses immediately.
 - If both [Marshals](<#marshal>) are under [Attack](<#attack>), the
   [Game](<#game>) is a draw.
-- Otherwise, the regular [Turn](<#turn>) sequence begins
-  ([BR-DEPLOY-010](<#br-deploy-010---first-regular-turn>)) with neither
+- Otherwise, the [Battle Phase](<#battle-phase>) [Turn](<#turn>) sequence begins
+  ([BR-DEPLOY-010](<#br-deploy-010---first-battle-phase-turn>)) with neither
   [Marshal](<#marshal>) under [Attack](<#attack>).
 
 ### BR-GAME - Game Lifecycle Rules
@@ -643,7 +668,7 @@ If an [Action](<#action>) references a [Piece](<#piece>), that
 #### BR-ACTION-002 - Self Check
 A [Player](<#player>) cannot perform any [Play](<#play>) that places or
 leaves their own [Marshal](<#marshal>) in [Check](<#check>). Self Check does
-not apply to [Deployments](<#deployment>): [Check](<#check>) is not evaluated
+not apply to [Placements](<#placement>): [Check](<#check>) is not evaluated
 during the [Deploy Phase](<#deploy-phase>) (see
 [BR-DEPLOY-012](<#br-deploy-012---exposure-evaluation>)).
 
@@ -655,9 +680,9 @@ If an [Action](<#action>) does not satisfy all applicable rules, the
 For a [Play](<#play>) ([Move](<#move>) or [Arata](<#arata>)), the performing
 [Player](<#player>) is always inferred from the
 [Active Player](<#active player>) --- it is never carried in the
-[Play](<#play>) itself. For a [Deployment](<#deployment>), the performing
-[Player](<#player>) is inferred from the deployment turn order
-([BR-DEPLOY-002](<#br-deploy-002---deploy-turn-order>)). For a
+[Play](<#play>) itself. For a [Placement](<#placement>), the performing
+[Player](<#player>) is inferred from the [Placement](<#placement>) order
+([BR-DEPLOY-002](<#br-deploy-002---placement-order>)). For a
 [Resignation](<#resignation>), the resigning [Player](<#player>) is carried
 in the [Action](<#action>) itself, since a
 non-[Active Player](<#active player>) may resign at any time.
@@ -840,12 +865,14 @@ target [Stack Size](<#stack-size>)). A [Move](<#move>) landing on a friendly
 cannot be exceeded.
 
 #### BR-STACK-004 - Stacking on Marshal is forbidden
-No [Piece](<#piece>) may ever be stacked on top of a [Marshal](<#marshal>).
-A [Move](<#move>) attempting to land on a [Square](<#square>) where the target
-[Stack's](<#stack>) top [Piece](<#piece>) is a [Marshal](<#marshal>) is
-[Illegal](<#illegal-play>). This prohibition governs physical placement
-only --- it does not shield the [Marshal](<#marshal>) from
-[Attack](<#attack>) (see [Attack](<#attack>)).
+No [Piece](<#piece>) may ever be placed or moved **on top of** a
+[Marshal](<#marshal>) within the same [Stack](<#stack>). The
+[Marshal](<#marshal>) is always the topmost [Piece](<#piece>) in any
+[Stack](<#stack>) it belongs to. This rule governs vertical position within
+the [Stack](<#stack>) only. The
+[Marshal](<#marshal>) is never actually [Captured](<#capture>) because
+[Checkmate](<#checkmate>) ends the [Game](<#game>) first (see
+[Attack](<#attack>) for threat evaluation).
 
 #### BR-STACK-005 - Effect of stacking on stack composition
 When a [Piece](<#piece>) is stacked onto a target [Square](<#square>), it
@@ -943,10 +970,12 @@ entirely and the [Move](<#move>) is [Illegal](<#illegal-play>).
 #### BR-REPETITION-001 - Repetition draw
 If the same [Game State](<#game-state>) (same
 [Active Player](<#active player>), same [Position](<#position>) and same
-[Hands](<#hand>) contents) occurs for the fourth time in a
-[Game](<#game>), the [Game](<#game>) ends in a draw. The first
-[Game State](<#game-state>) after the [Deploy Phase](<#deploy-phase>) counts as
-the first occurrence.
+[Hands](<#hand>) contents) occurs for the fourth time in the
+[Battle Phase](<#battle-phase>) of a [Game](<#game>), the [Game](<#game>) ends
+in a draw. Only [Battle Phase](<#battle-phase>) states count toward
+repetition; [Deploy Phase](<#deploy-phase>) states are excluded. The first
+[Game State](<#game-state>) at the start of the
+[Battle Phase](<#battle-phase>) counts as the first occurrence.
 
 ### BR-TERMINATION - Game Termination Rules
 
