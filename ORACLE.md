@@ -177,7 +177,7 @@ CMD ["vitest", "run"]
 - `CMD ["vitest", "run"]` — default `docker compose run` entry point; override
   with `--check` for type-checking.
 
-**`docker-compose.yml`** — two service aliases:
+**`docker-compose.yml`** — five service aliases:
 ```yaml
 services:
   test:
@@ -193,17 +193,80 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+  lint:
+    build: .
+    command: ["eslint", "src", "tests"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  format:
+    build: .
+    command: ["prettier", "--write", "src/**/*.ts", "tests/**/*.ts", "*.{js,json,ts}"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  format-check:
+    build: .
+    command: ["prettier", "--check", "src/**/*.ts", "tests/**/*.ts", "*.{js,json,ts}"]
+    volumes:
+      - .:/app
+      - /app/node_modules
 ```
 
-Why two services instead of one with a script: `tsc --noEmit` and `vitest run`
-have different CLI interfaces, and two named services make the intention
-self-documenting.
+Why five services instead of one with a script: `tsc --noEmit`, `vitest run`,
+`eslint`, and `prettier` each have different CLI interfaces, and separate named
+services make the intention self-documenting.
 
 **`.dockerignore`** — keeps build context lean:
 ```
 node_modules
 .git
 *.md
+```
+
+**`eslint.config.js`** — ESLint flat config (ESM):
+```javascript
+import eslint from '@eslint/js';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  eslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    ignores: ['dist/'],
+  },
+);
+```
+
+- Recommended rules with TypeScript type-checked linting.
+- `import.meta.dirname` is available in Node.js 22+ (the Docker image).
+
+**`.prettierrc`** — formatting defaults:
+```json
+{
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "all",
+  "printWidth": 100,
+  "tabWidth": 2,
+  "arrowParens": "always"
+}
 ```
 
 **`.gitignore`**:
@@ -220,25 +283,38 @@ docker compose run --rm check
 # Run tests (every step)
 docker compose run --rm test
 
+# Lint (every step)
+docker compose run --rm lint
+
+# Format code
+docker compose run --rm format
+
+# Check formatting (CI)
+docker compose run --rm format-check
+
 # Drop into a shell for ad-hoc commands
 docker compose run --rm test sh
 ```
 
 **Verification affordance lifecycle:**
-- `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.gitignore` — **durable.**
+- `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.gitignore`,
+  `eslint.config.js`, `.prettierrc` — **durable.**
   Used by all 14 steps, CI, and developer onboarding.
 
 **Checkpoint:**
 ```bash
 docker compose build --quiet
-docker compose run --rm check    # exit 0, no output (clean compile)
-docker compose run --rm test     # exit 0, "Tests 0 passed"
+docker compose run --rm check       # exit 0, no output (clean compile)
+docker compose run --rm test        # exit 0, "Tests N passed"
+docker compose run --rm lint        # exit 0, no warnings
+docker compose run --rm format-check  # exit 0, all files formatted
 ```
 
 **Verification:**
 - Build completes without warnings on a clean checkout
-- Both commands produce identical exit codes regardless of host OS or tooling
+- All four commands produce identical exit codes regardless of host OS or tooling
 - Docker cache does not mask stale `node_modules` — confirm with a `--no-cache-filter=deps` build if suspected
+- Lint catches rule violations before they reach CI
 
 ---
 

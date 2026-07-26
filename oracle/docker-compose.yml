@@ -12,3 +12,24 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+  lint:
+    build: .
+    command: ["eslint", "src", "tests"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  format:
+    build: .
+    command: ["prettier", "--write", "src/**/*.ts", "tests/**/*.ts", "*.{js,json,ts}"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  format-check:
+    build: .
+    command: ["prettier", "--check", "src/**/*.ts", "tests/**/*.ts", "*.{js,json,ts}"]
+    volumes:
+      - .:/app
+      - /app/node_modules
