@@ -1,0 +1,14 @@
+services:
+  test:
+    build: .
+    command: ["vitest", "run"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  check:
+    build: .
+    command: ["tsc", "--noEmit"]
+    volumes:
+      - .:/app
+      - /app/node_modules

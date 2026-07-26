@@ -11,7 +11,7 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [Module Layout](#2-module-layout)
-3. [Step 0 — Docker Toolchain Setup](#step-0--docker-toolchain-setup)
+3. [Step 0 — Docker Toolchain Setup](#step-0--docker-toolchain-setup) ✅
 4. [Step 1 — Project Scaffold + Domain Types](#step-1--project-scaffold--domain-types)
 5. [Step 2 — GSFEN Parser](#step-2--gsfen-parser)
 6. [Step 3 — GSFEN Serializer](#step-3--gsfen-serializer)
@@ -148,7 +148,7 @@ function that enforces a rule documents its BR-xxx citation in a JSDoc
 
 ---
 
-### Step 0 — Docker Toolchain Setup
+### Step 0 — Docker Toolchain Setup ✅
 
 **Goal:** Ensure every Oracle build, type-check, and test command runs
 deterministically on any machine without a host Node.js installation.
