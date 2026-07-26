@@ -11,21 +11,22 @@
 
 1. [Architecture Overview](#1-architecture-overview)
 2. [Module Layout](#2-module-layout)
-3. [Step 1 — Project Scaffold + Domain Types](#step-1--project-scaffold--domain-types)
-4. [Step 2 — GSFEN Parser](#step-2--gsfen-parser)
-5. [Step 3 — GSFEN Serializer](#step-3--gsfen-serializer)
-6. [Step 4 — GAN Parser](#step-4--gan-parser)
-7. [Step 5 — GAN Serializer](#step-5--gan-serializer)
-8. [Step 6 — Movement Rules Engine](#step-6--movement-rules-engine)
-9. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection)
-10. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata)
-11. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic)
-12. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase)
-13. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition)
-14. [Step 12 — Public API](#step-12--public-api)
-15. [Step 13 — Property Tests & Gherkin Step Defs](#step-13--property-tests--gherkin-step-defs)
-16. [Step 14 — Action Visualizer](#step-14--action-visualizer)
-17. [Verification Strategy Map](#verification-strategy-map)
+3. [Step 0 — Docker Toolchain Setup](#step-0--docker-toolchain-setup)
+4. [Step 1 — Project Scaffold + Domain Types](#step-1--project-scaffold--domain-types)
+5. [Step 2 — GSFEN Parser](#step-2--gsfen-parser)
+6. [Step 3 — GSFEN Serializer](#step-3--gsfen-serializer)
+7. [Step 4 — GAN Parser](#step-4--gan-parser)
+8. [Step 5 — GAN Serializer](#step-5--gan-serializer)
+9. [Step 6 — Movement Rules Engine](#step-6--movement-rules-engine)
+10. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection)
+11. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata)
+12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic)
+13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase)
+14. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition)
+15. [Step 12 — Public API](#step-12--public-api)
+16. [Step 13 — Property Tests & Gherkin Step Defs](#step-13--property-tests--gherkin-step-defs)
+17. [Step 14 — Action Visualizer](#step-14--action-visualizer)
+18. [Verification Strategy Map](#verification-strategy-map)
 
 ---
 
@@ -147,22 +148,118 @@ function that enforces a rule documents its BR-xxx citation in a JSDoc
 
 ---
 
+### Step 0 — Docker Toolchain Setup
+
+**Goal:** Ensure every Oracle build, type-check, and test command runs
+deterministically on any machine without a host Node.js installation.
+
+**What to build in `oracle/`:**
+
+**`Dockerfile`** — multi-stage Node.js image:
+```dockerfile
+# Stage 1: install dependencies
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Stage 2: dev workspace (source mounted at runtime)
+FROM deps AS dev
+WORKDIR /app
+COPY tsconfig.json vitest.config.ts ./
+ENTRYPOINT ["npx"]
+CMD ["vitest", "run"]
+```
+
+- `node:22-alpine` — current LTS; ~120 MB; musl libc is sufficient for pure
+  TypeScript (no native addons needed).
+- `npm ci` over `npm install` — deterministic install from lockfile.
+- `CMD ["vitest", "run"]` — default `docker compose run` entry point; override
+  with `--check` for type-checking.
+
+**`docker-compose.yml`** — two service aliases:
+```yaml
+services:
+  test:
+    build: .
+    command: ["vitest", "run"]
+    volumes:
+      - .:/app
+      - /app/node_modules    # anonymous volume: prevents host node_modules shadowing
+
+  check:
+    build: .
+    command: ["tsc", "--noEmit"]
+    volumes:
+      - .:/app
+      - /app/node_modules
+```
+
+Why two services instead of one with a script: `tsc --noEmit` and `vitest run`
+have different CLI interfaces, and two named services make the intention
+self-documenting.
+
+**`.dockerignore`** — keeps build context lean:
+```
+node_modules
+.git
+*.md
+```
+
+**`.gitignore`**:
+```
+node_modules/
+dist/
+```
+
+**How to use (all subsequent steps):**
+```bash
+# Type-check (every step)
+docker compose run --rm check
+
+# Run tests (every step)
+docker compose run --rm test
+
+# Drop into a shell for ad-hoc commands
+docker compose run --rm test sh
+```
+
+**Verification affordance lifecycle:**
+- `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.gitignore` — **durable.**
+  Used by all 14 steps, CI, and developer onboarding.
+
+**Checkpoint:**
+```bash
+docker compose build --quiet
+docker compose run --rm check    # exit 0, no output (clean compile)
+docker compose run --rm test     # exit 0, "Tests 0 passed"
+```
+
+**Verification:**
+- Build completes without warnings on a clean checkout
+- Both commands produce identical exit codes regardless of host OS or tooling
+- Docker cache does not mask stale `node_modules` — confirm with a `--no-cache-filter=deps` build if suspected
+
+---
+
 ### Step 1 — Project Scaffold + Domain Types
 
 **What to build:**
 - Initialize the project: `package.json` with vitest + typescript, `tsconfig.json`
-  (strict mode, ES2022 target, `src/` and `tests/` roots), `vitest.config.ts`.
+  (strict mode, ES2022 target, `src/` root), `vitest.config.ts`.
 - `src/types.ts` — all domain types as TypeScript types/interfaces:
   - `Player = 'white' | 'black'`
   - `PieceType` — union of 14 letter literals (`'A' | 'C' | 'E' | …`)
   - `Piece` — `{ type: PieceType; owner: Player }`
   - `Square` — `{ col: number; row: number }` (both 1–9)
   - `Stack` — `Piece[]` (ordered bottom→top, length 1–3)
-  - `Position` — 9×9 grid of `Stack | null` using the Standard Diagram coordinate system
+  - `Position` — `(Stack | null)[][]`, 9×9 grid, **row-major**: `position[row][col]`
+    where row 0 = Standard Diagram Row 1 (top), row 8 = Row 9 (bottom).
   - `Phase = 'deploy' | 'battle'`
   - `DoneFlag = Player | null`
   - `TurnState = { phase: Phase; activePlayer: Player; done: DoneFlag; counter: number }`
-  - `Hand` — `Partial<Record<PieceType, number>>`
+  - `Hand` — `Partial<Record<PieceType, number>>` (absent key = count 0;
+    avoids populating all 14 keys at game start)
   - `GameState` — `{ position: Position; turn: TurnState; hands: { white: Hand; black: Hand }; history: GameState[] }`
   - `Action` — discriminated union:
     - `{ kind: 'placement'; piece: PieceType; dest: Square; done: boolean }`
@@ -170,28 +267,62 @@ function that enforces a rule documents its BR-xxx citation in a JSDoc
     - `{ kind: 'arata'; piece: PieceType; dest: Square; turncoat: number[] }`
   - `GameResult` — `{ winner: Player } | { draw: 'repetition' | 'exposure' | 'stalemate' } | null`
   - `MoveClass = 'step' | 'limited-range' | 'range' | 'jump'`
-  - `Direction` — union of directional vector literals: `'F' | 'B' | 'L' | 'R' | 'FL' | 'FR' | 'BL' | 'BR'`
+  - `Direction` — string literal union: `'F' | 'B' | 'L' | 'R' | 'FL' | 'FR' | 'BL' | 'BR'`
+    (not an enum — zero runtime cost, erased at compile time)
 - `src/constants.ts`:
-  - `PIECE_NAMES` — letter → full name map
-  - `INITIAL_COUNTS` — letter → initial count map
-  - `PIECE_MOVEMENT` — per piece type: allowed directions per movement class at size 1
-  - `START_GSFEN` — the known startpos GSFEN string
+  - `PIECE_NAMES: Record<PieceType, string>` — letter → full name map
+  - `INITIAL_COUNTS: Record<PieceType, number>` — letter → initial count per player
+  - `PIECE_MOVEMENT` — per piece type: `{ step: Direction[]; limitedRange: Direction[]; range: Direction[]; jumps: JumpPattern[] }`
+    (empty arrays for movement classes the piece does not have)
+  - `START_GSFEN: string` — the known startpos GSFEN string
 - `src/errors.ts`:
-  - Base `GameError` carrying `rule: string` (the BR-xxx reference)
+  - `GameError` — base class carrying `rule: string` (the BR-xxx reference).
+    Uses `extends Error` so `instanceof` works in test assertions.
   - `IllegalActionError` extending `GameError` with `action: Action`
   - Error subclasses per rule group: `DeployError`, `MoveError`, `ArataError`,
     `SelfCheckError`, `TerminalError`
+- `tests/types.test.ts` — one trivial test per type confirming the compiler
+  accepts valid shapes.
+
+**Key design decisions:**
+
+| Concern | Choice | Rationale |
+|---------|--------|-----------|
+| Module system | ESM (`"type": "module"`) | Vitest and TS 5.7 handle ESM natively; all future tooling assumes it |
+| TypeScript target | `ES2022` | Structured result types, `?.`/`??` native; no downlevel pitfalls |
+| Module resolution | `Node16` | Correct ESM resolution; required for `"type": "module"` |
+| Strictness | `strict: true` + `noUnusedLocals` + `noUnusedParameters` + `exactOptionalPropertyTypes` | Catches unused code and `undefined` vs absent distinction (important for `GameResult`) |
+| Direction representation | String literal union (not enum) | Erased at compile time — no runtime code emitted |
+| Hand representation | `Partial<Record<PieceType, number>>` | Absent key = count 0; avoids constructing 28-key object per GameState |
+| Position indexing | `position[row][col]`, row-major | Matches GSFEN row-first serialization; parsers handle coordinate translation |
+| Error classes | `class extends Error` | `instanceof` works in test assertions and consumer error-handling code |
+| Runtime dependencies | **Zero** | The Oracle is pure TypeScript types + logic; everything compiles away |
 
 **Checkpoint:**
-- `npx tsc --noEmit` passes with strict mode
-- `npx vitest run` runs zero tests successfully (scaffold ready)
-- A smoke test file at `tests/types.test.ts` instantiates each type and
-  confirms the compiler accepts valid shapes and rejects invalid ones
+```bash
+docker compose run --rm check    # npx tsc --noEmit passes with strict mode
+docker compose run --rm test     # npx vitest run — scaffold smoke tests pass
+```
+- `tests/types.test.ts` instantiates each type and confirms the compiler
+  accepts valid shapes and rejects invalid ones.
 
 **Verification:**
-- Compilation with `strict: true` and `noUnusedLocals`, `noUnusedParameters`
+- Compilation with all strict flags enabled.
 - One trivial test per type confirming construction (type-level checks at
-  test time catch interface drift)
+  test time catch interface drift).
+- A `Square` coordinate sanity assertion: `{ col: 1, row: 1 }` is documented
+  in a code comment as **top-right corner** (Standard Diagram). This is the
+  single point of truth for the coordinate system — if this assumption is wrong,
+  all parser, board, and movement logic fails downstream. The smoke test
+  should include a comment-assertion pairing for this.
+
+**Risk (coordinate system):** The `Position` indexing convention is the most
+dangerous undetected error in Step 1. It compiles correctly even if wrong
+(the type system cannot encode "row 0 = top"). If implemented incorrectly,
+the bug is invisible until Step 2 (GSFEN parse) or Step 6 (movement) produces
+wrong results. **Mitigation:** The `Square` type carries a JSDoc comment
+explicitly stating the origin. The smoke test asserts a known coordinate
+round-trip.
 
 ---
 
@@ -707,6 +838,7 @@ movement, validation, and game logic complete.
 
 | Step | Deliverable | Verification | Failure mode | Escalation |
 |------|-------------|-------------|--------------|------------|
+| 0 | Docker toolchain | `docker compose run --rm check` + `test` exit 0 | Host Docker version mismatch | Pin `node:22-alpine` digest; document minimum Docker Engine version |
 | 1 | Types + scaffold | Compile + smoke test | Wrong coordinate system | Review BUSINESS_RULES.md glossary |
 | 2 | GSFEN parser | Parse 15 samples + reject invalid | Parsing edge case (malformed but accepted) | Add to invalid set |
 | 3 | GSFEN serializer | Round-trip 15 samples + exact text match | Canonicalization bug (wrong letter order) | Compare vs GSFEN.md canonical rules |
@@ -726,21 +858,24 @@ movement, validation, and game logic complete.
 ## Build Order Dependencies
 
 ```
-Step 1 (types)
-  └─→ Step 2 (GSFEN parse) ──→ Step 3 (GSFEN serialize)
-  └─→ Step 4 (GAN parse) ──→ Step 5 (GAN serialize)
-  └─→ Step 6 (movement)
-         └─→ Step 7 (attack)
-                └─→ Step 8 (action validation)
-                       └─→ Step 9 (deploy) ──→ Step 10 (battle)
-                              └─→ Step 11 (terminal)
-                                     └─→ Step 12 (public API)
-                                            ├─→ Step 13 (property + Gherkin)
-                                            └─→ Step 14 (action visualizer)
+Step 0 (Docker toolchain)
+   └─→ Step 1 (types)
+          └─→ Step 2 (GSFEN parse) ──→ Step 3 (GSFEN serialize)
+          └─→ Step 4 (GAN parse) ──→ Step 5 (GAN serialize)
+          └─→ Step 6 (movement)
+                 └─→ Step 7 (attack)
+                        └─→ Step 8 (action validation)
+                               └─→ Step 9 (deploy) ──→ Step 10 (battle)
+                                      └─→ Step 11 (terminal)
+                                             └─→ Step 12 (public API)
+                                                    ├─→ Step 13 (property + Gherkin)
+                                                    └─→ Step 14 (action visualizer)
 ```
 
-Steps 2–5 can be built independently (parallel-friendly) once Step 1 is
-done, since they depend only on types + constants.
+Step 0 is a prerequisite for all other steps — every `check` and `test`
+command in subsequent steps runs through Docker. Steps 2–5 can be built
+independently (parallel-friendly) once Step 1 is done, since they depend
+only on types + constants.
 
 ---
 
