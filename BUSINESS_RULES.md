@@ -130,7 +130,7 @@ the [Deploy Phase](<#deploy-phase>). See
 
 #### Action
 Any interaction that a [Player](<#player>) can have with the [Game](<#game>).
-An [Action](<#action>) is either a [Placement](<#placement>), a
+An [Action](<#action>) is either a [Placement](<#placement>) or a
 [Play](<#play>).
 
 #### Play
