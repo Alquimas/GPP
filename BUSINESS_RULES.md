@@ -131,7 +131,7 @@ the [Deploy Phase](<#deploy-phase>). See
 #### Action
 Any interaction that a [Player](<#player>) can have with the [Game](<#game>).
 An [Action](<#action>) is either a [Placement](<#placement>), a
-[Play](<#play>) or a [Resignation](<#resignation>).
+[Play](<#play>).
 
 #### Play
 An [Action](<#action>) that a [Player](<#player>) performs during their
@@ -227,7 +227,6 @@ Any situation that immediately ends the [Game](<#game>), determines a winner,
 or declares a draw. They are:
 - [Checkmate](<#checkmate>)
 - [Stalemate](<#stalemate>)
-- [Resignation](<#resignation>)
 - [Repetition](<#repetition>)
 - [Exposure](<#exposure>)
 
@@ -246,13 +245,6 @@ A condition where a [Player's](<#player>) [Marshal](<#marshal>) is in
 A [Game State](<#game-state>) where the [Active Player](<#active player>) does
 not have any legal [Plays](<#play>) available. Results in the loss of the
 [Active Player](<#active player>).
-
-#### Resignation
-An [Action](<#action>) where a [Player](<#player>) forfeits the
-[Game](<#game>). A [Resignation](<#resignation>) results in the loss of the
-resigning [Player](<#player>). It can be submitted at any time --- a
-[Player](<#player>) does not need to wait for their [Turn](<#turn>) to
-[Resign](<#resignation>).
 
 #### Repetition
 A draw declared when the same [Game State](<#game-state>) (same
@@ -682,10 +674,7 @@ For a [Play](<#play>) ([Move](<#move>) or [Arata](<#arata>)), the performing
 [Active Player](<#active player>) --- it is never carried in the
 [Play](<#play>) itself. For a [Placement](<#placement>), the performing
 [Player](<#player>) is inferred from the [Placement](<#placement>) order
-([BR-DEPLOY-002](<#br-deploy-002---placement-order>)). For a
-[Resignation](<#resignation>), the resigning [Player](<#player>) is carried
-in the [Action](<#action>) itself, since a
-non-[Active Player](<#active player>) may resign at any time.
+([BR-DEPLOY-002](<#br-deploy-002---placement-order>)).
 
 ### BR-PLAY - Play Rules
 
@@ -988,12 +977,4 @@ legal [Play](<#play>) available, the [Game](<#game>) ends with the loss of the
 If the [Active Player](<#active player>) is in [Stalemate](<#stalemate>), the
 [Game](<#game>) ends with the loss of the [Active Player](<#active player>).
 
-### BR-RESIGNATION - Resignation Rules
 
-#### BR-RESIGNATION-001 - When resignation can happen
-A [Player](<#player>) may [Resign](<#resignation>) at any time, regardless of
-whether it is their [Turn](<#turn>).
-
-#### BR-RESIGNATION-002 - Consequence of resignation
-A [Resignation](<#resignation>) results in the immediate loss of the resigning
-[Player](<#player>) and ends the [Game](<#game>).

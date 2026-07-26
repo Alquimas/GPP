@@ -26,7 +26,7 @@ _Avoid_: Battle turn, regular turn, deployment turn
 An Action that a Player performs during a Turn. Either a Move or an Arata.
 
 **Action**:
-Any interaction a Player can have with the Game. Either a Placement, a Play, or a Resignation.
+Any interaction a Player can have with the Game. Either a Placement or a Play.
 
 **Attack**:
 A Piece attacks a Square if its movement rules allow reaching it, ignoring whether the Square is currently occupied. For threat evaluation against a Marshal, the restriction on landing on the Marshal's Square is disregarded — Checkmate ends the Game before Capture resolves. The stack-size landing restriction (source Stack Size >= target Stack Size) still applies.
