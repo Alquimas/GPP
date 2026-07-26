@@ -38,7 +38,7 @@ BUSINESS_RULES.md
 These tools are built before or alongside the Oracle. They require zero
 game-logic code beyond GSFEN parsing.
 
-### 2.1 GSFEN Visualizer
+### 2.1 GSFEN Visualizer — ✅ Implemented
 
 A **static HTML page** that renders a Gungi board from a GSFEN string.
 
@@ -427,7 +427,7 @@ Each case is a JSON file with:
 | `oracle/src/` | TypeScript Oracle implementation |
 | `oracle/tests/` | Unit tests, property tests, Gherkin step definitions |
 | `core/` | C/Rust Core implementation |
-| `visualizers/gsfen.html` | Static GSFEN visualizer |
+| `visualizers/gsfen.html` | Static GSFEN visualizer ✅ |
 | `visualizers/action/` | Action visualizer (server-side tool, generates HTML) |
 | `features/` | Gherkin `.feature` files |
 | `regression/cases/` | JSON regression test cases |
