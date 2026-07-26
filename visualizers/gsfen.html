@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gungi GSFEN Viewer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #E8DCC8;
+    color: #2A1A0A;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 24px;
+  }
+
+  .container {
+    max-width: 760px;
+    width: 100%;
+  }
+
+  /* --- Header --- */
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+
+  .header h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #3B2A1C;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+
+  .header .subtitle {
+    font-size: 14px;
+    color: #7A6B55;
+    font-style: italic;
+  }
+
+  /* --- GSFEN Input --- */
+  .input-area {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .input-area input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #B8A68E;
+    border-radius: 6px;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 14px;
+    background: #FCF7EF;
+    color: #2A1A0A;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .input-area input:focus {
+    border-color: #7A5A3A;
+  }
+
+  .input-area button {
+    padding: 12px 24px;
+    background: #5D3A1A;
+    color: #F5E8D8;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+
+  .input-area button:hover {
+    background: #4A2E14;
+  }
+
+  .error-note {
+    background: #F5E6D5;
+    border-left: 3px solid #B85450;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #6B3030;
+    line-height: 1.5;
+    display: none;
+  }
+
+  .error-note.show { display: block; }
+
+  /* --- Turn / Phase Info --- */
+  .info-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: #FCF7EF;
+    border-radius: 8px;
+    border: 1px solid #D4C4B0;
+  }
+
+  .info-bar .phase {
+    font-size: 16px;
+    font-weight: 600;
+    color: #3B2A1C;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .info-bar .turn-label {
+    font-size: 15px;
+    color: #5A4A38;
+  }
+
+  .info-bar .turn-label strong {
+    color: #2A1A0A;
+  }
+
+  .info-bar .counter {
+    margin-left: auto;
+    font-size: 15px;
+    color: #7A6B55;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .info-bar .done-flag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #D4C4B0;
+    color: #5A4A38;
+  }
+
+  .info-bar .done-flag.is-active {
+    background: #C49A6C;
+    color: #FCF7EF;
+  }
+
+  /* --- Board --- */
+  .board-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 28px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .board-frame {
+    display: inline-block;
+    background: #5D3A1A;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(42, 26, 10, 0.3);
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(9, var(--cell-w, 68px)) 28px;
+    grid-template-rows: 28px repeat(9, var(--cell-h, 68px));
+    gap: 1px;
+    background: #7A5A3A;
+  }
+
+  /* --- Labels --- */
+  .label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #D4C4B0;
+    background: #5D3A1A;
+    user-select: none;
+  }
+
+  .label.col-label { height: 28px; }
+  .label.row-label { width: 28px; }
+
+  .label.corner {
+    background: #4A2E14;
+  }
+
+  /* --- Cells --- */
+  .cell {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #D4B896;
+    display: flex;
+    flex-direction: column-reverse;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.15s;
+  }
+
+  .cell.empty-cell {
+    background: #C9AD8A;
+  }
+
+  .cell.empty-cell:hover {
+    background: #D4B896;
+  }
+
+  /* Deploy zone highlighting */
+  .cell.deploy-zone-black {
+    background: #C4A27A;
+  }
+
+  .cell.deploy-zone-black.empty-cell:hover {
+    background: #D4B896;
+  }
+
+  .cell.deploy-zone-white {
+    background: #C4A27A;
+  }
+
+  .cell.deploy-zone-white.empty-cell:hover {
+    background: #D4B896;
+  }
+
+  /* --- Level (piece) rendering --- */
+  .level {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 17px;
+    font-weight: 700;
+    min-height: 0;
+    position: relative;
+    transition: background 0.1s;
+    letter-spacing: 0.5px;
+  }
+
+  .level + .level {
+    border-top: 1.5px solid #7A5A3A;
+  }
+
+  .level.owner-white {
+    background: #3B2A1C;
+    color: #F5E8D8;
+  }
+
+  .level.owner-white:hover {
+    background: #4A3828;
+  }
+
+  .level.owner-black {
+    background: #F0E0C8;
+    color: #2A1A0A;
+  }
+
+  .level.owner-black:hover {
+    background: #E4D0B4;
+  }
+
+  /* Stack size indicator for 3-deep stacks */
+  .level .level-indicator {
+    position: absolute;
+    right: 2px;
+    bottom: 1px;
+    font-size: 7px;
+    opacity: 0.4;
+    font-family: -apple-system, sans-serif;
+  }
+
+  /* --- Hands --- */
+  .hands-section {
+    background: #FCF7EF;
+    border-radius: 8px;
+    border: 1px solid #D4C4B0;
+    padding: 20px 24px;
+  }
+
+  .hands-section h2 {
+    font-family: Georgia, serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #3B2A1C;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .hands-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .hands-row:last-child { margin-bottom: 0; }
+
+  .hands-row .player-label {
+    font-size: 15px;
+    font-weight: 600;
+    min-width: 68px;
+    padding-top: 4px;
+  }
+
+  .hands-row .player-label.white-label { color: #3B2A1C; }
+  .hands-row .player-label.black-label { color: #3B2A1C; }
+
+  .hands-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .hand-piece {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px 4px 10px;
+    border-radius: 4px;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .hand-piece.white-piece {
+    background: #3B2A1C;
+    color: #F5E8D8;
+  }
+
+  .hand-piece.black-piece {
+    background: #E4D0B4;
+    color: #2A1A0A;
+    border: 1px solid #C4A27A;
+  }
+
+  .hand-piece .hand-count {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 17px;
+    font-weight: 700;
+    opacity: 0.75;
+  }
+
+  .hand-empty {
+    font-size: 13px;
+    color: #9A8A78;
+    font-style: italic;
+    padding: 2px 0;
+  }
+
+  .hands-note {
+    text-align: center;
+    font-size: 12px;
+    color: #9A8A78;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #E8DCC8;
+  }
+
+  /* --- Glossary --- */
+  .glossary-wrap {
+    margin-top: 20px;
+  }
+
+  .glossary-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: none;
+    border: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #7A6B55;
+    cursor: pointer;
+    transition: color 0.15s;
+    border-radius: 4px;
+  }
+
+  .glossary-toggle:hover {
+    color: #3B2A1C;
+    background: rgba(90, 58, 26, 0.06);
+  }
+
+  .glossary-toggle .arrow {
+    display: inline-block;
+    font-size: 11px;
+    transition: transform 0.25s ease;
+  }
+
+  .glossary-toggle.open .arrow {
+    transform: rotate(90deg);
+  }
+
+  .glossary-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+
+  .glossary-panel.open {
+    max-height: 520px;
+  }
+
+  .glossary-inner {
+    background: #FCF7EF;
+    border: 1px solid #D4C4B0;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-top: 6px;
+  }
+
+  .glossary-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 3px 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .glossary-row + .glossary-row {
+    border-top: 1px solid #EDE3D5;
+  }
+
+  .glossary-letter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    background: #3B2A1C;
+    color: #F5E8D8;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 13px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .glossary-sep {
+    color: #B8A68E;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .glossary-name {
+    flex: 1;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #3B2A1C;
+  }
+
+  .glossary-count {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #7A6B55;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* --- Raw GSFEN display --- */
+  .raw-gsfen {
+    margin-top: 24px;
+    padding: 14px 18px;
+    background: #FCF7EF;
+    border-radius: 8px;
+    border: 1px solid #D4C4B0;
+    font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+    font-size: 16px;
+    color: #3B2A1C;
+    word-break: break-all;
+    user-select: all;
+    line-height: 1.5;
+  }
+
+  .raw-gsfen .label-text {
+    font-family: -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    margin-bottom: 6px;
+    color: #7A6B55;
+  }
+
+  /* --- Responsive --- */
+  @media (max-width: 640px) {
+    body { padding: 16px 10px; }
+    .container { max-width: 100%; }
+    .header h1 { font-size: 24px; }
+    .header { margin-bottom: 20px; }
+    .input-area { flex-direction: column; gap: 8px; }
+    .input-area input { font-size: 13px; padding: 10px 12px; }
+    .input-area button { font-size: 14px; padding: 10px 16px; }
+    .board-frame { padding: 6px; }
+    .board { --cell-w: 44px; --cell-h: 44px; gap: 0.5px; grid-template-columns: repeat(9, var(--cell-w, 44px)) 22px; grid-template-rows: 22px repeat(9, var(--cell-h, 44px)); }
+    .label { font-size: 9px; }
+    .label.col-label { height: 22px; }
+    .label.row-label { width: 22px; }
+    .level { font-size: 12px; }
+    .level + .level { border-top-width: 1px; }
+    .info-bar { padding: 12px 14px; gap: 12px; flex-wrap: wrap; }
+    .info-bar .phase { font-size: 13px; }
+    .info-bar .turn-label { font-size: 13px; }
+    .info-bar .counter { font-size: 13px; }
+    .hands-section { padding: 14px 16px; }
+    .hands-section h2 { font-size: 16px; }
+    .hand-piece { font-size: 14px; padding: 3px 8px 3px 7px; }
+    .hand-piece .hand-count { font-size: 14px; }
+    .hands-row .player-label { font-size: 13px; min-width: 54px; }
+    .error-note { font-size: 13px; padding: 10px 12px; }
+    .glossary-inner { padding: 10px 12px; }
+    .glossary-row { font-size: 13px; gap: 6px; }
+    .glossary-letter { width: 22px; height: 22px; font-size: 11px; }
+    .glossary-count { font-size: 12px; }
+    .glossary-toggle { font-size: 12px; padding: 5px 8px; }
+    .raw-gsfen { font-size: 11px; }
+  }
+
+  @media (min-width: 768px) {
+    .level { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Gungi GSFEN Viewer</h1>
+    <div class="subtitle">visualize Gungi board states from GSFEN notation</div>
+  </div>
+
+  <div class="input-area">
+    <input type="text" id="gsfenInput" placeholder="Enter GSFEN string or startpos …" spellcheck="false">
+    <button id="loadBtn">Load</button>
+  </div>
+
+  <div class="error-note" id="errorNote"></div>
+
+  <div id="app"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ============================================================
+  //  Constants
+  // ============================================================
+
+  const PIECE_NAMES = {
+    A: 'Archer',  C: 'Cannon',  E: 'Spear',
+    F: 'Fortress', G: 'General', J: 'Major',
+    L: 'Lieutenant', M: 'Marshal', N: 'Knight',
+    P: 'Pawn', S: 'Samurai', T: 'Captain',
+    U: 'Musketeer', Y: 'Spy'
+  };
+
+  const VALID_PIECES = new Set(Object.keys(PIECE_NAMES));
+
+  const INITIAL_COUNTS = { A:2, C:1, E:3, F:2, G:1, J:2, L:1, M:1, N:2, P:4, S:2, T:1, U:1, Y:2 };
+
+  const START_GSFEN = '9/9/9/9/9/9/9/9/9 dw 2AC3E2FG2JLM2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 1';
+
+  // ============================================================
+  //  Parser
+  // ============================================================
+
+  /**
+   * Parse a GSFEN string into a structured state object.
+   * Returns { board, turn, hands, counter } on success, or throws.
+   *
+   * board: 9×9 array, board[rowIdx][colIdx] = Array<{ piece, owner, type }>
+   *   rowIdx 0 = Row 1 (top), 8 = Row 9 (bottom)
+   *   colIdx 0 = Col 9 (left),  8 = Col 1 (right)
+   *
+   * turn: { phase: 'deploy'|'battle', turn: 'white'|'black', done: null|'white'|'black' }
+   * hands: { white: { P: count, … }, black: { p: count, … } }
+   * counter: number
+   */
+  function parseGSFEN(str) {
+    let s = String(str).trim();
+
+    // Expand startpos
+    if (s === 'startpos') {
+      s = START_GSFEN;
+    }
+
+    const parts = s.split(/\s+/);
+    if (parts.length !== 4) {
+      throw new Error('GSFEN must have exactly 4 space-separated fields');
+    }
+
+    const [posStr, turnStr, handsStr, counterStr] = parts;
+
+    const board = parsePosition(posStr);
+    const turn  = parseTurn(turnStr);
+    const hands = parseHands(handsStr);
+    const counter = parseCounter(counterStr);
+
+    return { board, turn, hands, counter, raw: { position: posStr, turn: turnStr, hands: handsStr, counter: counterStr } };
+  }
+
+  function parsePosition(posStr) {
+    const rows = posStr.split('/');
+    if (rows.length !== 9) {
+      throw new Error('Position field must have exactly 9 rows (slashes)');
+    }
+
+    const board = [];
+    for (let r = 0; r < 9; r++) {
+      const items = rows[r].split(',');
+      const row = [];
+
+      for (const item of items) {
+        if (item === '') {
+          throw new Error('Empty item in position (consecutive commas?)');
+        }
+
+        // Empty run: a single digit 1-9
+        if (/^[1-9]$/.test(item)) {
+          const count = parseInt(item, 10);
+          for (let i = 0; i < count; i++) {
+            row.push([]); // empty stack
+          }
+          continue;
+        }
+
+        // Stack: 1-3 piece letters
+        if (item.length < 1 || item.length > 3) {
+          throw new Error('Stack must have 1–3 pieces, got "' + item + '"');
+        }
+
+        const stack = [];
+        for (const ch of item) {
+          const upper = ch.toUpperCase();
+          if (!VALID_PIECES.has(upper)) {
+            throw new Error('Unknown piece letter "' + ch + '" in stack "' + item + '"');
+          }
+          const owner = (ch === upper) ? 'white' : 'black';
+          stack.push({ piece: ch, owner: owner, type: upper });
+        }
+        row.push(stack);
+      }
+
+      if (row.length !== 9) {
+        throw new Error('Row ' + (r + 1) + ' has ' + row.length + ' squares, expected 9');
+      }
+
+      board.push(row);
+    }
+
+    return board;
+  }
+
+  function parseTurn(turnStr) {
+    switch (turnStr) {
+      case 'w':   return { phase: 'battle', turn: 'white', done: null };
+      case 'b':   return { phase: 'battle', turn: 'black', done: null };
+      case 'dw':  return { phase: 'deploy', turn: 'white', done: null };
+      case 'db':  return { phase: 'deploy', turn: 'black', done: null };
+      case 'dwB': return { phase: 'deploy', turn: 'white', done: 'black' };
+      case 'dbW': return { phase: 'deploy', turn: 'black', done: 'white' };
+      default:    throw new Error('Invalid turn token "' + turnStr + '"');
+    }
+  }
+
+  function parseHands(handsStr) {
+    if (handsStr === '-') {
+      return { white: {}, black: {} };
+    }
+
+    const result = { white: {}, black: {} };
+    let i = 0;
+    const len = handsStr.length;
+
+    // --- Parse white section (uppercase letters) ---
+    while (i < len) {
+      const ch = handsStr[i];
+      if (ch >= 'A' && ch <= 'Z') {
+        // Single uppercase piece without count prefix
+        if (!VALID_PIECES.has(ch)) {
+          throw new Error('Unknown piece letter "' + ch + '" in hands');
+        }
+        result.white[ch] = (result.white[ch] || 0) + 1;
+        i++;
+      } else if (ch >= '2' && ch <= '4') {
+        // Count prefix — peek at next character to determine section
+        if (i + 1 >= len) {
+          throw new Error('Expected piece letter after count at end of hands');
+        }
+        const next = handsStr[i + 1];
+        if (next >= 'A' && next <= 'Z') {
+          // Uppercase → white piece with count
+          const count = parseInt(ch, 10);
+          if (!VALID_PIECES.has(next)) {
+            throw new Error('Unknown piece letter "' + next + '" in hands');
+          }
+          result.white[next] = (result.white[next] || 0) + count;
+          i += 2;
+        } else {
+          // Not uppercase → end of white section, leave digit for black section
+          break;
+        }
+      } else {
+        // Not an uppercase letter or digit — end of white section
+        break;
+      }
+    }
+
+    // --- Parse black section (lowercase letters) ---
+    while (i < len) {
+      const ch = handsStr[i];
+      if (ch >= 'a' && ch <= 'z') {
+        // Single lowercase piece without count prefix
+        if (!VALID_PIECES.has(ch.toUpperCase())) {
+          throw new Error('Unknown piece letter "' + ch + '" in hands');
+        }
+        result.black[ch] = (result.black[ch] || 0) + 1;
+        i++;
+      } else if (ch >= '2' && ch <= '4') {
+        // Count prefix for black piece
+        if (i + 1 >= len) {
+          throw new Error('Expected piece letter after count at end of hands');
+        }
+        const next = handsStr[i + 1];
+        if (next >= 'a' && next <= 'z') {
+          const count = parseInt(ch, 10);
+          if (!VALID_PIECES.has(next.toUpperCase())) {
+            throw new Error('Unknown piece letter "' + next + '" in hands');
+          }
+          result.black[next] = (result.black[next] || 0) + count;
+          i += 2;
+        } else {
+          throw new Error('Expected lowercase piece letter after count, got "' + next + '"');
+        }
+      } else {
+        throw new Error('Unexpected character "' + ch + '" in hands at position ' + i);
+      }
+    }
+
+    return result;
+  }
+
+  function parseCounter(counterStr) {
+    if (!/^[1-9]\d*$/.test(counterStr)) {
+      throw new Error('Counter must be a positive integer (no leading zeros), got "' + counterStr + '"');
+    }
+    const n = parseInt(counterStr, 10);
+    if (isNaN(n) || n < 1) {
+      throw new Error('Counter must be >= 1');
+    }
+    return n;
+  }
+
+  // ============================================================
+  //  Renderer
+  // ============================================================
+
+  /**
+   * Render the full application state into #app
+   */
+  function render(state) {
+    const app = document.getElementById('app');
+    if (!app) return;
+
+    // --- Info bar ---
+    const phaseName = state.turn.phase === 'deploy' ? 'Deploy Phase' : 'Battle Phase';
+    const turnName  = state.turn.turn === 'white' ? 'White' : 'Black';
+    const phaseColor = state.turn.phase === 'deploy' ? '#C49A6C' : '#5D3A1A';
+
+    const infoHTML = [
+      '<div class="info-bar">',
+      '  <span class="phase" style="color:' + phaseColor + '">' + phaseName + '</span>',
+      '  <span class="turn-label"><strong>' + turnName + '</strong> to ' + (state.turn.phase === 'deploy' ? 'place' : 'move') + '</span>',
+      state.turn.done
+        ? '<span class="done-flag is-active">' + state.turn.done + ' done</span>'
+        : '',
+      '  <span class="counter">Turn ' + state.counter + '</span>',
+      '</div>'
+    ].join('\n');
+
+    // --- Board ---
+    let boardHTML = '<div class="board-container">';
+    boardHTML += '<div class="board-frame"><div class="board">';
+
+    // Column labels: 9 → 1 (left to right)
+    for (let col = 9; col >= 1; col--) {
+      boardHTML += '<div class="label col-label">' + col + '</div>';
+    }
+    // Corner above the row-label column
+    boardHTML += '<div class="label corner"></div>';
+
+    // Board rows: 1 (top) → 9 (bottom)
+    for (let rowIdx = 0; rowIdx < 9; rowIdx++) {
+      const rowNum = rowIdx + 1;
+      const cells = state.board[rowIdx];
+      // cells[0] = Col 9, cells[8] = Col 1 — display left to right
+      for (let colIdx = 0; colIdx < 9; colIdx++) {
+        const stack = cells[colIdx];
+        const isEmpty = stack.length === 0;
+
+        // Deploy zone detection
+        const isBlackDeployZone = rowIdx < 3; // rows 1-3
+        const isWhiteDeployZone = rowIdx > 5; // rows 7-9
+        const isDeploy = state.turn.phase === 'deploy';
+
+        let cellClass = 'cell';
+        if (isEmpty) {
+          cellClass += ' empty-cell';
+        }
+        if (isDeploy) {
+          if (isBlackDeployZone) cellClass += ' deploy-zone-black';
+          if (isWhiteDeployZone) cellClass += ' deploy-zone-white';
+        }
+
+        boardHTML += '<div class="' + cellClass + '">';
+
+        if (!isEmpty) {
+          // Render stack levels: Level 1 (bottom) first, Level 3 (top) last
+          // flex-direction: column-reverse in CSS puts Level 1 at bottom
+          for (let li = 0; li < stack.length; li++) {
+            const lvl = stack[li];
+            const ownerClass = lvl.owner === 'white' ? 'owner-white' : 'owner-black';
+            const pieceName = PIECE_NAMES[lvl.type] || lvl.type;
+            boardHTML += '<div class="level ' + ownerClass + '" title="' + pieceName + ' (' + lvl.owner + ', level ' + (li + 1) + ')">';
+            boardHTML += lvl.piece;
+            // Show a small indicator for 3-deep stacks
+            if (stack.length === 3) {
+              boardHTML += '<span class="level-indicator">' + (li + 1) + '</span>';
+            }
+            boardHTML += '</div>';
+          }
+        }
+
+        boardHTML += '</div>'; // .cell
+      }
+      // Row label on the RIGHT side of the row
+      boardHTML += '<div class="label row-label">' + rowNum + '</div>';
+    }
+
+    boardHTML += '</div></div></div>'; // .board .board-frame .board-container
+
+    // --- Hands ---
+    let handsHTML = '<div class="hands-section">';
+    handsHTML += '<h2>Pieces in Hand</h2>';
+
+    // White hand
+    const whitePieces = state.hands.white || {};
+    const blackPieces = state.hands.black || {};
+    const whiteEntries = Object.keys(whitePieces).sort();
+    const blackEntries = Object.keys(blackPieces).sort();
+
+    handsHTML += '<div class="hands-row">';
+    handsHTML += '  <span class="player-label white-label">White</span>';
+    handsHTML += '  <div class="hands-pieces">';
+    if (whiteEntries.length === 0) {
+      handsHTML += '<span class="hand-empty">empty</span>';
+    } else {
+      for (const letter of whiteEntries) {
+        const count = whitePieces[letter];
+        const name = PIECE_NAMES[letter.toUpperCase()];
+        handsHTML += '<span class="hand-piece white-piece" title="' + name + '">';
+        handsHTML += letter.toUpperCase();
+        if (count > 1) {
+          handsHTML += '<span class="hand-count">×' + count + '</span>';
+        }
+        handsHTML += '</span>';
+      }
+    }
+    handsHTML += '  </div></div>';
+
+    // Black hand
+    handsHTML += '<div class="hands-row">';
+    handsHTML += '  <span class="player-label black-label">Black</span>';
+    handsHTML += '  <div class="hands-pieces">';
+    if (blackEntries.length === 0) {
+      handsHTML += '<span class="hand-empty">empty</span>';
+    } else {
+      for (const letter of blackEntries) {
+        const count = blackPieces[letter];
+        const name = PIECE_NAMES[letter.toUpperCase()];
+        handsHTML += '<span class="hand-piece black-piece" title="' + name + '">';
+        handsHTML += letter.toUpperCase();
+        if (count > 1) {
+          handsHTML += '<span class="hand-count">×' + count + '</span>';
+        }
+        handsHTML += '</span>';
+      }
+    }
+    handsHTML += '  </div></div>';
+
+    handsHTML += '<div class="hands-note">in-hand pieces • uppercase = White, lowercase = Black</div>';
+    handsHTML += '</div>';
+
+    // --- Glossary ---
+    const pieceOrder = Object.keys(PIECE_NAMES); // alphabetical / canonical
+    let glossaryRows = '';
+    for (const letter of pieceOrder) {
+      const name = PIECE_NAMES[letter];
+      const count = INITIAL_COUNTS[letter];
+      glossaryRows +=
+        '<div class="glossary-row">' +
+          '<span class="glossary-letter" title="White/Black">' + letter + '</span>' +
+          '<span class="glossary-sep">—</span>' +
+          '<span class="glossary-name">' + escapeHTML(name) + '</span>' +
+          '<span class="glossary-count">×' + count + ' each</span>' +
+        '</div>';
+    }
+
+    const glossaryHTML =
+      '<div class="glossary-wrap">' +
+        '<button class="glossary-toggle" id="glossaryToggle" aria-expanded="false" aria-controls="glossaryPanel">' +
+          '<span class="arrow">▸</span> Piece Glossary' +
+        '</button>' +
+        '<div class="glossary-panel" id="glossaryPanel">' +
+          '<div class="glossary-inner">' +
+            glossaryRows +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    // --- Raw GSFEN ---
+    let rawHTML = '';
+    if (state.raw) {
+      const fullRaw = state.raw.position + ' ' + state.raw.turn + ' ' + state.raw.hands + ' ' + state.raw.counter;
+      rawHTML = '<div class="raw-gsfen"><div class="label-text">GSFEN</div>' + escapeHTML(fullRaw) + '</div>';
+    }
+
+    app.innerHTML = infoHTML + boardHTML + handsHTML + glossaryHTML + rawHTML;
+
+    // Wire up glossary toggle
+    const toggleEl = document.getElementById('glossaryToggle');
+    const panelEl = document.getElementById('glossaryPanel');
+    if (toggleEl && panelEl) {
+      toggleEl.addEventListener('click', function () {
+        const isOpen = panelEl.classList.toggle('open');
+        toggleEl.classList.toggle('open', isOpen);
+        toggleEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+    }
+  }
+
+  function escapeHTML(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // ============================================================
+  //  Main
+  // ============================================================
+
+  function showError(msg) {
+    const note = document.getElementById('errorNote');
+    if (note) {
+      note.textContent = '⚠ ' + msg;
+      note.classList.add('show');
+    }
+  }
+
+  function clearError() {
+    const note = document.getElementById('errorNote');
+    if (note) {
+      note.textContent = '';
+      note.classList.remove('show');
+    }
+  }
+
+  function loadAndRender(gsfenStr) {
+    clearError();
+
+    let state;
+    try {
+      state = parseGSFEN(gsfenStr);
+    } catch (err) {
+      showError('Invalid GSFEN: ' + err.message + '. Showing start position.');
+      // Fall back to startpos
+      try {
+        state = parseGSFEN('startpos');
+      } catch (_) {
+        // Should never happen
+        document.getElementById('app').innerHTML = '<p style="color:#B85450;">Fatal error: start position is invalid.</p>';
+        return;
+      }
+    }
+
+    render(state);
+  }
+
+  function getURLParam() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('gsfen');
+  }
+
+  function init() {
+    const input = document.getElementById('gsfenInput');
+    const btn   = document.getElementById('loadBtn');
+
+    if (!input || !btn) return;
+
+    // Load from URL param or default to startpos
+    const urlGsfen = getURLParam();
+    const initialValue = urlGsfen !== null ? decodeURIComponent(urlGsfen) : 'startpos';
+    input.value = initialValue;
+    loadAndRender(initialValue);
+
+    // Button click
+    btn.addEventListener('click', function () {
+      const val = input.value.trim();
+      if (!val) {
+        showError('Please enter a GSFEN string.');
+        return;
+      }
+      loadAndRender(val);
+    });
+
+    // Enter key
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        btn.click();
+      }
+    });
+  }
+
+  // Start when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+</body>
+</html>
