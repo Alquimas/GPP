@@ -13,7 +13,7 @@
 2. [Module Layout](#2-module-layout)
 3. [Step 0 — Docker Toolchain Setup](#step-0--docker-toolchain-setup) ✅
 4. [Step 1 — Project Scaffold + Domain Types](#step-1--project-scaffold--domain-types)
-5. [Step 2 — GSFEN Parser](#step-2--gsfen-parser)
+5. [Step 2 — GSFEN Parser](#step-2--gsfen-parser) ✅
 6. [Step 3 — GSFEN Serializer](#step-3--gsfen-serializer)
 7. [Step 4 — GAN Parser](#step-4--gan-parser)
 8. [Step 5 — GAN Serializer](#step-5--gan-serializer)
@@ -410,7 +410,7 @@ round-trip.
 
 ---
 
-### Step 2 — GSFEN Parser
+### Step 2 — GSFEN Parser ✅
 
 **What to build:**
 - `src/gsfen/parse.ts` — port the GSFEN parser from `visualizers/gsfen.html`

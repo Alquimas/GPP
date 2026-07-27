@@ -36,8 +36,11 @@ export const INITIAL_COUNTS: Record<PieceType, number> = {
   Y: 2,
 };
 
-/** A Hand record with every count at 0 — the canonical empty hand. */
-export const EMPTY_HAND: Hand = {
+/** A Hand record with every count at 0 — the canonical empty hand.
+ * Frozen at runtime to prevent accidental mutation of the shared instance
+ * (used as a default return value in parseHands and as an export).
+ */
+export const EMPTY_HAND: Hand = Object.freeze({
   A: 0,
   C: 0,
   E: 0,
@@ -52,7 +55,7 @@ export const EMPTY_HAND: Hand = {
   T: 0,
   U: 0,
   Y: 0,
-};
+});
 
 /** A Hand record with every count at its initial value — the canonical full hand. */
 export const FULL_HAND: Hand = { ...INITIAL_COUNTS };

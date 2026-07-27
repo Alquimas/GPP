@@ -54,10 +54,11 @@ describe('parseGSFEN — startpos keyword', () => {
     expect(state.hands.black).toEqual(FULL_HAND);
   });
 
-  it('startpos with extra whitespace is rejected', () => {
+  it('startpos with leading/trailing whitespace is rejected (C1)', () => {
     const result = parseGSFEN('  startpos  ');
-    // The trim in parseGSFEN handles it — it's still 'startpos' after trim
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return; // unreachable — narrows type to error branch
+    expect(result.error.rule).toBe('C1');
   });
 
   it('Startpos (capital S) is NOT the keyword', () => {

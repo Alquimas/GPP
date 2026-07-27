@@ -54,8 +54,13 @@ const ALL_TYPES: PieceType[] = [
 
 const VALID_PIECE_SET = new Set<string>(ALL_TYPES);
 
-/** Check if a character is an uppercase piece letter. */
-function isWhitePieceChar(ch: string): boolean {
+/** Safe cast: an already-validated piece letter → PieceType (centralises the unsafe cast). */
+function isPieceType(ch: string): ch is PieceType {
+  return VALID_PIECE_SET.has(ch);
+}
+
+/** Check if a character is an uppercase piece letter — also narrows to PieceType. */
+function isWhitePieceChar(ch: string): ch is PieceType {
   return ch >= 'A' && ch <= 'Z' && VALID_PIECE_SET.has(ch);
 }
 
@@ -63,6 +68,11 @@ function isWhitePieceChar(ch: string): boolean {
 function isBlackPieceChar(ch: string): boolean {
   if (ch < 'a' || ch > 'z') return false;
   return VALID_PIECE_SET.has(ch.toUpperCase());
+}
+
+/** Convert a lowercase piece letter to a PieceType. Caller must validate via isBlackPieceChar first. */
+function toUpperPieceType(ch: string): PieceType {
+  return ch.toUpperCase() as PieceType;
 }
 
 /** Check if a character is a valid count digit (2–4). */
@@ -160,14 +170,14 @@ function parsePosition(posStr: string): FieldResult<Position> {
       const stack: Stack = [];
       for (const ch of item) {
         const upper = ch.toUpperCase();
-        if (!VALID_PIECE_SET.has(upper)) {
+        if (!isPieceType(upper)) {
           return {
             ok: false,
             error: new GameError(`Unknown piece letter "${ch}" in row ${r + 1}`, 'C2'),
           };
         }
         const owner: Player = ch === upper ? 'white' : 'black';
-        stack.push({ type: upper as PieceType, owner });
+        stack.push({ type: upper, owner });
       }
 
       if (pos < 0) {
@@ -290,7 +300,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
     const ch = handsStr[i];
 
     if (isWhitePieceChar(ch)) {
-      // Single uppercase piece (count = 1)
+      // Single uppercase piece (count = 1) — ch is now PieceType
       if (lastWhiteLetter !== '' && ch <= lastWhiteLetter) {
         return {
           ok: false,
@@ -300,13 +310,13 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
           ),
         };
       }
-      if (white[ch as PieceType] > 0) {
+      if (white[ch] > 0) {
         return {
           ok: false,
           error: new GameError(`Hands: duplicate white piece letter "${ch}"`, 'C5'),
         };
       }
-      white[ch as PieceType] = 1;
+      white[ch] = 1;
       lastWhiteLetter = ch;
       i++;
     } else if (isCountDigit(ch)) {
@@ -329,13 +339,13 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
             ),
           };
         }
-        if (white[next as PieceType] > 0) {
+        if (white[next] > 0) {
           return {
             ok: false,
             error: new GameError(`Hands: duplicate white piece letter "${next}"`, 'C5'),
           };
         }
-        white[next as PieceType] = count;
+        white[next] = count;
         lastWhiteLetter = next;
         i += 2;
       } else {
@@ -363,7 +373,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
           ),
         };
       }
-      const upper = ch.toUpperCase() as PieceType;
+      const upper = toUpperPieceType(ch);
       if (black[upper] > 0) {
         return {
           ok: false,
@@ -392,7 +402,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
             ),
           };
         }
-        const upper = next.toUpperCase() as PieceType;
+        const upper = toUpperPieceType(next);
         if (black[upper] > 0) {
           return {
             ok: false,
@@ -463,24 +473,41 @@ function parseCounter(counterStr: string): FieldResult<number> {
  * @param input - Raw GSFEN string to parse.
  */
 export function parseGSFEN(input: string): ParseResult {
-  // Trim input
-  const trimmed = input.trim();
-
-  // C7: startpos keyword (lowercase, exact)
-  if (trimmed === 'startpos') {
+  // C7: startpos keyword (lowercase, exact, no whitespace allowed per C1)
+  if (input === 'startpos') {
     return parseGSFEN(START_GSFEN);
   }
 
-  // Split into exactly 4 fields by whitespace
-  const parts = trimmed.split(/\s+/);
+  // C1: No leading or trailing whitespace
+  if (input !== input.trim()) {
+    return {
+      ok: false,
+      error: new GameError('GSFEN must not have leading or trailing whitespace (C1)', 'C1'),
+    };
+  }
+
+  // C1: Fields separated by exactly one space (U+0020).
+  // Using split on single space — multi-space segments produce empty strings,
+  // which makes the resulting array longer than 4.
+  const parts = input.split(' ');
   if (parts.length !== 4) {
     return {
       ok: false,
       error: new GameError(
-        `GSFEN must have exactly 4 space-separated fields, got ${parts.length}`,
+        `GSFEN must have exactly 4 single-space-separated fields (C1), got ${parts.length} segments`,
         'C1',
       ),
     };
+  }
+
+  // C1: No non-space whitespace characters (tabs, etc.) embedded in any field
+  for (const p of parts) {
+    if (/\s/.test(p)) {
+      return {
+        ok: false,
+        error: new GameError('GSFEN fields must not contain tabs or other whitespace (C1)', 'C1'),
+      };
+    }
   }
 
   const [posStr, turnStr, handsStr, counterStr] = parts;
