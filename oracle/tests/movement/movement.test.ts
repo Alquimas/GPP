@@ -7,17 +7,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { getLegalDestinations, getLegalMoves } from '../../src/board/movement.js';
+import { getLegalDestinations, getLegalMoves, getScaledJumps } from '../../src/board/movement.js';
 import { PIECE_MOVEMENT } from '../../src/constants.js';
+import { emptyPosition } from '../../src/board/board.js';
 import type { BoardCoord, PieceType, Player, Position, Square, Stack } from '../../src/types.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
 /* ------------------------------------------------------------------ */
-
-function emptyPos(): Position {
-  return Array.from({ length: 9 }, () => Array(9).fill(null));
-}
 
 /** Place a single-piece stack at (col, row). */
 function putPiece(pos: Position, col: number, row: number, type: PieceType, owner: Player): void {
@@ -74,7 +71,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   it.each(STEP_PIECES.filter((p) => PIECE_MOVEMENT[p.type].step.length > 0))(
     '$label ($type) at centre should have $dirs step destinations at size 1',
     ({ type, dirs }) => {
-      const pos = emptyPos();
+      const pos = emptyPosition();
       putPiece(pos, 5, 5, type, 'white');
       const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
       const stepMoves = moves.filter((m) => m.moveClass === 'step');
@@ -83,7 +80,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   );
 
   it('Marshal at centre size 1 — all 8 directions present', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toEqual(
@@ -93,24 +90,15 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('Marshal at corner (1,1) size 1 — only 3 reachable squares', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 1, 1, 'M', 'white');
     const dests = allDests(pos, 1, 1, 'white');
-    // For white at (1,1): F = (1,0) off-board, B = (1,2), L = (2,1) off-board, R = (0,1) off-board
-    // FL = (2,0) off, FR = (0,0) off, BL = (2,2), BR = (0,2) off
-    // So only: B=(1,2), BL=(2,2), BR is off
-    // Wait: col=1, row=1. For white: F=row-1=0 (off), B=row+1=2, L=col+1=2, R=col-1=0 (off)
-    // FL: col+1=2, row-1=0 (off), FR: col-1=0 (off), row-1=0 (off)
-    // BL: col+1=2, row+1=2, BR: col-1=0 (off), row+1=2
-    // So: B=(1,2), L=(2,1) — wait L=col+1=2, row stays same
-    // Actually L=col+1, so (2,1). R=col-1=(0,1) off.
-    // So valid: B=(1,2), L=(2,1), BL=(2,2) = 3
     expect(dests).toHaveLength(3);
     expect(dests).toEqual(expect.arrayContaining(['1,2', '2,1', '2,2']));
   });
 
   it('Lieutenant at centre size 1 — 4 orthogonal steps (step class only)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'L', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const stepMoves = moves.filter((m) => m.moveClass === 'step');
@@ -120,7 +108,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('General at centre size 1 — 4 diagonal steps (step class only)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const stepMoves = moves.filter((m) => m.moveClass === 'step');
@@ -130,7 +118,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('Step blocked by friendly piece — destination still valid (stack outcome)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 4, 'P', 'white'); // friendly block forward
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
@@ -140,7 +128,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('Step onto enemy — outcome is stack (choice exists) OR capture (forced)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 4, 'P', 'black'); // enemy size 1, not Marshal
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
@@ -150,7 +138,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('Step onto enemy Marshal — capture forced', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'M', 'black');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
@@ -160,7 +148,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('Step onto enemy stack of size 3 — capture forced (source size >= target)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -178,7 +166,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
   });
 
   it('BR-MOVE-005: source size < target size — move illegal', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white'); // size 1
     putStack(pos, 5, 4, [
       { type: 'P', owner: 'white' },
@@ -196,7 +184,7 @@ describe('Step movement — size 1 (BR-MOVEMENT-001)', () => {
 
 describe('Step movement — sizes 2-3 (BR-MOVEMENT-005 scaling)', () => {
   it('Marshal size 2 at centre — step extends 2 squares in each direction', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'M', owner: 'white' },
@@ -216,7 +204,7 @@ describe('Step movement — sizes 2-3 (BR-MOVEMENT-005 scaling)', () => {
   });
 
   it('Marshal size 3 at centre — step extends 3 squares in each direction', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -229,7 +217,7 @@ describe('Step movement — sizes 2-3 (BR-MOVEMENT-005 scaling)', () => {
   });
 
   it('Step size 2 blocked by obstruction at step 1 — only obstruction square valid', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'M', owner: 'white' },
@@ -248,7 +236,7 @@ describe('Step movement — sizes 2-3 (BR-MOVEMENT-005 scaling)', () => {
 
 describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   it('Spear (E) forward size 1 — max 2 squares', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step: FL, FR, B → 3
@@ -259,7 +247,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   });
 
   it('Spear size 2 — forward max 3 squares', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'E', owner: 'white' },
@@ -272,7 +260,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   });
 
   it('Spear size 3 — forward max 4 squares', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -283,7 +271,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   });
 
   it('Knight size 1 — limited-range F,B (max 2) + step L,R', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'N', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step L,R: (4,5), (6,5) → 2
@@ -295,7 +283,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   });
 
   it('Spy (Y) size 1 — limited-range 4 diagonals, max 2 each', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'Y', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // 4 directions × 2 squares = 8
@@ -315,7 +303,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   });
 
   it('Limited-range blocked by friendly at step 1 — only obstruction valid', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'white');
     putPiece(pos, 5, 4, 'P', 'white'); // friendly at F1
     const dests = allDests(pos, 5, 5, 'white');
@@ -324,7 +312,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
   });
 
   it('Limited-range blocked by enemy at step 1 — obstruction valid, cannot pass', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'white');
     putPiece(pos, 5, 4, 'P', 'black'); // enemy at F1
     const dests = allDests(pos, 5, 5, 'white');
@@ -339,7 +327,7 @@ describe('Limited-range movement (BR-MOVEMENT-002)', () => {
 
 describe('Range movement (BR-MOVEMENT-003)', () => {
   it('General (G) centre — orthogonal range to board edge', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step: 4 diagonals → 4
@@ -353,7 +341,7 @@ describe('Range movement (BR-MOVEMENT-003)', () => {
   });
 
   it('Lieutenant (L) centre — diagonal range to board edge', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'L', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step: 4 orthogonal → 4
@@ -368,7 +356,7 @@ describe('Range movement (BR-MOVEMENT-003)', () => {
   });
 
   it('Range blocked by friendly piece — stops at obstruction', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     putPiece(pos, 5, 7, 'P', 'white'); // friendly at B2
     const dests = allDests(pos, 5, 5, 'white');
@@ -378,7 +366,7 @@ describe('Range movement (BR-MOVEMENT-003)', () => {
   });
 
   it('Range blocked by enemy piece — stops at obstruction', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     putPiece(pos, 5, 7, 'P', 'black'); // enemy at B2
     const dests = allDests(pos, 5, 5, 'white');
@@ -388,7 +376,7 @@ describe('Range movement (BR-MOVEMENT-003)', () => {
   });
 
   it('Range from corner to board edge', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 1, 1, 'G', 'white');
     const dests = allDests(pos, 1, 1, 'white');
     // step: 4 diagonal — but corner limits to 1 (BR: (2,2))
@@ -399,7 +387,7 @@ describe('Range movement (BR-MOVEMENT-003)', () => {
   });
 
   it('Range movement unaffected by stack size (BR-MOVEMENT-005)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     // General at size 3
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -419,7 +407,7 @@ describe('Range movement (BR-MOVEMENT-003)', () => {
 
 describe('Jump movement (BR-MOVEMENT-004)', () => {
   it('Cannon forward jump size 1 — dest=(0,+3) from centre', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'C', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step: L,R,B → 3
@@ -428,7 +416,7 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Cannon forward jump size 2 — dest extended to (0,+4)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'C', owner: 'white' },
@@ -443,7 +431,7 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Cannon forward jump size 3 — dest extended to (0,+5)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -453,10 +441,11 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
     // level 1: (5,2), level 2: (5,1), level 3: col=5, row=5-5=0 off
     expect(dests).toContain('5,2');
     expect(dests).toContain('5,1');
+    expect(dests).not.toContain('5,0'); // off-board
   });
 
   it('Cannon jump blocked by large stack on over square (BR-PATH-002)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'C', 'white');
     // Block over square (5,4) [over (0,+1)] with size 2 stack (> source size 1)
     putStack(pos, 5, 4, [
@@ -468,7 +457,7 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Cannon jump NOT blocked by small stack on over square', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'C', 'white');
     putPiece(pos, 5, 4, 'P', 'black'); // size 1 <= source size 1 → OK
     const dests = allDests(pos, 5, 5, 'white');
@@ -476,14 +465,14 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Cannon jump NOT blocked by empty over squares', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'C', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toContain('5,2');
   });
 
   it('Archer (A) 3 jump patterns at size 1', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'A', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step: B (5,6) → 1
@@ -497,7 +486,7 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Archer jumps at size 2 — each extends by 1', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'A', owner: 'white' },
@@ -514,7 +503,7 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Musketeer (U) jump forward at size 1 — dest=(0,+2) over [(0,+1)]', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'U', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     // step: BL (6,6), BR (4,6) → 2
@@ -523,7 +512,7 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
   });
 
   it('Musketeer jump blocked by size > source on over square', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'U', 'white'); // size 1
     putStack(pos, 5, 4, [
       { type: 'P', owner: 'black' },
@@ -540,49 +529,49 @@ describe('Jump movement (BR-MOVEMENT-004)', () => {
 
 describe('Player-relative directions', () => {
   it('White Marshal at (5,5) — F = row-1 = (5,4)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toContain('5,4');
   });
 
   it('Black Marshal at (5,5) — F = row+1 = (5,6)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     expect(dests).toContain('5,6');
   });
 
   it('White Marshal at (5,5) — L = col+1 = (6,5)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toContain('6,5');
   });
 
   it('Black Marshal at (5,5) — L = col-1 = (4,5)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     expect(dests).toContain('4,5');
   });
 
   it('White Marshal at (5,5) — FL = (col+1,row-1) = (6,4)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toContain('6,4');
   });
 
   it('Black Marshal at (5,5) — FL = (col-1,row+1) = (4,6)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     expect(dests).toContain('4,6');
   });
 
   it('White and Black see opposite forward directions', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'white');
     putPiece(pos, 5, 6, 'E', 'black'); // black spear below white
     const whiteDests = allDests(pos, 5, 5, 'white');
@@ -601,7 +590,7 @@ describe('Player-relative directions', () => {
 
 describe('Mixed-ownership stacks', () => {
   it('Source stack with enemy pieces below — top piece still moves', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'black' }, // bottom: enemy
       { type: 'M', owner: 'white' }, // top: white
@@ -613,7 +602,7 @@ describe('Mixed-ownership stacks', () => {
   });
 
   it('Source stack with enemy on top — player cannot move (not their piece)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'black' },
@@ -623,7 +612,7 @@ describe('Mixed-ownership stacks', () => {
   });
 
   it('Target stack with mixed ownership — outcome by top piece owner', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'M', owner: 'white' },
@@ -640,7 +629,7 @@ describe('Mixed-ownership stacks', () => {
   });
 
   it('Target stack with enemy on top — outcome is stack or capture', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'M', owner: 'white' },
@@ -662,7 +651,7 @@ describe('Mixed-ownership stacks', () => {
 
 describe('Edge cases', () => {
   it('Piece at (1,1) — cannot move off board (step)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 1, 1, 'M', 'white');
     const dests = allDests(pos, 1, 1, 'white');
     // Only B=(1,2), L=(2,1), BL=(2,2)
@@ -676,7 +665,7 @@ describe('Edge cases', () => {
   });
 
   it('Piece at bottom edge (row 9) for white — backward goes off board', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 9, 'M', 'white');
     const dests = allDests(pos, 5, 9, 'white');
     // B = row+1 = 10 off, so 7 destinations (B, BL, BR off)
@@ -688,7 +677,7 @@ describe('Edge cases', () => {
   });
 
   it('Stack size 3 — maximum allowed', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -702,20 +691,20 @@ describe('Edge cases', () => {
   });
 
   it('Stack size 1 — minimum (no scaling bonus)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toHaveLength(8); // all 8 directions, 1 each
   });
 
   it('Empty source square — returns empty array', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     expect(moves).toHaveLength(0);
   });
 
   it('Opponent piece on source square — returns empty array', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'black');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     expect(moves).toHaveLength(0);
@@ -745,15 +734,15 @@ describe('All 14 piece types × 3 stack sizes — movement count sanity', () => 
   ];
 
   it.each(ALL_TYPES)('%s at centre size 1 — at least 1 legal move', (type) => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, type, 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests.length).toBeGreaterThanOrEqual(1);
   });
 
   it.each(ALL_TYPES)('%s at centre size 2 — more moves than size 1', (type) => {
-    const pos1 = emptyPos();
-    const pos2 = emptyPos();
+    const pos1 = emptyPosition();
+    const pos2 = emptyPosition();
     putPiece(pos1, 5, 5, type, 'white');
     putStack(pos2, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -765,8 +754,8 @@ describe('All 14 piece types × 3 stack sizes — movement count sanity', () => 
   });
 
   it.each(ALL_TYPES)('%s at centre size 3 — more moves than size 2', (type) => {
-    const pos2 = emptyPos();
-    const pos3 = emptyPos();
+    const pos2 = emptyPosition();
+    const pos3 = emptyPosition();
     putStack(pos2, 5, 5, [
       { type: 'P', owner: 'white' },
       { type, owner: 'white' },
@@ -788,13 +777,13 @@ describe('All 14 piece types × 3 stack sizes — movement count sanity', () => 
 
 describe('getLegalMoves — aggregate', () => {
   it('Empty board — returns empty array', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     const moves = getLegalMoves(pos, 'white');
     expect(moves).toHaveLength(0);
   });
 
   it('White has 1 piece — matches getLegalDestinations', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const all = getLegalMoves(pos, 'white');
     const direct = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
@@ -802,7 +791,7 @@ describe('getLegalMoves — aggregate', () => {
   });
 
   it('Finds moves for only the specified player', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 6, 'M', 'black');
     const whiteMoves = getLegalMoves(pos, 'white');
@@ -821,7 +810,7 @@ describe('getLegalMoves — aggregate', () => {
 
 describe('BR-MOVE-005 — stack size landing restriction', () => {
   it('Step: source=2, target=3 — illegal (target > source)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -843,7 +832,7 @@ describe('BR-MOVE-005 — stack size landing restriction', () => {
   });
 
   it('Step: source=3, target=3 — legal (source >= target)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -861,7 +850,7 @@ describe('BR-MOVE-005 — stack size landing restriction', () => {
   });
 
   it('Limited-range: source=1, target=2 — illegal', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'white'); // size 1
     putStack(pos, 5, 4, [
       { type: 'P', owner: 'black' },
@@ -873,7 +862,7 @@ describe('BR-MOVE-005 — stack size landing restriction', () => {
   });
 
   it('Range: source=1, target=2 — illegal', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white'); // size 1
     putStack(pos, 5, 4, [
       { type: 'P', owner: 'black' },
@@ -885,7 +874,7 @@ describe('BR-MOVE-005 — stack size landing restriction', () => {
   });
 
   it('Jump: source=1, target=2 — illegal (via BR-MOVE-005 check on dest)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'C', 'white'); // size 1
     putStack(pos, 5, 2, [
       { type: 'P', owner: 'black' },
@@ -903,7 +892,7 @@ describe('BR-MOVE-005 — stack size landing restriction', () => {
 
 describe('General range movement details', () => {
   it('General at (5,5) size 1 — range F goes to row 1', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toContain('5,1');
@@ -913,14 +902,14 @@ describe('General range movement details', () => {
   });
 
   it('General at (5,5) size 1 — range B goes to row 9', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     const dests = allDests(pos, 5, 5, 'white');
     expect(dests).toContain('5,9');
   });
 
   it('General at (5,5) size 1 — each orthogonal direction has 4 empty squares', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'G', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const rangeMoves = moves.filter((m) => m.moveClass === 'range');
@@ -935,7 +924,7 @@ describe('General range movement details', () => {
 
 describe('Spear movement combinations', () => {
   it('Spear size 1 — step FL, FR, B + limited-range F', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const classes = moves.map((m) => m.moveClass);
@@ -944,7 +933,7 @@ describe('Spear movement combinations', () => {
   });
 
   it('Spear size 2 — step FL, FR, B become 2-step each + limited-range F max 3', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'E', owner: 'white' },
@@ -956,7 +945,7 @@ describe('Spear movement combinations', () => {
   });
 
   it('Spear size 3 — step FL, FR, B become 3-step each + limited-range F max 4', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -975,7 +964,7 @@ describe('Spear movement combinations', () => {
 
 describe('Black player direction symmetry', () => {
   it('Black Marshal at (5,5) — has 8 step destinations (opposite from White)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     expect(dests).toHaveLength(8);
@@ -988,7 +977,7 @@ describe('Black player direction symmetry', () => {
   });
 
   it('Black Spear size 1 — forward = row+1 (max 2)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'E', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     expect(dests).toContain('5,6'); // F1
@@ -997,7 +986,7 @@ describe('Black player direction symmetry', () => {
   });
 
   it('Black Cannon jump forward size 1 — dest = (0,+3) from black POV = (5,8)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'C', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     // For black: positive row delta = forward = row+1
@@ -1006,7 +995,7 @@ describe('Black player direction symmetry', () => {
   });
 
   it('Black Archer jump patterns — mirrored from White', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'A', 'black');
     const dests = allDests(pos, 5, 5, 'black');
     // step: B (row-1) = (5,4)
@@ -1027,7 +1016,7 @@ describe('Black player direction symmetry', () => {
 
 describe('Jump scaling details (BR-MOVEMENT-005)', () => {
   it('Archer size 3 — each pattern extends to level 3', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -1049,7 +1038,7 @@ describe('Jump scaling details (BR-MOVEMENT-005)', () => {
   });
 
   it('Musketeer size 2 — jump extends to (0,+3)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'U', owner: 'white' },
@@ -1062,7 +1051,7 @@ describe('Jump scaling details (BR-MOVEMENT-005)', () => {
   });
 
   it('Musketeer size 3 — jump extends to (0,+4)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -1082,7 +1071,7 @@ describe('Jump scaling details (BR-MOVEMENT-005)', () => {
 
 describe('Knight scaling', () => {
   it('Knight size 2 — step L,R extend to 2, limited-range F,B extend to 3', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'N', owner: 'white' },
@@ -1099,7 +1088,7 @@ describe('Knight scaling', () => {
   });
 
   it('Knight size 3 — step L,R extend to 3, limited-range F,B extend to 4', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -1127,7 +1116,7 @@ describe('Spy movement', () => {
   });
 
   it('Spy size 1 — 4 diagonals × 2 = 8 destinations', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'Y', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     expect(moves).toHaveLength(8);
@@ -1137,7 +1126,7 @@ describe('Spy movement', () => {
   });
 
   it('Spy size 2 — 4 diagonals × 3 = 12 destinations', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'Y', owner: 'white' },
@@ -1147,7 +1136,7 @@ describe('Spy movement', () => {
   });
 
   it('Spy size 3 — 4 diagonals × 4 = 16 destinations', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -1164,7 +1153,7 @@ describe('Spy movement', () => {
 
 describe('Extended step obstruction (sizes 2-3)', () => {
   it('Step size 2 blocked at step 2 by friendly — step 1 valid empty, step 2 valid stack, step 3 invalid', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'M', owner: 'white' },
@@ -1177,7 +1166,7 @@ describe('Extended step obstruction (sizes 2-3)', () => {
   });
 
   it('Step size 3 blocked at step 1 by enemy — only step 1 valid', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -1191,7 +1180,7 @@ describe('Extended step obstruction (sizes 2-3)', () => {
   });
 
   it('Limited-range size 2 blocked at step 2 — step 1 empty valid, step 2 valid', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'E', owner: 'white' },
@@ -1210,7 +1199,7 @@ describe('Extended step obstruction (sizes 2-3)', () => {
 
 describe('Lieutenant diagonal range', () => {
   it('Lieutenant at centre size 1 — 4 diagonal range directions × up to 4 = 16 range moves', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'L', 'white');
     const rangeMoves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white').filter(
       (m) => m.moveClass === 'range',
@@ -1219,7 +1208,7 @@ describe('Lieutenant diagonal range', () => {
   });
 
   it('Lieutenant at (1,1) — only BR diagonal reachable', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 1, 1, 'L', 'white');
     const rangeMoves = getLegalDestinations(pos, { col: 1, row: 1 }, 'white').filter(
       (m) => m.moveClass === 'range',
@@ -1237,7 +1226,7 @@ describe('Lieutenant diagonal range', () => {
 
 describe('Move outcome determination', () => {
   it('Empty dest → outcome null', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     for (const m of moves) {
@@ -1248,7 +1237,7 @@ describe('Move outcome determination', () => {
   });
 
   it('Friendly dest → outcome null', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 4, 'P', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
@@ -1257,7 +1246,7 @@ describe('Move outcome determination', () => {
   });
 
   it('Enemy dest size 1 top not Marshal → outcome stack (choice)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 4, 'P', 'black');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
@@ -1266,7 +1255,7 @@ describe('Move outcome determination', () => {
   });
 
   it('Enemy dest top is Marshal → outcome capture (forced)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'M', owner: 'white' },
@@ -1281,7 +1270,7 @@ describe('Move outcome determination', () => {
   });
 
   it('Enemy dest size 3 top not Marshal → outcome capture (forced)', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -1304,7 +1293,7 @@ describe('Move outcome determination', () => {
 
 describe('Movement at board edges', () => {
   it('General at (5,1) — F goes off-board, B goes to row 9', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 1, 'G', 'white');
     const dests = allDests(pos, 5, 1, 'white');
     expect(dests).toContain('5,9'); // B max
@@ -1312,7 +1301,7 @@ describe('Movement at board edges', () => {
   });
 
   it('Fortress at (9,5) — L goes off-board (col+1=10), R reachable', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 9, 5, 'F', 'white');
     const dests = allDests(pos, 9, 5, 'white');
     // step F, L, R, BL, BR
@@ -1329,16 +1318,247 @@ describe('Movement at board edges', () => {
   });
 
   it('Pawn at (5,1) — F off-board, B = (5,2) reachable', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 1, 'P', 'white');
     const dests = allDests(pos, 5, 1, 'white');
     expect(dests).toEqual(['5,2']);
   });
 
   it('Pawn at (5,9) — B off-board, F = (5,8) reachable', () => {
-    const pos = emptyPos();
+    const pos = emptyPosition();
     putPiece(pos, 5, 9, 'P', 'white');
     const dests = allDests(pos, 5, 9, 'white');
     expect(dests).toEqual(['5,8']);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  22. BR-PATH-002 boundary — strict `>` (not `>=`) semantics         */
+/* ------------------------------------------------------------------ */
+
+describe('BR-PATH-002 boundary — strict > check', () => {
+  it('Jump: source=2, over=2 — NOT blocked (2 > 2 is false)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'C', owner: 'white' },
+    ]); // size 2
+    // Place a size-2 stack on the over square (5,4)
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]); // size 2
+    const dests = allDests(pos, 5, 5, 'white');
+    // source=2, over=2 → 2 > 2 is false → NOT blocked
+    expect(dests).toContain('5,2'); // Cannon jump forward should work
+  });
+
+  it('Jump: source=2, over=3 — blocked (3 > 2 is true)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'C', owner: 'white' },
+    ]); // size 2
+    // Place a size-3 stack on the over square (5,4)
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]); // size 3
+    const dests = allDests(pos, 5, 5, 'white');
+    // source=2, over=3 → 3 > 2 is true → blocked
+    expect(dests).not.toContain('5,2');
+  });
+
+  it('Jump: source=3, over=3 — NOT blocked (3 > 3 is false)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'C', owner: 'white' },
+    ]); // size 3
+    // Place a size-3 stack on the over square (5,4)
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]); // size 3
+    const dests = allDests(pos, 5, 5, 'white');
+    // source=3, over=3 → 3 > 3 is false → NOT blocked
+    expect(dests).toContain('5,2');
+  });
+
+  it('Jump: source=3, over=2 at level-2 over square — blocked', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'C', owner: 'white' },
+    ]); // size 3
+    // Level-1 over square (5,4) is empty; level-2 over square (5,3) has size 2
+    putStack(pos, 5, 3, [
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]); // size 2
+    const dests = allDests(pos, 5, 5, 'white');
+    // Level-2 jump: over=[(0,+1),(0,+2)], over[1]=(5,3) has size 2
+    // source=3, over=2 → 2 > 3 is false → NOT blocked
+    expect(dests).toContain('5,1'); // level-2 dest
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  23. getScaledJumps — direct unit tests                             */
+/* ------------------------------------------------------------------ */
+
+describe('getScaledJumps — direct unit tests', () => {
+  it('Cannon size 1: dest=(0,+3), over=[(0,+1),(0,+2)]', () => {
+    const base = PIECE_MOVEMENT.C.jumps[0];
+    const patterns = getScaledJumps(base, 1);
+    expect(patterns).toHaveLength(1);
+    expect(patterns[0].dest).toEqual({ col: 0, row: 3 });
+    expect(patterns[0].over).toEqual([
+      { col: 0, row: 1 },
+      { col: 0, row: 2 },
+    ]);
+  });
+
+  it('Cannon size 2: adds level-2 dest=(0,+4), over=[(0,+1),(0,+2),(0,+3)]', () => {
+    const base = PIECE_MOVEMENT.C.jumps[0];
+    const patterns = getScaledJumps(base, 2);
+    expect(patterns).toHaveLength(2);
+    expect(patterns[1].dest).toEqual({ col: 0, row: 4 });
+    expect(patterns[1].over).toEqual([
+      { col: 0, row: 1 },
+      { col: 0, row: 2 },
+      { col: 0, row: 3 },
+    ]);
+  });
+
+  it('Cannon size 3: adds level-3 dest=(0,+5), over=[...,(0,+4)]', () => {
+    const base = PIECE_MOVEMENT.C.jumps[0];
+    const patterns = getScaledJumps(base, 3);
+    expect(patterns).toHaveLength(3);
+    expect(patterns[2].dest).toEqual({ col: 0, row: 5 });
+    expect(patterns[2].over).toHaveLength(4);
+  });
+
+  it('Archer size 1: 3 patterns, each dest=(±1/0,+2), over=[(0,+1)]', () => {
+    const patterns = PIECE_MOVEMENT.A.jumps.flatMap((j) => getScaledJumps(j, 1));
+    expect(patterns).toHaveLength(3);
+    const dests = patterns.map((p) => p.dest);
+    expect(dests).toEqual(
+      expect.arrayContaining([
+        { col: -1, row: 2 },
+        { col: 0, row: 2 },
+        { col: 1, row: 2 },
+      ]),
+    );
+    for (const p of patterns) {
+      expect(p.over).toEqual([{ col: 0, row: 1 }]);
+    }
+  });
+
+  it('Archer size 2: each pattern extends by 1', () => {
+    const patterns = PIECE_MOVEMENT.A.jumps.flatMap((j) => getScaledJumps(j, 2));
+    expect(patterns).toHaveLength(6); // 3 base × 2 levels
+    const dests = patterns.map((p) => p.dest);
+    expect(dests).toEqual(
+      expect.arrayContaining([
+        { col: -1, row: 2 },
+        { col: 0, row: 2 },
+        { col: 1, row: 2 },
+        { col: -2, row: 3 },
+        { col: 0, row: 3 },
+        { col: 2, row: 3 },
+      ]),
+    );
+  });
+
+  it('Musketeer size 1: dest=(0,+2), over=[(0,+1)]', () => {
+    const base = PIECE_MOVEMENT.U.jumps[0];
+    const patterns = getScaledJumps(base, 1);
+    expect(patterns).toHaveLength(1);
+    expect(patterns[0].dest).toEqual({ col: 0, row: 2 });
+    expect(patterns[0].over).toEqual([{ col: 0, row: 1 }]);
+  });
+
+  it('Musketeer size 3: 3 levels', () => {
+    const base = PIECE_MOVEMENT.U.jumps[0];
+    const patterns = getScaledJumps(base, 3);
+    expect(patterns).toHaveLength(3);
+    expect(patterns[0].dest).toEqual({ col: 0, row: 2 });
+    expect(patterns[1].dest).toEqual({ col: 0, row: 3 });
+    expect(patterns[2].dest).toEqual({ col: 0, row: 4 });
+  });
+
+  it('Empty over array throws explicit error', () => {
+    const badBase = { dest: { col: 0, row: 2 }, over: [] };
+    expect(() => getScaledJumps(badBase, 1)).toThrow(/at least one jumped-over square/);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  24. Black at extreme corners                                       */
+/* ------------------------------------------------------------------ */
+
+describe('Black at extreme corners', () => {
+  it('Black Marshal at (1,1) — top-right corner; only F, R, FR reachable', () => {
+    const pos = emptyPosition();
+    putPiece(pos, 1, 1, 'M', 'black');
+    const dests = allDests(pos, 1, 1, 'black');
+    // Black at (1,1): F=row+1=(1,2), R=col-1=(0,1) off, L=col+1=(2,1),
+    //                 B=row-1=(1,0) off, FL=(2,2), FR=(0,2) off, BL=(2,0) off, BR=(0,0) off
+    // Valid: F=(1,2), L=(2,1), FL=(2,2) = 3 destinations
+    expect(dests).toHaveLength(3);
+    expect(dests).toEqual(expect.arrayContaining(['1,2', '2,1', '2,2']));
+  });
+
+  it('Black Marshal at (9,9) — bottom-left corner; only B, L, BL reachable', () => {
+    const pos = emptyPosition();
+    putPiece(pos, 9, 9, 'M', 'black');
+    const dests = allDests(pos, 9, 9, 'black');
+    // Black at (9,9): F=row+1=(9,10) off, B=row-1=(9,8),
+    //                 L=col+1=(10,9) off, R=col-1=(8,9),
+    //                 FL=(10,10) off, FR=(8,10) off, BL=(10,8) off, BR=(8,8)
+    // Valid: B=(9,8), R=(8,9), BR=(8,8) = 3 destinations
+    expect(dests).toHaveLength(3);
+    expect(dests).toEqual(expect.arrayContaining(['9,8', '8,9', '8,8']));
+  });
+
+  it('Black Spear at (5,9) — bottom edge; F off-board, B = (5,8) reachable', () => {
+    const pos = emptyPosition();
+    putPiece(pos, 5, 9, 'E', 'black');
+    const dests = allDests(pos, 5, 9, 'black');
+    // Black Spear: F=row+1=(5,10) off, B=row-1=(5,8), FL/FR also off
+    // Only B and step B-directions are valid
+    expect(dests).toContain('5,8');
+    expect(dests).not.toContain('5,10'); // off-board
+  });
+
+  it('Black Cannon at (5,5) — forward jump = row+3 = (5,8)', () => {
+    const pos = emptyPosition();
+    putPiece(pos, 5, 5, 'C', 'black');
+    const dests = allDests(pos, 5, 5, 'black');
+    // Black Cannon forward: positive row = row+3 = (5,8)
+    expect(dests).toContain('5,8');
+  });
+
+  it('White and Black at (1,1) see opposite reachable sets', () => {
+    const posW = emptyPosition();
+    const posB = emptyPosition();
+    putPiece(posW, 1, 1, 'M', 'white');
+    putPiece(posB, 1, 1, 'M', 'black');
+    const whiteDests = allDests(posW, 1, 1, 'white');
+    const blackDests = allDests(posB, 1, 1, 'black');
+    // White at (1,1): F=row-1 off, B=row+1=(1,2), L=col+1=(2,1), R=col-1 off,
+    //                 FL/FR off, BL=(2,2), BR off
+    // Black at (1,1): F=row+1=(1,2), B=row-1 off, L=col+1=(2,1), R=col-1 off,
+    //                 FL=(2,2), FR off, BL/BR off
+    // Both: B/F=(1,2), L=(2,1), BL/FL=(2,2) = 3 each, but different directions
+    expect(whiteDests).toHaveLength(3);
+    expect(blackDests).toHaveLength(3);
+    // Same squares, different direction labels
+    expect(whiteDests.sort()).toEqual(blackDests.sort());
   });
 });

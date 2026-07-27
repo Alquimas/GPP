@@ -8,7 +8,6 @@
  */
 
 import type {
-  BoardCoord,
   CoordDelta,
   Direction,
   JumpPattern,
@@ -22,9 +21,10 @@ import { PIECE_MOVEMENT } from '../constants.js';
 import {
   applyDirection,
   getStack,
-  squareInBounds,
+  squareFromIndex,
   stackSize as getStackSize,
   topPiece,
+  trySquare,
 } from './board.js';
 
 /* ------------------------------------------------------------------ */
@@ -51,9 +51,19 @@ function canLandOnStack(sourceSize: number, targetStack: Stack | null): boolean 
 
 /**
  * Determine move outcome based on target ownership and stack composition.
- * - null  → empty or friendly (automatic stack)
- * - 'stack'  → enemy, size < 3, top is not Marshal (player may choose)
+ * - null      → empty or friendly (automatic stack)
+ * - 'stack'   → enemy, size < 3, top is not Marshal (player may choose)
  * - 'capture' → enemy, size = 3 OR top is Marshal (forced)
+ *
+ * ## BR-STACK-004 separation
+ * This function does NOT enforce "no piece may be placed or moved on top
+ * of a Marshal."  The movement engine computes every geometrically
+ * reachable square; the semantic prohibition on stacking onto a Marshal
+ * is enforced by the validator (Step 8 — `validateMove` / `validateArata`)
+ * which rejects moves whose target top is a friendly Marshal.  Callers
+ * that need only the rule-legal move set must therefore run the result
+ * through the validator — `getLegalDestinations` alone is necessary but
+ * not sufficient for legality.
  */
 function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcome | null {
   if (targetStack === null) return null;
@@ -68,18 +78,15 @@ function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcom
  * Convert a player-relative CoordDelta into an absolute board Square.
  * For White: positive row = forward (row-1), positive col = left (col+1).
  * For Black: negate both components.
+ *
+ * Returns `null` if the computed square lies outside the board — callers
+ * should treat null as "off-board destination" (skip / block, depending
+ * on movement class).
  */
-function applyCoordDelta(origin: Square, delta: CoordDelta, player: Player): Square {
-  if (player === 'white') {
-    return {
-      col: (origin.col + delta.col) as BoardCoord,
-      row: (origin.row - delta.row) as BoardCoord,
-    };
-  }
-  return {
-    col: (origin.col - delta.col) as BoardCoord,
-    row: (origin.row + delta.row) as BoardCoord,
-  };
+function applyCoordDelta(origin: Square, delta: CoordDelta, player: Player): Square | null {
+  const col = player === 'white' ? origin.col + delta.col : origin.col - delta.col;
+  const row = player === 'white' ? origin.row - delta.row : origin.row + delta.row;
+  return trySquare(col, row);
 }
 
 /* ------------------------------------------------------------------ */
@@ -164,10 +171,10 @@ function computeTraceMovement(
         break; // stop tracing past obstruction
       }
 
-      // Empty square — always valid (outcome = null → automatic stack)
-      if (canLandOnStack(sourceSize, null)) {
-        results.push({ dest: next, moveClass, outcome: null });
-      }
+      // Empty square — always a valid landing (BR-MOVE-005 is trivially
+      // satisfied for an empty target; `canLandOnStack(sourceSize, null)`
+      // is always true, so we push unconditionally rather than re-check).
+      results.push({ dest: next, moveClass, outcome: null });
 
       col = next.col;
       row = next.row;
@@ -189,13 +196,30 @@ function computeTraceMovement(
  * pattern.  The previous level's destination becomes part of the jumped-
  * over set.
  */
-function getScaledJumps(
+/**
+ * Generate all jump patterns for a given base pattern up to a target
+ * stack size, following the scaling rule in BR-MOVEMENT-005.
+ *
+ * Each extension adds the vector `dest - farthest(over)` from the base
+ * pattern.  The previous level's destination becomes part of the jumped-
+ * over set.
+ *
+ * @throws if `base.over` is empty — a jump pattern with no intervening
+ *   squares is not a meaningful jump (it would be a step) and signals a
+ *   data error in `PIECE_MOVEMENT`.  Failing loudly here prevents silent
+ *   divergence under differential testing against a future Core.
+ */
+export function getScaledJumps(
   base: JumpPattern,
   upToLevel: number,
 ): { dest: CoordDelta; over: CoordDelta[] }[] {
   const patterns: { dest: CoordDelta; over: CoordDelta[] }[] = [];
 
-  if (base.over.length === 0) return patterns;
+  if (base.over.length === 0) {
+    throw new Error(
+      `Jump pattern must have at least one jumped-over square; got dest=${JSON.stringify(base.dest)}, over=[]`,
+    );
+  }
 
   // Extension vector: dest - farthest(over)
   const farthestOver = base.over[base.over.length - 1];
@@ -252,14 +276,17 @@ function computeJumpMovement(
   for (const base of baseJumps) {
     const patterns = getScaledJumps(base, sourceSize);
     for (const pattern of patterns) {
+      // `applyCoordDelta` returns null for off-board destinations — skip.
       const destSquare = applyCoordDelta(square, pattern.dest, player);
-      if (!squareInBounds(destSquare)) continue;
+      if (!destSquare) continue;
 
-      // BR-PATH-002: check all jumped-over squares
+      // BR-PATH-002: check all jumped-over squares.
+      // An off-board over-square means the jump pattern itself is
+      // geometrically impossible from this origin — block.
       let blocked = false;
       for (const over of pattern.over) {
         const overSquare = applyCoordDelta(square, over, player);
-        if (!squareInBounds(overSquare)) {
+        if (!overSquare) {
           blocked = true;
           break;
         }
@@ -363,7 +390,8 @@ export function getLegalMoves(position: Position, player: Player): LegalMove[] {
       const stack = position[r][c];
       if (!stack) continue;
       if (topPiece(stack).owner === player) {
-        const square: Square = { col: (c + 1) as BoardCoord, row: (r + 1) as BoardCoord };
+        // squareFromIndex is safe here: r, c ∈ [0,8] ⇒ +1 ∈ [1,9].
+        const square = squareFromIndex(r, c);
         results.push(...getLegalDestinations(position, square, player));
       }
     }

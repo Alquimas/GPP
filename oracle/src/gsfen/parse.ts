@@ -164,6 +164,12 @@ function parsePosition(posStr: string): FieldResult<Position> {
         const owner: Player = ch === upper ? 'white' : 'black';
         pieces.push({ type: upper, owner });
       }
+      // SAFETY: the cast is safe because `item.length` was validated to be
+      // in 1..3 at the top of this branch (see the `item.length < 1 || item.length > 3`
+      // guard above).  Each character produces exactly one Piece, so
+      // `pieces.length === item.length ∈ {1,2,3}`, satisfying the Stack
+      // tuple type.  `validateState` (V2) re-checks this invariant after
+      // parsing as a defence-in-depth measure.
       const stack = pieces as Stack;
 
       if (pos < 0) {

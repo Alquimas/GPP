@@ -21,6 +21,85 @@ import type {
 } from '../types.js';
 
 /* ------------------------------------------------------------------ */
+/*  Runtime-validated narrowing helpers                                */
+/*                                                                     */
+/*  These are the SINGLE points of truth for narrowing `number` →      */
+/*  `BoardCoord` and `Piece[]` → `Stack`.  Every other call site in    */
+/*  the codebase should route through one of these helpers instead of  */
+/*  using a raw `as BoardCoord` / `as Stack` cast.                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Type guard: true iff `n` is an integer in 1..9.
+ *
+ * Narrows `n` to `BoardCoord` on the true branch, so downstream code
+ * can build a `Square` without a cast.
+ */
+export function isBoardCoord(n: number): n is BoardCoord {
+  return Number.isInteger(n) && n >= 1 && n <= 9;
+}
+
+/**
+ * Build a Square from raw coordinates. Returns null if either component
+ * is outside the 1..9 board range.
+ *
+ * Prefer this over a manual `as BoardCoord` cast — the type predicate
+ * in `isBoardCoord` does the narrowing.
+ */
+export function trySquare(col: number, row: number): Square | null {
+  if (!isBoardCoord(col) || !isBoardCoord(row)) return null;
+  return { col, row };
+}
+
+/**
+ * Build a Square from 0-indexed position indices (r, c each in 0..8).
+ *
+ * The cast is provably safe here: c ∈ [0,8] ⇒ c+1 ∈ [1,9].  Isolating
+ * the cast in one helper keeps the invariant auditable.
+ */
+export function squareFromIndex(r: number, c: number): Square {
+  return { col: (c + 1) as BoardCoord, row: (r + 1) as BoardCoord };
+}
+
+/**
+ * Build a Stack from a piece array with runtime length validation.
+ *
+ * @throws if `pieces.length` is not 1, 2, or 3.
+ *
+ * Use this at parser boundaries and anywhere a Stack is constructed
+ * from dynamic data.  The `as Stack` cast is safe because the length
+ * check above is the Stack tuple type's only non-type-level invariant.
+ */
+export function createStack(pieces: Piece[]): Stack {
+  if (pieces.length < 1 || pieces.length > 3) {
+    throw new Error(`Stack must have 1–3 pieces, got ${pieces.length}`);
+  }
+  return pieces as Stack;
+}
+
+/**
+ * Validate that a Position has the required 9×9 shape.
+ *
+ * @throws if the shape is wrong.  Cheap enough to call at construction
+ * time (e.g. after parsing a GSFEN) but not on every query.
+ */
+export function validatePosition(pos: Position): void {
+  if (pos.length !== 9) {
+    throw new Error(`Position must have 9 rows, got ${pos.length}`);
+  }
+  for (let r = 0; r < 9; r++) {
+    if (!Array.isArray(pos[r]) || pos[r].length !== 9) {
+      throw new Error(`Position row ${r} must be an array of length 9`);
+    }
+  }
+}
+
+/** Build an empty 9×9 Position (every square null). */
+export function emptyPosition(): Position {
+  return Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => null));
+}
+
+/* ------------------------------------------------------------------ */
 /*  Private helper – iterates each occupied square on the board        */
 /* ------------------------------------------------------------------ */
 
@@ -186,10 +265,8 @@ export function applyDirection(
   const base = WHITE_DIR_DELTA[direction];
   const dc = player === 'white' ? base.col : -base.col;
   const dr = player === 'white' ? base.row : -base.row;
-  const newCol = col + dc;
-  const newRow = row + dr;
-  if (newCol < 1 || newCol > 9 || newRow < 1 || newRow > 9) return null;
-  return { col: newCol as BoardCoord, row: newRow as BoardCoord };
+  // trySquare narrows via the isBoardCoord type predicate — no cast needed.
+  return trySquare(col + dc, row + dr);
 }
 
 /** True if the square has a stack whose top piece belongs to `player`. */

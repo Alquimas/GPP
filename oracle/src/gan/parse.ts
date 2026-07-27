@@ -9,15 +9,10 @@
  * @module
  */
 
-import {
-  type Action,
-  type BoardCoord,
-  type PieceType,
-  type Square,
-  type TurncoatLevels,
-} from '../types.js';
+import { type Action, type PieceType, type Square, type TurncoatLevels } from '../types.js';
 import { GameError } from '../errors.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
+import { trySquare } from '../board/board.js';
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -61,7 +56,15 @@ export function parseSquare(s: string): Square {
   const col = parseInt(colStr, 10);
   const row = parseInt(rowStr, 10);
 
-  return { col: col as BoardCoord, row: row as BoardCoord };
+  // The regex guarantees col, row ∈ 1..9, so trySquare cannot return null.
+  // Routing through trySquare keeps the `as BoardCoord` cast confined to
+  // the single audited helper in board.ts.
+  const sq = trySquare(col, row);
+  if (!sq) {
+    // Defensive: regex should prevent this path from ever executing.
+    throw new GameError(`Invalid square "${s}" (internal — regex should have rejected)`, 'A1');
+  }
+  return sq;
 }
 
 // ---------------------------------------------------------------------------

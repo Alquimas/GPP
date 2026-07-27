@@ -36,6 +36,22 @@ export type Stack = [Piece] | [Piece, Piece] | [Piece, Piece, Piece];
  * The 9×9 board, row-major: position[row][col].
  * Row 0 = Row 1 (top), Row 8 = Row 9 (bottom).
  * null = empty square.
+ *
+ * ## Contract
+ * A valid Position MUST satisfy:
+ *   - `position.length === 9`
+ *   - `position[r].length === 9` for every r ∈ 0..8
+ *   - each cell is `null` (empty square) or a `Stack` of 1–3 pieces
+ *
+ * The type system cannot enforce the rectangular shape, so the factory
+ * `emptyPosition()` and the runtime checker `validatePosition()` in
+ * `board/board.ts` are the single points of truth.  Any code that
+ * constructs a Position by hand should pass it through
+ * `validatePosition()` before use, or use `emptyPosition()` as the seed.
+ *
+ * Parsers (GSFEN, GAN) may produce malformed data — the semantic
+ * validators (`validateState`, V2) catch stack-shape violations, but
+ * `validatePosition()` is the cheaper, earlier guard for the 9×9 shape.
  */
 export type Position = (Stack | null)[][];
 
