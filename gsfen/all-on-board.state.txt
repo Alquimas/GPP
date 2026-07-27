@@ -1,0 +1,21 @@
+== Board ==
+    9    8    7  6    5   4  3  2  1
+ 1  a/c  e/f  m  n/p  s/t .  .  .  .
+ 2  a    e    g  j    l   n  p  s  u
+ 3  e    j    p  y/y  p   f  .  .  .
+ 4  .    .    .  .    .   .  .  .  .
+ 5  .    .    .  .    .   .  .  .  .
+ 6  .    .    .  .    .   .  .  .  .
+ 7  E    J    P  Y/Y  P   F  .  .  .
+ 8  A    E    G  J    L   N  P  S  U
+ 9  A/C  E/F  M  N/P  S/T .  .  .  .
+
+== Hands ==
+white: A0 C0 E0 F0 G0 J0 L0 M0 N0 P0 S0 T0 U0 Y0
+black: A0 C0 E0 F0 G0 J0 L0 M0 N0 P0 S0 T0 U0 Y0
+
+== Turn ==
+phase: battle  active: white  counter: 1  done: none
+
+== Name ==
+all-on-board-valid

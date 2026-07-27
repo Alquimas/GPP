@@ -1,0 +1,18 @@
+== Board ==
+    9    8    7    6    5    4    3    2    1
+ 1  .    .    .    .    m    .    .    .    .
+ 2  .    .    .    .    g    .    .    .    .
+ 3  .    .    .    .    .    .    .    .    .
+ 4  .    .    .    .    n    .    .    .    .
+ 5  .    .    .    .    A    .    .    .    .
+ 6  .    .    .    .    .    .    .    .    .
+ 7  .    .    .    .    .    .    .    .    .
+ 8  .    .    .    .    G    .    .    .    .
+ 9  .    .    .    .    M    .    .    .    .
+== Hands ==
+white: A0 C1 E3 F2 G0 J2 L1 M0 N2 P3 S2 T1 U1 Y2
+black: A2 C1 E3 F2 G0 J2 L1 M0 N0 P4 S1 T1 U1 Y2
+== Turn ==
+phase: battle  active: white  counter: 40  done: none
+== Name ==
+deep-capture-exchange

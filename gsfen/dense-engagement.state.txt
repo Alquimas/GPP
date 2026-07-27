@@ -1,0 +1,18 @@
+== Board ==
+    9     8     7     6     5     4     3     2     1
+ 1  .     .     p     .     .     .     e     .     .
+ 2  .     .     .     .     g/n   .     .     .     .
+ 3  .     .     a     .     m     .     a     .     .
+ 4  .     .     .     .     .     .     .     .     .
+ 5  .     .     Y/N   .     .     .     F     .     .
+ 6  .     .     .     .     E/P   .     .     .     .
+ 7  .     .     .     P/S   .     .     P/U   .     .
+ 8  .     .     s     .     .     G     s     .     .
+ 9  .     .     .     .     M     .     .     .     .
+== Hands ==
+white: A1 C1 E2 F0 G0 J2 L1 M0 N0 P0 S1 T1 U0 Y1
+black: A0 C1 E2 F2 G0 J1 L1 M0 N1 P1 S0 T0 U0 Y0
+== Turn ==
+phase: battle  active: white  counter: 45  done: none
+== Name ==
+dense-engagement

@@ -1,4 +1,4 @@
-import { type MovementDef, type PieceType } from './types.js';
+import { type Hand, type MovementDef, type PieceType } from './types.js';
 
 /** Letter → full English name. */
 export const PIECE_NAMES: Record<PieceType, string> = {
@@ -35,6 +35,27 @@ export const INITIAL_COUNTS: Record<PieceType, number> = {
   U: 1,
   Y: 2,
 };
+
+/** A Hand record with every count at 0 — the canonical empty hand. */
+export const EMPTY_HAND: Hand = {
+  A: 0,
+  C: 0,
+  E: 0,
+  F: 0,
+  G: 0,
+  J: 0,
+  L: 0,
+  M: 0,
+  N: 0,
+  P: 0,
+  S: 0,
+  T: 0,
+  U: 0,
+  Y: 0,
+};
+
+/** A Hand record with every count at its initial value — the canonical full hand. */
+export const FULL_HAND: Hand = { ...INITIAL_COUNTS };
 
 /**
  * Declarative movement rules per piece type (White's perspective).

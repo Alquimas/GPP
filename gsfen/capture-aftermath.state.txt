@@ -1,0 +1,18 @@
+== Board ==
+    9     8     7     6     5     4     3     2     1
+ 1  .     .     .     .     m     .     .     .     .
+ 2  .     .     .     .     a     .     .     .     .
+ 3  .     .     .     .     .     .     .     .     .
+ 4  .     .     .     .     .     .     .     .     .
+ 5  .     .     .     .     N     .     .     .     .
+ 6  .     .     .     .     n/Y   .     .     .     .
+ 7  .     .     .     .     .     .     .     .     .
+ 8  .     .     .     .     G/P   .     .     .     .
+ 9  .     .     .     .     M     .     .     .     .
+== Hands ==
+white: A2 C1 E3 F2 G0 J1 L1 M0 N1 P2 S2 T1 U1 Y1
+black: A0 C1 E3 F2 G1 J1 L1 M0 N1 P4 S2 T1 U1 Y1
+== Turn ==
+phase: battle  active: black  counter: 22  done: none
+== Name ==
+capture-aftermath

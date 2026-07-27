@@ -1,0 +1,18 @@
+== Board ==
+    9     8     7     6     5     4     3     2     1
+ 1  .     .     .     .     .     e/m   .     .     .
+ 2  .     .     .     .     .     .     .     .     .
+ 3  .     .     .     .     .     .     .     .     .
+ 4  .     .     .     .     .     .     .     .     .
+ 5  .     .     .     .     .     .     .     .     .
+ 6  .     .     .     .     .     .     .     .     .
+ 7  .     .     .     .     M     .     .     .     .
+ 8  .     .     .     .     .     .     .     .     .
+ 9  .     .     .     .     .     .     .     .     .
+== Hands ==
+white: A2 C1 E3 F2 G1 J2 L1 M0 N1 P2 S2 T1 U1 Y2
+black: A2 C1 E2 F1 G1 J2 L1 M0 N2 P4 S1 T1 U1 Y2
+== Turn ==
+phase: battle  active: white  counter: 35  done: none
+== Name ==
+sparse-board

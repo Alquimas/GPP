@@ -1,0 +1,18 @@
+== Board ==
+    9    8    7      6      5      4      3      2      1
+ 1  .    .    .      .      m      a/c/e  f/f/j  j/l/n  n/p/u
+ 2  .    .    .      .      g/s/t  .      .      .      .
+ 3  .    .    .      .      y/y    .      .      .      .
+ 4  .    .    .      .      .      .      .      .      .
+ 5  .    .    .      .      .      .      .      .      .
+ 6  .    .    .      .      .      .      .      .      .
+ 7  .    .    .      .      .      .      .      .      .
+ 8  .    .    .      .      G/S/T  .      .      .      .
+ 9  .    .    .      .      M      A/C/E  E/F/J  L/N/P  P/U/Y
+== Hands ==
+white: A0 C0 E0 F0 G0 J0 L0 M0 N0 P0 S0 T0 U0 Y0
+black: a0 c0 e0 f0 g0 j0 l0 m0 n0 p0 s0 t0 u0 y0
+== Turn ==
+phase: battle  active: white  counter: 60  done: none
+== Name ==
+empty-hands-endgame

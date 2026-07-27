@@ -1,0 +1,18 @@
+== Board ==
+    9    8    7    6    5    4    3    2    1
+ 1  .    .    .    .    m    .    .    .    .
+ 2  .    .    .    .    g/s/t .   .    .    .
+ 3  .    .    .    .    p/Y/n .   .    .    .
+ 4  .    .    E    .    .    .    e    .    .
+ 5  .    .    .    .    .    .    .    .    .
+ 6  .    .    f    .    .    .    F    .    .
+ 7  .    .    .    .    P/y/N .   .    .    .
+ 8  .    .    .    .    G/S/T .   .    .    .
+ 9  .    .    .    .    M    .    .    .    .
+== Hands ==
+white: A2 C1 E2 F1 G0 J2 L1 M0 N1 P3 S1 T0 U1 Y1
+black: A2 C1 E2 F1 G0 J2 L1 M0 N1 P3 S1 T0 U1 Y1
+== Turn ==
+phase: battle  active: white  counter: 30  done: none
+== Name ==
+triple-stack-battlefield

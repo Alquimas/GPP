@@ -1,0 +1,18 @@
+== Board ==
+    9     8     7     6     5     4     3     2     1
+ 1  .     .     .     .     m     .     .     .     .
+ 2  .     .     .     .     g/e/n .     .     .     .
+ 3  .     .     .     .     .     .     .     .     .
+ 4  .     .     .     .     .     .     .     .     .
+ 5  .     .     .     .     P/Y/T .     .     .     .
+ 6  .     .     .     .     .     .     .     .     .
+ 7  .     .     .     .     .     .     .     .     .
+ 8  .     .     .     .     G/P/N .     .     .     .
+ 9  .     .     .     .     M     .     .     .     .
+== Hands ==
+white: A2 C1 E2 F2 G0 J2 L1 M0 N1 P1 S1 T0 U1 Y1
+black: A1 C1 E2 F2 G0 J2 L1 M0 N1 P4 S2 T0 U1 Y1
+== Turn ==
+phase: battle  active: black  counter: 18  done: none
+== Name ==
+three-deep-stacks

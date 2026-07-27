@@ -1,0 +1,18 @@
+== Board ==
+    9     8     7     6     5     4     3     2     1
+ 1  .     .     .     .     m     .     .     .     .
+ 2  .     .     .     .     g     .     .     .     .
+ 3  .     .     .     .     s     .     .     .     .
+ 4  .     .     .     .     .     .     .     .     .
+ 5  .     .     .     .     P/y/T .     .     .     .
+ 6  .     .     .     .     .     .     .     .     .
+ 7  .     .     .     .     A     .     .     .     .
+ 8  .     .     .     .     G/S   .     .     .     .
+ 9  .     .     .     .     M     .     .     .     .
+== Hands ==
+white: A0 C1 E2 F2 G0 J2 L1 M0 N2 P3 S0 T0 U1 Y1
+black: A1 C1 E3 F2 G0 J2 L1 M0 N1 P4 S0 T1 U1 Y1
+== Turn ==
+phase: battle  active: white  counter: 14  done: none
+== Name ==
+battle-midgame
