@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as fc from 'fast-check';
 import {
   serializeGAN,
   serializeSquare,
@@ -8,7 +9,7 @@ import {
   serializeArata,
 } from '../../src/gan/serialize.js';
 import { parseGAN, type ParseResult } from '../../src/gan/parse.js';
-import type { Action } from '../../src/types.js';
+import type { Action, TurncoatLevels, BoardCoord } from '../../src/types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -738,4 +739,288 @@ describe('round-trip — serialize(parse(gan)) === gan invariant', () => {
       expect(serialized).toBe(gan);
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Property-based tests — GAN grammar compliance
+// ---------------------------------------------------------------------------
+
+describe('property-based — GAN grammar compliance', () => {
+  // GAN grammar regex patterns
+  const SQUARE_PATTERN = '[1-9]-[1-9]';
+  const PIECE_PATTERN = '[ACEFGJLMNPSTUY]';
+  const OUTCOME_PATTERN = '[=x]?';
+  const TURNCOAT_PATTERN = '(\\+1|\\+2|\\+12)?';
+
+  const PLACEMENT_PATTERN = `^${PIECE_PATTERN}${SQUARE_PATTERN}!?$`;
+  const MOVE_PATTERN = `^${SQUARE_PATTERN}>${SQUARE_PATTERN}${OUTCOME_PATTERN}${TURNCOAT_PATTERN}$`;
+  const ARATA_PATTERN = `^${PIECE_PATTERN}\\*${SQUARE_PATTERN}${TURNCOAT_PATTERN}$`;
+
+  // Arbitraries for generating random actions
+  const pieceArb = fc.constantFrom(
+    'A',
+    'C',
+    'E',
+    'F',
+    'G',
+    'J',
+    'L',
+    'M',
+    'N',
+    'P',
+    'S',
+    'T',
+    'U',
+    'Y',
+  );
+  const boardCoordArb = fc.integer({ min: 1, max: 9 }).map((n) => n as BoardCoord);
+  const squareArb = fc.record({ col: boardCoordArb, row: boardCoordArb });
+  const turncoatArb = fc.constantFrom<TurncoatLevels>([], [1], [2], [1, 2]);
+  const outcomeArb = fc.constantFrom<'stack' | 'capture' | null>('stack', 'capture', null);
+
+  const placementArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('placement' as const),
+    piece: pieceArb,
+    dest: squareArb,
+    done: fc.boolean(),
+  });
+
+  const moveArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('move' as const),
+    origin: squareArb,
+    dest: squareArb,
+    outcome: outcomeArb,
+    turncoat: turncoatArb,
+  });
+
+  const arataArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('arata' as const),
+    piece: pieceArb,
+    dest: squareArb,
+    turncoat: turncoatArb,
+  });
+
+  const actionArb = fc.oneof(placementArb, moveArb, arataArb);
+
+  it('serialized output always matches GAN grammar', () => {
+    fc.assert(
+      fc.property(actionArb, (action: Action) => {
+        const serialized = serializeGAN(action);
+
+        // Check which pattern should match based on action kind
+        if (action.kind === 'placement') {
+          expect(serialized).toMatch(new RegExp(PLACEMENT_PATTERN));
+        } else if (action.kind === 'move') {
+          expect(serialized).toMatch(new RegExp(MOVE_PATTERN));
+        } else if (action.kind === 'arata') {
+          expect(serialized).toMatch(new RegExp(ARATA_PATTERN));
+        }
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('serialized output never contains whitespace', () => {
+    fc.assert(
+      fc.property(actionArb, (action: Action) => {
+        const serialized = serializeGAN(action);
+        expect(serialized).not.toMatch(/\s/);
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('serialized output never contains annotation tokens', () => {
+    fc.assert(
+      fc.property(actionArb, (action: Action) => {
+        const serialized = serializeGAN(action);
+        // No check/checkmate marks, move numbers, or comments
+        // Note: + is valid for turncoat notation, so we only check for other symbols
+        expect(serialized).not.toMatch(/#|[()[\]{}]/);
+        // ! only allowed at end of placement
+        if (action.kind !== 'placement' || !action.done) {
+          expect(serialized).not.toContain('!');
+        }
+      }),
+      { numRuns: 100 },
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Property-based tests — Canonicity rules (A1-A6)
+// ---------------------------------------------------------------------------
+
+describe('property-based — canonicity rules', () => {
+  const pieceArb = fc.constantFrom(
+    'A',
+    'C',
+    'E',
+    'F',
+    'G',
+    'J',
+    'L',
+    'M',
+    'N',
+    'P',
+    'S',
+    'T',
+    'U',
+    'Y',
+  );
+  const boardCoordArb = fc.integer({ min: 1, max: 9 }).map((n) => n as BoardCoord);
+  const squareArb = fc.record({ col: boardCoordArb, row: boardCoordArb });
+  const turncoatArb = fc.constantFrom<TurncoatLevels>([], [1], [2], [1, 2]);
+  const outcomeArb = fc.constantFrom<'stack' | 'capture' | null>('stack', 'capture', null);
+
+  const moveArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('move' as const),
+    origin: squareArb,
+    dest: squareArb,
+    outcome: outcomeArb,
+    turncoat: turncoatArb,
+  });
+
+  const arataArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('arata' as const),
+    piece: pieceArb,
+    dest: squareArb,
+    turncoat: turncoatArb,
+  });
+
+  it('A2: turncoat token only present when elected (non-empty)', () => {
+    fc.assert(
+      fc.property(fc.oneof(moveArb, arataArb), (action: Action) => {
+        const serialized = serializeGAN(action);
+        const hasTurncoatToken = serialized.includes('+');
+        // Both move and arata have turncoat property
+        const turncoatData =
+          action.kind === 'move' || action.kind === 'arata' ? action.turncoat : [];
+        const hasTurncoatData = turncoatData.length > 0;
+
+        // Turncoat token should be present iff turncoat data is present
+        expect(hasTurncoatToken).toBe(hasTurncoatData);
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('A3: turncoat levels are always ascending, no duplicates', () => {
+    fc.assert(
+      fc.property(fc.oneof(moveArb, arataArb), (action: Action) => {
+        const serialized = serializeGAN(action);
+        // Both move and arata have turncoat property
+        const turncoatData =
+          action.kind === 'move' || action.kind === 'arata' ? action.turncoat : [];
+
+        if (turncoatData.length === 0) {
+          // No turncoat token
+          expect(serialized).not.toMatch(/\+\d/);
+        } else if (turncoatData.length === 1) {
+          // Single level: +1 or +2
+          expect(serialized).toMatch(/\+[12]/);
+        } else if (turncoatData.length === 2) {
+          // Both levels: must be +12 (ascending)
+          expect(serialized).toMatch(/\+12/);
+          // Must not be +21 (descending) or +11/+22 (duplicates)
+          expect(serialized).not.toMatch(/\+21/);
+          expect(serialized).not.toMatch(/\+11/);
+          expect(serialized).not.toMatch(/\+22/);
+        }
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('A4: ! only appears on placements with done=true', () => {
+    const placementArb: fc.Arbitrary<Action> = fc.record({
+      kind: fc.constant('placement' as const),
+      piece: pieceArb,
+      dest: squareArb,
+      done: fc.boolean(),
+    });
+
+    fc.assert(
+      fc.property(fc.oneof(placementArb, moveArb, arataArb), (action: Action) => {
+        const serialized = serializeGAN(action);
+        const hasBang = serialized.endsWith('!');
+
+        if (action.kind === 'placement') {
+          // Placement: ! iff done=true
+          expect(hasBang).toBe(action.done);
+        } else {
+          // Move/Arata: never has !
+          expect(hasBang).toBe(false);
+        }
+      }),
+      { numRuns: 100 },
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Property-based tests — Inverse property (parse∘serialize = id)
+// ---------------------------------------------------------------------------
+
+describe('property-based — inverse property', () => {
+  const pieceArb = fc.constantFrom(
+    'A',
+    'C',
+    'E',
+    'F',
+    'G',
+    'J',
+    'L',
+    'M',
+    'N',
+    'P',
+    'S',
+    'T',
+    'U',
+    'Y',
+  );
+  const boardCoordArb = fc.integer({ min: 1, max: 9 }).map((n) => n as BoardCoord);
+  const squareArb = fc.record({ col: boardCoordArb, row: boardCoordArb });
+  const turncoatArb = fc.constantFrom<TurncoatLevels>([], [1], [2], [1, 2]);
+  const outcomeArb = fc.constantFrom<'stack' | 'capture' | null>('stack', 'capture', null);
+
+  const placementArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('placement' as const),
+    piece: pieceArb,
+    dest: squareArb,
+    done: fc.boolean(),
+  });
+
+  const moveArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('move' as const),
+    origin: squareArb,
+    dest: squareArb,
+    outcome: outcomeArb,
+    turncoat: turncoatArb,
+  });
+
+  const arataArb: fc.Arbitrary<Action> = fc.record({
+    kind: fc.constant('arata' as const),
+    piece: pieceArb,
+    dest: squareArb,
+    turncoat: turncoatArb,
+  });
+
+  const actionArb = fc.oneof(placementArb, moveArb, arataArb);
+
+  it('parse(serialize(action)) === action (round-trip identity)', () => {
+    fc.assert(
+      fc.property(actionArb, (action: Action) => {
+        const serialized = serializeGAN(action);
+        const parsed = parseGAN(serialized);
+
+        expect(parsed.ok).toBe(true);
+        if (!parsed.ok) throw new Error('unreachable');
+
+        // Deep equality check
+        expect(parsed.action).toEqual(action);
+      }),
+      { numRuns: 100 },
+    );
+  });
 });

@@ -102,6 +102,13 @@ export type GameResult =
   | { kind: 'exposure-draw' }
   | { kind: 'repetition' };
 
+/**
+ * Turncoat swap levels for Captain moves/aratas.
+ * Constrained by GAN spec rule A3: levels ascending, no duplicates, only 1 or 2.
+ * Valid combinations: [] (no swaps), [1], [2], [1, 2].
+ */
+export type TurncoatLevels = [] | [1] | [2] | [1, 2];
+
 /** Discriminated union of all possible player actions. */
 export type Action =
   | {
@@ -118,14 +125,14 @@ export type Action =
       /** Outcome choice: 'stack', 'capture', or null (not yet chosen/forced). */
       outcome: 'stack' | 'capture' | null;
       /** Elected turncoat swap levels (empty = none). */
-      turncoat: number[];
+      turncoat: TurncoatLevels;
     }
   | {
       kind: 'arata';
       piece: PieceType;
       dest: Square;
       /** Elected turncoat swap levels (empty = none). */
-      turncoat: number[];
+      turncoat: TurncoatLevels;
     };
 
 /** Classification of a piece's movement type. */

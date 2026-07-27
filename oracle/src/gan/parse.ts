@@ -9,7 +9,13 @@
  * @module
  */
 
-import { type Action, type BoardCoord, type PieceType, type Square } from '../types.js';
+import {
+  type Action,
+  type BoardCoord,
+  type PieceType,
+  type Square,
+  type TurncoatLevels,
+} from '../types.js';
 import { GameError } from '../errors.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
 
@@ -65,7 +71,7 @@ export function parseSquare(s: string): Square {
 /**
  * Parse a turncoat suffix: `+1`, `+2`, or `+12`.
  *
- * Returns the elected swap levels as an array of numbers.
+ * Returns the elected swap levels as a TurncoatLevels tuple.
  * - `+1`  → [1]
  * - `+2`  → [2]
  * - `+12` → [1, 2]
@@ -73,7 +79,7 @@ export function parseSquare(s: string): Square {
  * @param s - The turncoat string including the leading `+`.
  * @throws {GameError} with rule 'A3' if levels are not valid.
  */
-export function parseTurncoat(s: string): number[] {
+export function parseTurncoat(s: string): TurncoatLevels {
   if (!s.startsWith('+')) {
     throw new GameError(`Turncoat must start with "+", got "${s}"`, 'A3');
   }
@@ -230,7 +236,7 @@ export function parseMove(gan: string): Action {
   }
 
   // Parse optional turncoat
-  let turncoat: number[] = [];
+  let turncoat: TurncoatLevels = [];
   if (remainder.startsWith('+')) {
     turncoat = parseTurncoat(remainder);
     remainder = remainder.slice(remainder.startsWith('+12') ? 3 : 2);
@@ -310,7 +316,7 @@ export function parseArata(gan: string): Action {
   remainder = remainder.slice(3);
 
   // Parse optional turncoat
-  let turncoat: number[] = [];
+  let turncoat: TurncoatLevels = [];
   if (remainder.startsWith('+')) {
     turncoat = parseTurncoat(remainder);
     remainder = remainder.slice(remainder.startsWith('+12') ? 3 : 2);

@@ -17,7 +17,7 @@
  * @module
  */
 
-import { type Action, type Square } from '../types.js';
+import { type Action, type Square, type TurncoatLevels } from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Square serialization
@@ -48,7 +48,7 @@ export function serializeSquare(sq: Square): string {
  * @param levels - The elected turncoat swap levels (ascending, no duplicates).
  * @returns The turncoat suffix (including leading `+`), or empty string.
  */
-export function serializeTurncoat(levels: number[]): string {
+export function serializeTurncoat(levels: TurncoatLevels): string {
   if (levels.length === 0) return '';
   return '+' + levels.join('');
 }
