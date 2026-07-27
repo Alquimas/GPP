@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gungi Position Tester</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #1a1a1a;
+    color: #e0e0e0;
+    padding: 20px;
+    display: flex;
+    gap: 20px;
+  }
+  .container { display: flex; gap: 20px; }
+  .board-section { flex-shrink: 0; }
+  .sidebar { flex: 1; min-width: 300px; }
+  
+  h1 { font-size: 24px; margin-bottom: 15px; color: #4a9eff; }
+  h2 { font-size: 18px; margin: 15px 0 10px; color: #4a9eff; }
+  
+  .board {
+    display: grid;
+    grid-template-columns: repeat(9, 50px);
+    grid-template-rows: repeat(9, 50px);
+    gap: 2px;
+    background: #333;
+    padding: 2px;
+    border-radius: 4px;
+  }
+  .square {
+    background: #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    font-size: 20px;
+    font-weight: bold;
+    transition: background 0.1s;
+  }
+  .square:hover { background: #3a3a3a; }
+  .square.attacked { background: rgba(255, 100, 100, 0.3); }
+  .square.attacked-selected { background: rgba(100, 200, 255, 0.4); }
+  .square.selected { background: rgba(74, 158, 255, 0.4); }
+  .square.legal { background: rgba(100, 255, 100, 0.3); }
+  .square.legal:hover { background: rgba(100, 255, 100, 0.5); }
+  .attack-level {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+    padding: 1px 3px;
+    min-width: 14px;
+    text-align: center;
+  }
+  .attack-level.level-1 { background: rgba(100, 100, 100, 0.9); }
+  .attack-level.level-2 { background: rgba(200, 100, 0, 0.9); }
+  .attack-level.level-3 { background: rgba(200, 0, 0, 0.9); }
+  
+  .piece-white { color: #fff; text-shadow: 0 0 3px #000; }
+  .piece-black { color: #888; text-shadow: 0 0 3px #000; }
+  
+  .palette {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    margin-bottom: 15px;
+  }
+  .palette-item {
+    background: #2a2a2a;
+    border: 2px solid #444;
+    padding: 8px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.1s;
+  }
+  .palette-item:hover { border-color: #666; }
+  .palette-item.selected { border-color: #4a9eff; background: #3a3a3a; }
+  .palette-item.white { color: #fff; }
+  .palette-item.black { color: #888; }
+  
+  .owner-toggle {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  .owner-btn {
+    flex: 1;
+    padding: 10px;
+    background: #2a2a2a;
+    border: 2px solid #444;
+    color: #e0e0e0;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.1s;
+  }
+  .owner-btn:hover { border-color: #666; }
+  .owner-btn.selected { border-color: #4a9eff; background: #3a3a3a; }
+  .owner-btn.white.selected { color: #fff; }
+  .owner-btn.black.selected { color: #888; }
+  
+  .status {
+    background: #2a2a2a;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+  }
+  .status-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #333;
+  }
+  .status-item:last-child { border-bottom: none; }
+  .status-label { color: #888; }
+  .status-value { font-weight: bold; }
+  .status-value.danger { color: #ff6b6b; }
+  .status-value.safe { color: #51cf66; }
+  
+  .gsfen-output {
+    background: #2a2a2a;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    word-break: break-all;
+    margin-bottom: 10px;
+    min-height: 60px;
+  }
+  
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  button {
+    padding: 8px 16px;
+    background: #4a9eff;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: background 0.1s;
+  }
+  button:hover { background: #3a8eef; }
+  button.secondary { background: #444; }
+  button.secondary:hover { background: #555; }
+  
+  .info {
+    background: #2a2a2a;
+    padding: 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .info code {
+    background: #1a1a1a;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="board-section">
+    <h1>Position Tester</h1>
+    <div id="board" class="board"></div>
+  </div>
+  
+  <div class="sidebar">
+    <h2>Piece Palette</h2>
+    <div class="owner-toggle">
+      <button class="owner-btn white selected" data-owner="white">White</button>
+      <button class="owner-btn black" data-owner="black">Black</button>
+      <button class="owner-btn" data-owner="erase">Erase</button>
+    </div>
+    <div id="palette" class="palette"></div>
+    
+  <div class="controls">
+    <button id="clearBtn" class="secondary">Clear Board</button>
+    <button id="showAttacksBtn">Show Attacks</button>
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+      <input type="checkbox" id="stackMode">
+      <span>Stack Mode</span>
+    </label>
+  </div>
+    
+    <h2>Status</h2>
+    <div class="status">
+      <div class="status-item">
+        <span class="status-label">White in Check:</span>
+        <span id="whiteCheck" class="status-value">-</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Black in Check:</span>
+        <span id="blackCheck" class="status-value">-</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">White Exposed:</span>
+        <span id="whiteExposed" class="status-value">-</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Black Exposed:</span>
+        <span id="blackExposed" class="status-value">-</span>
+      </div>
+    </div>
+    
+    <h2>GSFEN</h2>
+    <div id="gsfenOutput" class="gsfen-output">Click squares to place pieces...</div>
+    <button id="copyBtn" class="secondary">Copy GSFEN</button>
+    
+    <h2>How to Use</h2>
+    <div class="info">
+      <p>• Select owner (White/Black/Erase) and piece type</p>
+      <p>• Click squares to place/remove pieces</p>
+      <p>• <strong>Right-click</strong> any square to clear it completely</p>
+      <p>• <strong>Click a piece</strong> to see only its attack range (blue highlight)</p>
+      <p>• <strong>Stack Mode:</strong> click occupied square to add piece on top (max 3)</p>
+      <p>• <strong>Erase + Stack Mode:</strong> removes only the top piece</p>
+      <p>• <strong>Show Attacks:</strong> highlights all squares attacked by the selected owner</p>
+      <p>• <strong>Level indicators:</strong> numbers in top-left show attacker's stack size</p>
+      <p style="margin-top: 10px; color: #888;">
+        <strong>Colors:</strong> Blue = selected piece attacks | Red = all attacks | Numbers: <span style="background:rgba(100,100,100,0.9);padding:1px 3px;border-radius:2px;">1</span> <span style="background:rgba(200,100,0,0.9);padding:1px 3px;border-radius:2px;">2</span> <span style="background:rgba(200,0,0,0.9);padding:1px 3px;border-radius:2px;">3</span>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Piece types
+const PIECE_TYPES = ['M', 'G', 'L', 'J', 'S', 'E', 'N', 'Y', 'F', 'P', 'C', 'A', 'U', 'T'];
+const PIECE_NAMES = {
+  M: 'Marshal', G: 'General', L: 'Lieutenant', J: 'Major',
+  S: 'Samurai', E: 'Spear', N: 'Knight', Y: 'Spy',
+  F: 'Fortress', P: 'Pawn', C: 'Cannon', A: 'Archer',
+  U: 'Musketeer', T: 'Captain'
+};
+
+// Movement definitions (white's perspective)
+const PIECE_MOVEMENT = {
+  M: { step: ['F', 'B', 'L', 'R', 'FL', 'FR', 'BL', 'BR'], limitedRange: [], range: [], jumps: [] },
+  G: { step: ['FL', 'FR', 'BL', 'BR'], limitedRange: [], range: ['F', 'B', 'L', 'R'], jumps: [] },
+  L: { step: ['F', 'B', 'L', 'R'], limitedRange: [], range: ['FL', 'FR', 'BL', 'BR'], jumps: [] },
+  J: { step: ['F', 'B', 'L', 'R', 'FL', 'FR'], limitedRange: [], range: [], jumps: [] },
+  S: { step: ['F', 'FL', 'FR', 'B'], limitedRange: [], range: [], jumps: [] },
+  E: { step: ['FL', 'FR', 'B'], limitedRange: ['F'], range: [], jumps: [] },
+  N: { step: ['L', 'R'], limitedRange: ['F', 'B'], range: [], jumps: [] },
+  Y: { step: [], limitedRange: ['FL', 'FR', 'BL', 'BR'], range: [], jumps: [] },
+  F: { step: ['F', 'L', 'R', 'BL', 'BR'], limitedRange: [], range: [], jumps: [] },
+  P: { step: ['F', 'B'], limitedRange: [], range: [], jumps: [] },
+  C: { step: ['L', 'R', 'B'], limitedRange: [], range: [], jumps: [{ dest: { col: 0, row: 3 }, over: [{ col: 0, row: 1 }, { col: 0, row: 2 }] }] },
+  A: { step: ['B'], limitedRange: [], range: [], jumps: [{ dest: { col: -1, row: 2 }, over: [{ col: 0, row: 1 }] }, { dest: { col: 0, row: 2 }, over: [{ col: 0, row: 1 }] }, { dest: { col: 1, row: 2 }, over: [{ col: 0, row: 1 }] }] },
+  U: { step: ['BL', 'BR'], limitedRange: [], range: [], jumps: [{ dest: { col: 0, row: 2 }, over: [{ col: 0, row: 1 }] }] },
+  T: { step: ['FL', 'FR', 'B'], limitedRange: [], range: [], jumps: [] },
+};
+
+const WHITE_DIR_DELTA = {
+  F: { col: 0, row: -1 }, B: { col: 0, row: 1 },
+  L: { col: 1, row: 0 }, R: { col: -1, row: 0 },
+  FL: { col: 1, row: -1 }, FR: { col: -1, row: -1 },
+  BL: { col: 1, row: 1 }, BR: { col: -1, row: 1 },
+};
+
+// State
+let board = Array(9).fill(null).map(() => Array(9).fill(null));
+let selectedOwner = 'white';
+let selectedPiece = 'M';
+let selectedSquare = null;
+let showAllAttacks = false;
+
+// Helpers
+function applyDirection(col, row, dir, player) {
+  const base = WHITE_DIR_DELTA[dir];
+  const dc = player === 'white' ? base.col : -base.col;
+  const dr = player === 'white' ? base.row : -base.row;
+  const newCol = col + dc;
+  const newRow = row + dr;
+  if (newCol < 1 || newCol > 9 || newRow < 1 || newRow > 9) return null;
+  return { col: newCol, row: newRow };
+}
+
+function trySquare(col, row) {
+  if (col < 1 || col > 9 || row < 1 || row > 9) return null;
+  return { col, row };
+}
+
+function getStack(col, row) {
+  return board[row - 1][col - 1];
+}
+
+function topPiece(stack) {
+  return stack[stack.length - 1];
+}
+
+function canLandOnStack(sourceSize, targetStack) {
+  if (!targetStack) return true;
+  return sourceSize >= targetStack.length;
+}
+
+function computeStepMovement(col, row, player, directions) {
+  const results = [];
+  const stack = getStack(col, row);
+  if (!stack) return results;
+  const sourceSize = stack.length;
+  
+  for (const dir of directions) {
+    const dest = applyDirection(col, row, dir, player);
+    if (!dest) continue;
+    const targetStack = getStack(dest.col, dest.row);
+    if (!canLandOnStack(sourceSize, targetStack)) continue;
+    results.push(dest);
+  }
+  return results;
+}
+
+function computeTraceMovement(col, row, player, directions, maxRange) {
+  const results = [];
+  const stack = getStack(col, row);
+  if (!stack) return results;
+  const sourceSize = stack.length;
+  
+  for (const dir of directions) {
+    let c = col, r = row;
+    for (let step = 1; step <= maxRange; step++) {
+      const next = applyDirection(c, r, dir, player);
+      if (!next) break;
+      const targetStack = getStack(next.col, next.row);
+      if (targetStack) {
+        if (canLandOnStack(sourceSize, targetStack)) results.push(next);
+        break;
+      }
+      results.push(next);
+      c = next.col;
+      r = next.row;
+    }
+  }
+  return results;
+}
+
+function getScaledJumps(base, upToLevel) {
+  const patterns = [];
+  const farthestOver = base.over[base.over.length - 1];
+  const extCol = base.dest.col - farthestOver.col;
+  const extRow = base.dest.row - farthestOver.row;
+  
+  if (extCol === 0 && extRow === 0) {
+    patterns.push({ dest: { ...base.dest }, over: base.over.map(o => ({ ...o })) });
+    return patterns;
+  }
+  
+  let prevDest = { ...base.dest };
+  let prevOver = base.over.map(o => ({ ...o }));
+  patterns.push({ dest: { ...prevDest }, over: prevOver.map(o => ({ ...o })) });
+  
+  for (let level = 2; level <= upToLevel; level++) {
+    const newDest = { col: prevDest.col + extCol, row: prevDest.row + extRow };
+    const newOver = [...prevOver.map(o => ({ ...o })), { ...prevDest }];
+    patterns.push({ dest: newDest, over: newOver });
+    prevDest = newDest;
+    prevOver = newOver;
+  }
+  return patterns;
+}
+
+function computeJumpMovement(col, row, player, baseJumps, sourceSize) {
+  const results = [];
+  for (const base of baseJumps) {
+    const patterns = getScaledJumps(base, sourceSize);
+    for (const pattern of patterns) {
+      const dc = player === 'white' ? pattern.dest.col : -pattern.dest.col;
+      const dr = player === 'white' ? -pattern.dest.row : pattern.dest.row;
+      const destCol = col + dc;
+      const destRow = row + dr;
+      const destSquare = trySquare(destCol, destRow);
+      if (!destSquare) continue;
+      
+      let blocked = false;
+      for (const over of pattern.over) {
+        const oc = player === 'white' ? over.col : -over.col;
+        const or = player === 'white' ? -over.row : over.row;
+        const overCol = col + oc;
+        const overRow = row + or;
+        const overSquare = trySquare(overCol, overRow);
+        if (!overSquare) { blocked = true; break; }
+        const overStack = getStack(overSquare.col, overSquare.row);
+        if (overStack && overStack.length > sourceSize) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      
+      const targetStack = getStack(destSquare.col, destSquare.row);
+      if (!canLandOnStack(sourceSize, targetStack)) continue;
+      results.push(destSquare);
+    }
+  }
+  return results;
+}
+
+function getLegalDestinations(col, row, player) {
+  const stack = getStack(col, row);
+  if (!stack) return [];
+  const top = topPiece(stack);
+  if (top.owner !== player) return [];
+  const sSize = stack.length;
+  const def = PIECE_MOVEMENT[top.type];
+  
+  const results = [];
+  
+  if (sSize === 1) {
+    results.push(...computeStepMovement(col, row, player, def.step));
+  } else {
+    results.push(...computeTraceMovement(col, row, player, def.step, sSize));
+  }
+  
+  if (def.limitedRange.length > 0) {
+    results.push(...computeTraceMovement(col, row, player, def.limitedRange, sSize + 1));
+  }
+  
+  if (def.range.length > 0) {
+    results.push(...computeTraceMovement(col, row, player, def.range, 9));
+  }
+  
+  if (def.jumps.length > 0) {
+    results.push(...computeJumpMovement(col, row, player, def.jumps, sSize));
+  }
+  
+  return results;
+}
+
+function isSquareUnderAttack(targetCol, targetRow, byPlayer) {
+  for (let r = 1; r <= 9; r++) {
+    for (let c = 1; c <= 9; c++) {
+      const stack = getStack(c, r);
+      if (!stack || topPiece(stack).owner !== byPlayer) continue;
+      const moves = getLegalDestinations(c, r, byPlayer);
+      if (moves.some(m => m.col === targetCol && m.row === targetRow)) return true;
+    }
+  }
+  return false;
+}
+
+function findMarshal(player) {
+  for (let r = 1; r <= 9; r++) {
+    for (let c = 1; c <= 9; c++) {
+      const stack = getStack(c, r);
+      if (stack) {
+        for (const piece of stack) {
+          if (piece.type === 'M' && piece.owner === player) return { col: c, row: r };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function isInCheck(player) {
+  const marshal = findMarshal(player);
+  if (!marshal) return false;
+  const opponent = player === 'white' ? 'black' : 'white';
+  return isSquareUnderAttack(marshal.col, marshal.row, opponent);
+}
+
+function isExposed() {
+  return { white: isInCheck('white'), black: isInCheck('black') };
+}
+
+function toGSFEN() {
+  const rows = [];
+  for (let r = 0; r < 9; r++) {
+    const row = [];
+    let emptyCount = 0;
+    for (let c = 0; c < 9; c++) {
+      const stack = board[r][c];
+      if (!stack) {
+        emptyCount++;
+      } else {
+        if (emptyCount > 0) {
+          row.push(emptyCount);
+          emptyCount = 0;
+        }
+        const pieces = stack.map(p => p.owner === 'white' ? p.type.toLowerCase() : p.type).join('');
+        row.push(pieces);
+      }
+    }
+    if (emptyCount > 0) row.push(emptyCount);
+    rows.push(row.join(','));
+  }
+  return rows.join('/') + ' w - 1';
+}
+
+// Rendering
+function render() {
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  
+  // Track attacked squares with level info
+  const attackedSquares = new Map(); // key: "col,row", value: Set of levels
+  const selectedPieceAttacks = new Set(); // squares attacked by selected piece
+  
+  // If showing all attacks, compute for the selected owner
+  if (showAllAttacks) {
+    const owner = selectedOwner === 'erase' ? 'white' : selectedOwner;
+    for (let r = 1; r <= 9; r++) {
+      for (let c = 1; c <= 9; c++) {
+        const stack = getStack(c, r);
+        if (!stack || topPiece(stack).owner !== owner) continue;
+        const moves = getLegalDestinations(c, r, owner);
+        const level = stack.length;
+        for (const move of moves) {
+          const key = `${move.col},${move.row}`;
+          if (!attackedSquares.has(key)) attackedSquares.set(key, new Set());
+          attackedSquares.get(key).add(level);
+        }
+      }
+    }
+  }
+  
+  // If a piece is selected, compute its attacks
+  if (selectedSquare) {
+    const stack = getStack(selectedSquare.col, selectedSquare.row);
+    if (stack) {
+      const owner = topPiece(stack).owner;
+      const moves = getLegalDestinations(selectedSquare.col, selectedSquare.row, owner);
+      for (const move of moves) {
+        selectedPieceAttacks.add(`${move.col},${move.row}`);
+        const key = `${move.col},${move.row}`;
+        if (!attackedSquares.has(key)) attackedSquares.set(key, new Set());
+        attackedSquares.get(key).add(stack.length);
+      }
+    }
+  }
+  
+  for (let r = 1; r <= 9; r++) {
+    for (let c = 1; c <= 9; c++) {
+      const square = document.createElement('div');
+      square.className = 'square';
+      square.dataset.col = c;
+      square.dataset.row = r;
+      
+      const key = `${c},${r}`;
+      
+      // Highlight selected piece attacks differently
+      if (selectedPieceAttacks.has(key)) {
+        square.classList.add('attacked-selected');
+      } else if (attackedSquares.has(key)) {
+        square.classList.add('attacked');
+      }
+      
+      if (selectedSquare && selectedSquare.col === c && selectedSquare.row === r) {
+        square.classList.add('selected');
+      }
+      
+      const stack = board[r - 1][c - 1];
+      if (stack) {
+        const top = topPiece(stack);
+        const pieceEl = document.createElement('span');
+        pieceEl.textContent = top.type;
+        pieceEl.className = `piece-${top.owner}`;
+        square.appendChild(pieceEl);
+        
+        if (stack.length > 1) {
+          const sizeEl = document.createElement('span');
+          sizeEl.textContent = stack.length;
+          sizeEl.style.cssText = 'position:absolute;bottom:2px;right:2px;font-size:10px;color:#888;';
+          square.appendChild(sizeEl);
+        }
+      }
+      
+      // Add attack level indicators
+      if (attackedSquares.has(key)) {
+        const levels = attackedSquares.get(key);
+        // Show all levels that attack this square
+        const levelArray = Array.from(levels).sort();
+        const levelEl = document.createElement('span');
+        levelEl.className = `attack-level level-${levelArray[levelArray.length - 1]}`;
+        levelEl.textContent = levelArray.join(',');
+        square.appendChild(levelEl);
+      }
+      
+      square.addEventListener('click', () => handleSquareClick(c, r));
+      square.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        board[r - 1][c - 1] = null;
+        selectedSquare = null;
+        render();
+      });
+      boardEl.appendChild(square);
+    }
+  }
+  
+  updateStatus();
+  document.getElementById('gsfenOutput').textContent = toGSFEN();
+}
+
+function handleSquareClick(col, row) {
+  const stack = board[row - 1][col - 1];
+  const stackMode = document.getElementById('stackMode').checked;
+  
+  if (selectedOwner === 'erase') {
+    if (stackMode && stack) {
+      // Remove top piece from stack
+      stack.pop();
+      if (stack.length === 0) {
+        board[row - 1][col - 1] = null;
+      }
+    } else {
+      board[row - 1][col - 1] = null;
+    }
+    selectedSquare = null;
+  } else if (stack) {
+    if (stackMode && stack.length < 3) {
+      // Stack the selected piece on top
+      stack.push({ type: selectedPiece, owner: selectedOwner });
+      selectedSquare = null;
+    } else if (selectedSquare && selectedSquare.col === col && selectedSquare.row === row) {
+      selectedSquare = null;
+    } else {
+      selectedSquare = { col, row };
+      showAllAttacks = false;
+    }
+  } else {
+    board[row - 1][col - 1] = [{ type: selectedPiece, owner: selectedOwner }];
+    selectedSquare = null;
+  }
+  
+  render();
+}
+
+function updateStatus() {
+  const whiteCheck = isInCheck('white');
+  const blackCheck = isInCheck('black');
+  const exposure = isExposed();
+  
+  const whiteCheckEl = document.getElementById('whiteCheck');
+  const blackCheckEl = document.getElementById('blackCheck');
+  const whiteExposedEl = document.getElementById('whiteExposed');
+  const blackExposedEl = document.getElementById('blackExposed');
+  
+  whiteCheckEl.textContent = whiteCheck ? 'YES' : 'no';
+  whiteCheckEl.className = `status-value ${whiteCheck ? 'danger' : 'safe'}`;
+  
+  blackCheckEl.textContent = blackCheck ? 'YES' : 'no';
+  blackCheckEl.className = `status-value ${blackCheck ? 'danger' : 'safe'}`;
+  
+  whiteExposedEl.textContent = exposure.white ? 'YES' : 'no';
+  whiteExposedEl.className = `status-value ${exposure.white ? 'danger' : 'safe'}`;
+  
+  blackExposedEl.textContent = exposure.black ? 'YES' : 'no';
+  blackExposedEl.className = `status-value ${exposure.black ? 'danger' : 'safe'}`;
+}
+
+function renderPalette() {
+  const palette = document.getElementById('palette');
+  palette.innerHTML = '';
+  
+  PIECE_TYPES.forEach(type => {
+    const item = document.createElement('div');
+    item.className = `palette-item ${selectedOwner}`;
+    if (type === selectedPiece && selectedOwner !== 'erase') {
+      item.classList.add('selected');
+    }
+    item.textContent = type;
+    item.title = PIECE_NAMES[type];
+    item.addEventListener('click', () => {
+      selectedPiece = type;
+      if (selectedOwner === 'erase') {
+        selectedOwner = 'white';
+        document.querySelectorAll('.owner-btn').forEach(btn => {
+          btn.classList.toggle('selected', btn.dataset.owner === 'white');
+        });
+      }
+      renderPalette();
+    });
+    palette.appendChild(item);
+  });
+}
+
+// Event listeners
+document.querySelectorAll('.owner-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedOwner = btn.dataset.owner;
+    document.querySelectorAll('.owner-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    renderPalette();
+  });
+});
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  board = Array(9).fill(null).map(() => Array(9).fill(null));
+  selectedSquare = null;
+  render();
+});
+
+document.getElementById('showAttacksBtn').addEventListener('click', () => {
+  showAllAttacks = !showAllAttacks;
+  selectedSquare = null;
+  render();
+});
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const gsfen = toGSFEN();
+  navigator.clipboard.writeText(gsfen).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = original, 1000);
+  });
+});
+
+// Initial render
+renderPalette();
+render();
+</script>
+</body>
+</html>

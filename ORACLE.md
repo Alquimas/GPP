@@ -12,13 +12,13 @@
 1. [Architecture Overview](#1-architecture-overview)
 2. [Module Layout](#2-module-layout)
 3. [Step 0 — Docker Toolchain Setup](#step-0--docker-toolchain-setup) ✅
-4. [Step 1 — Project Scaffold + Domain Types](#step-1--project-scaffold--domain-types)
+4. [Step 1 — Project Scaffold + Domain Types](#step-1--project-scaffold--domain-types) ✅
 5. [Step 2 — GSFEN Parser](#step-2--gsfen-parser) ✅
-6. [Step 3 — GSFEN Serializer](#step-3--gsfen-serializer)
-7. [Step 4 — GAN Parser](#step-4--gan-parser)
-8. [Step 5 — GAN Serializer](#step-5--gan-serializer)
-9. [Step 6 — Movement Rules Engine](#step-6--movement-rules-engine)
-10. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection)
+6. [Step 3 — GSFEN Serializer](#step-3--gsfen-serializer) ✅
+7. [Step 4 — GAN Parser](#step-4--gan-parser) ✅
+8. [Step 5 — GAN Serializer](#step-5--gan-serializer) ✅
+9. [Step 6 — Movement Rules Engine](#step-6--movement-rules-engine) ✅
+10. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection) ✅
 11. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata)
 12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic)
 13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase)
@@ -102,32 +102,36 @@ oracle/
 │   │   ├── board.ts                # Board query/mutate helpers
 │   │   ├── movement.ts             # Movement computation per piece type
 │   │   └── attack.ts               # Attack detection for Check
-│   └── game/
+│   └── game/                       # Steps 8–11 (not yet built)
 │       ├── game.ts                 # Game class (public API)
 │       ├── deploy.ts               # Deploy phase logic
 │       ├── battle.ts               # Battle phase logic
 │       ├── apply.ts                # Apply validated action to state
 │       └── terminal.ts             # Terminal condition evaluation
 ├── tests/
+│   ├── types.test.ts
+│   ├── constants.test.ts
 │   ├── gsfen/
 │   │   ├── parse.test.ts
 │   │   ├── serialize.test.ts
-│   │   └── validate.test.ts
+│   │   ├── validate.test.ts
+│   │   └── verify.test.ts          # Structural spot-checks
 │   ├── gan/
 │   │   ├── parse.test.ts
+│   │   ├── serialize.test.ts
 │   │   └── validate.test.ts
 │   ├── movement/
 │   │   └── movement.test.ts        # Parametric tests, all pieces
 │   ├── attack/
 │   │   └── attack.test.ts
-│   ├── game/
+│   ├── game/                       # Steps 8–11 (not yet built)
 │   │   ├── deploy.test.ts
 │   │   ├── battle.test.ts
 │   │   ├── arata.test.ts
 │   │   ├── terminal.test.ts
 │   │   └── repetition.test.ts
-│   ├── invariants.test.ts          # Property-based tests
-│   └── integration.test.ts         # Full game sequences
+│   ├── invariants.test.ts          # Property-based tests (Step 13)
+│   └── integration.test.ts         # Full game sequences (Step 13)
 └── features/                       # Gherkin .feature files (Step 13)
     ├── deploy_phase.feature
     ├── battle_move.feature
@@ -327,10 +331,12 @@ docker compose run --rm format-check  # exit 0, all files formatted
   - `Player = 'white' | 'black'`
   - `PieceType` — union of 14 letter literals (`'A' | 'C' | 'E' | …`)
   - `Piece` — `{ type: PieceType; owner: Player }`
-  - `Square` — `{ col: number; row: number }` (both 1–9)
-  - `Stack` — `Piece[]` (ordered bottom→top, length 1–3)
+  - `Square` — `{ col: BoardCoord; row: BoardCoord }` (both 1–9, constrained at compile time)
+  - `BoardCoord = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9` — integer literal union
+  - `Stack` — `[Piece] | [Piece, Piece] | [Piece, Piece, Piece]` (tuple union, length 1–3 enforced at type level)
   - `Position` — `(Stack | null)[][]`, 9×9 grid, **row-major**: `position[row][col]`
     where row 0 = Standard Diagram Row 1 (top), row 8 = Row 9 (bottom).
+    Documented 9×9 contract with runtime validation via `validatePosition()`.
   - `Phase = 'deploy' | 'battle'`
   - `DoneFlag = Player | null`
   - `TurnState = { phase: Phase; activePlayer: Player; done: DoneFlag; counter: number }`
@@ -341,10 +347,11 @@ docker compose run --rm format-check  # exit 0, all files formatted
     (snapshot only — Repetition compares these directly, per CONTEXT.md)
   - `GlobalState` — `{ current: GameState; history: GameState[]; result: GameResult }`
     (runtime container; history lives here, never inside a snapshot)
+  - `TurncoatLevels = [] | [1] | [2] | [1, 2]` — ascending levels, per GAN A3
   - `Action` — discriminated union:
     - `{ kind: 'placement'; piece: PieceType; dest: Square; done: boolean }`
-    - `{ kind: 'move'; origin: Square; dest: Square; outcome: 'stack' | 'capture' | null; turncoat: number[] }`
-    - `{ kind: 'arata'; piece: PieceType; dest: Square; turncoat: number[] }`
+    - `{ kind: 'move'; origin: Square; dest: Square; outcome: 'stack' | 'capture' | null; turncoat: TurncoatLevels }`
+    - `{ kind: 'arata'; piece: PieceType; dest: Square; turncoat: TurncoatLevels }`
   - `GameResult` — discriminated union: `{ kind: 'ongoing' }` |
     `{ kind: 'checkmate' | 'stalemate' | 'exposure'; loser: Player }` |
     `{ kind: 'exposure-draw' }` | `{ kind: 'repetition' }`
@@ -408,6 +415,12 @@ wrong results. **Mitigation:** The `Square` type carries a JSDoc comment
 explicitly stating the origin. The smoke test asserts a known coordinate
 round-trip.
 
+**Post-implementation hardening:**
+- `Stack` constrained from `Piece[]` to tuple union `[Piece] | [Piece, Piece] | [Piece, Piece, Piece]` — length 1–3 enforced at type level.
+- `Square` coordinates constrained from `number` to `BoardCoord` (1–9 literal union) — prevents out-of-range coordinates at compile time.
+- Added narrowing helpers in `board.ts`: `isBoardCoord` (type predicate), `trySquare` (number → Square | null), `squareFromIndex` (0-indexed → Square), `createStack` (runtime-validated factory), `validatePosition` (9×9 shape check), `emptyPosition` (factory). All `as BoardCoord` / `as Stack` casts confined to these audited helpers.
+- `Position` JSDoc expanded with 9×9 contract and pointers to `emptyPosition` / `validatePosition`.
+
 ---
 
 ### Step 2 — GSFEN Parser ✅
@@ -448,7 +461,7 @@ round-trip.
 
 ---
 
-### Step 3 — GSFEN Serializer
+### Step 3 — GSFEN Serializer ✅
 
 **What to build:**
 - `src/gsfen/serialize.ts` — `GameState → string`
@@ -496,38 +509,39 @@ round-trip.
 
 ---
 
-### Step 4 — GAN Parser
+### Step 4 — GAN Parser ✅
 
 **What to build:**
 - `src/gan/parse.ts` — port the GAN grammar into TypeScript:
   - Parse a GAN string into the `Action` discriminated union
   - Three shapes: `placement`, `move`, `arata` — distinguished by the
     shape of the first token (letter → piece vs digit → square)
-  - Parse square notation: `{col}-{row}` → `{ col: number; row: number }`
+  - Parse square notation: `{col}-{row}` → `{ col: BoardCoord; row: BoardCoord }`
+    using `trySquare` narrowing helper (rejects 0 and out-of-range at parse level)
   - Parse optional tokens: `!` (done), `/=/x` (outcome), `+` (turncoat levels)
+  - Square regex tightened to `[1-9]-[1-9]` to reject `0` at parse level
 - `src/gan/validate.ts` — semantic validity checks S1–S6 from GAN.md:
-  - S1: Phase match (placement → deploy; move/arata → battle)
+  - S1: Phase match (placement → deploy; move/arata → battle) — exhaustive with explicit kind checks
   - S2: Placement legality (piece in hand, marshal first, deploy zone, target empty/friendly)
   - S3: Move legality — calls movement/attack modules (produced in Step 6–7)
   - S4: Arata legality — calls board helpers
-  - S5: Turncoat legality — calls hand/stack helpers
+  - S5: Turncoat legality — calls hand/stack helpers; includes Captain check for turncoat moves
   - S6: Done legality — only on placements
+  - Type guard narrowing used instead of unsafe casts for piece/owner validation
 
 **Checkpoint:**
 - All worked examples from GAN.md parse to expected `Action` objects
 - All invalid GAN strings from GAN.md are rejected with correct error types
 - GAN ABNF grammar examples from TEST.md §4.7 all parse correctly
-- Passing tests: `tests/gan/parse.test.ts`, `tests/gan/validate.test.ts`
+- Passing tests: `tests/gan/parse.test.ts` (84 tests), `tests/gan/validate.test.ts` (16 tests)
 
 **Note:** The semantic validation in S3–S4 depends on movement rules and
-board helpers from later steps. For Step 4, the validate function should
-accept the GameState reference and call into modules that will be built in
-Steps 6–8. Stub these until they exist, or write the validate function
-incrementally.
+board helpers from later steps. For Step 4, the validate function accepts
+the GameState reference and calls into modules built in Steps 6–8.
 
 ---
 
-### Step 5 — GAN Serializer
+### Step 5 — GAN Serializer ✅
 
 **What to build:**
 - `src/gan/serialize.ts` — `Action → string`
@@ -536,16 +550,18 @@ incrementally.
   - Arata: `{piece}*{destCol}-{destRow}[+{levels}]`
   - Enforce canonicity A1–A6: omit outcome when forced, omit turncoat when
     declined, levels ascending, no annotation tokens
+  - Exhaustiveness check on the Action kind switch (compile-time safety)
+  - `turncoat` field uses `TurncoatLevels` type (constrained to `[] | [1] | [2] | [1, 2]`)
 
 **Checkpoint:**
 - `parse(serialize(action))` round-trips for all worked examples from GAN.md
 - `serialize(parse(ganStr))` returns exactly the original string for every
   canonical input
-- Passing test: `tests/gan/serialize.test.ts`
+- Passing test: `tests/gan/serialize.test.ts` (104 tests)
 
 ---
 
-### Step 6 — Movement Rules Engine
+### Step 6 — Movement Rules Engine ✅
 
 **What to build in `src/board/`:**
 
@@ -553,30 +569,33 @@ incrementally.
 - `getStack(position, square): Stack | null`
 - `setStack(position, square, stack): Position` (returns new position, immutable)
 - `squareInBounds(square): boolean`
-- `applyDirection(col, row, direction, player): { col: number; row: number } | null`
-  — returns adjacent square in a given direction, or null if off-board
+- `applyDirection(col: BoardCoord, row: BoardCoord, direction, player): Square | null`
+  — returns adjacent square in a given direction, or null if off-board.
+  Uses `trySquare` for safe narrowing.
 - `isOccupiedBy(position, square, player): boolean`
 - `topPiece(stack): Piece`
 - `stackSize(stack): number`
 - Directions are **player-relative**: for White, F = row-1, B = row+1,
   L = col+1, R = col-1; for Black, the mapping is reversed.
+- **Narrowing helpers** (single points of truth for `as BoardCoord` / `as Stack` casts):
+  `isBoardCoord`, `trySquare`, `squareFromIndex`, `createStack`, `validatePosition`, `emptyPosition`.
 
 #### `movement.ts` — Movement computation
 - `getLegalDestinations(position, square, player): LegalMove[]`
   — single entry point that dispatches to movement class handlers
-  
+   
   For each piece type at its stack size:
-  
+   
   1. **Step movement** (BR-MOVEMENT-001):
      - For each allowed direction at size 1, produce the adjacent square
      - Check BR-MOVE-005 (stack size landing restriction)
-  
+   
   2. **Limited range movement** (BR-MOVEMENT-002):
      - For each allowed direction, trace 1–2 squares (size 1), 1–3 (size 2),
        1–4 (size 3) per BR-MOVEMENT-005
      - Check BR-PATH-001: stop at obstruction (destination is valid if it's
        the obstruction itself; path cannot extend beyond)
-  
+   
   3. **Range movement** (BR-MOVEMENT-003):
      - For each allowed direction, trace until board edge or obstruction
      - BR-PATH-001 applies: destination is valid if it's the obstruction
@@ -594,6 +613,17 @@ incrementally.
 
 - `getLegalMoves(position, player): LegalMove[]` — all legal destinations
   for all of a player's pieces (used for checkmate/stalemate, action visualizer)
+- `getScaledJumps(base, upToLevel)` — exported; throws explicit error when
+  `base.over` is empty (data error guard for differential testing safety)
+
+**`determineOutcome` — BR-STACK-004 separation:**
+The movement engine computes every geometrically reachable square; it does
+NOT enforce "no piece may be placed or moved on top of a Marshal."  That
+semantic prohibition is enforced by the validator (Step 8 — `validateMove` /
+`validateArata`) which rejects moves whose target top is a friendly Marshal.
+Callers that need only the rule-legal move set must run the result through
+the validator — `getLegalDestinations` alone is necessary but not sufficient
+for legality.
 
 **Checkpoint:**
 - Parametric (table-driven) tests covering:
@@ -605,9 +635,13 @@ incrementally.
   - Jump blocked by large stack on jumped-over square
   - Jump unblocked through empty squares
   - Mixed-ownership stack handling
+  - BR-PATH-002 boundary at source=2/over=2, source=2/over=3, source=3/over=3
+  - Direct `getScaledJumps` unit tests for Cannon/Archer/Musketeer at sizes 1-3
+  - Black at extreme corners, bottom-edge Spear, Cannon forward direction
+  - White-vs-Black symmetry at corners
 - All movement examples from BUSINESS_RULES.md piece type reference produce
   correct destinations
-- Passing test: `tests/movement/movement.test.ts`
+- Passing test: `tests/movement/movement.test.ts` (165 tests)
 
 **Verification:**
 - **Primary:** Parametric test matrix — use `describe.each` / `test.each` to
@@ -617,20 +651,28 @@ incrementally.
   present (≥1 legal move test + ≥1 illegal move test per combination).
 - **Proportionate:** Don't test every possible board position; test the
   class of pattern (step, range, etc.) and the boundary cases (edge,
-  obstruction at each step). 150–250 parametric cases covers the depth.
+  obstruction at each step). 165 parametric cases covers the depth.
 
 ---
 
-### Step 7 — Attack & Check Detection
+### Step 7 — Attack & Check Detection ✅
 
 **What to build in `src/board/attack.ts`:**
-- `isSquareUnderAttack(position, targetSquare, byPlayer, sourceStackSize): boolean`
+- `isSquareUnderAttack(position, targetSquare, byPlayer, sourceStackSize?: 1|2|3): boolean`
   — returns true if any piece belonging to `byPlayer` can reach
   `targetSquare` considering only movement rules and board boundaries
   (per BR-Attack definition: disregards occupation for Marshal threat,
   still applies stack-size landing restriction)
+  - Implementation delegates directly to `getLegalDestinations()` — no
+    separate attack-specific path needed, since the movement engine
+    already permits landing on enemy Marshals (outcome = 'capture')
+    and enforces BR-MOVE-005 via `canLandOnStack`.
+  - `sourceStackSize` parameter narrowed to `1 | 2 | 3` literal union.
 - `isInCheck(position, player): boolean`
-  — true if the player's Marshal square is under attack by the opponent
+  — true if the player's Marshal square is under attack by the opponent.
+  Searches all stack levels for robustness (BR-STACK-004 guarantees Marshal
+  is always on top, but defensive against corruption). Returns `false` if
+  Marshal is not on board (deploy phase).
 - `isExposed(position): { white: boolean; black: boolean }`
   — Exposure evaluation (BR-DEPLOY-012): checks if each Marshal is under
   attack. Returns a pair of booleans.
@@ -643,11 +685,34 @@ whose stack size exceeds its own source stack size.
 **Checkpoint:**
 - Attack detection works for every piece type at every size against targets
   within and beyond range
+- Directional parametric test: all 14 piece types at size 1 tested with
+  explicit forward/backward expected values (replaced earlier tautological
+  `typeof === 'boolean'` assertions)
+- Exact-set enumeration tests for 6 piece types (Marshal, Fortress, Pawn,
+  Samurai, Captain, Cannon) — verify both attacked AND not-attacked squares
 - Marshal threat: test that a piece that can *reach* the Marshal's square
   (but couldn't land on it due to BR-STACK-004) still makes the Marshal
   "under attack"
+- Stack-size restriction (BR-MOVE-005): all 6 source/target size combinations
+  tested, including friendly-target and empty-target cases
+- Extended range at sizes 2-3 (BR-MOVEMENT-005): Marshal, Spy, General, Cannon
+- Cross-module consistency: `isSquareUnderAttack` results match
+  `getLegalDestinations` output
 - Exposition detection: confirm correct exposure state for all 15 sample GSFENs
-- Passing test: `tests/attack/attack.test.ts`
+- GSFEN integration: dense-engagement position verified with specific
+  expected values (not just typeof checks)
+- Passing test: `tests/attack/attack.test.ts` (95 tests)
+
+**Saved edge case for Step 8 (Self Check after capture changes stack size):**
+GSFEN: `9/9/9/3,AAm,FPP,4/9/9/9/9/4,G,4 w - 1`
+Marshal at (4,4) could capture Pawns at (5,4) — both size 3. After capture,
+Marshal at (5,4) becomes size 1, and General at (5,9) could attack it.
+Self Check (BR-ACTION-002) must reject this move. Tests that Self Check
+evaluates the **post-move** state including changed stack sizes.
+
+**Position tester prototype:** `visualizers/position-tester.html` —
+interactive tool for building positions, visualizing attack ranges per piece,
+stacking, and level indicators. One-command usage (open in browser).
 
 ---
 
@@ -719,6 +784,19 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
   the action under test.
 - For Self Check, design positions where only one of several candidate moves
   is legal (the one that doesn't leave the Marshal exposed).
+  
+  **Saved test case — Self Check after capture changes stack size:**
+  GSFEN: `9/9/9/3,AAm,FPP,4/9/9/9/9/4,G,4 w - 1`
+  
+  Position: (4,4) stack [A,A,m] size 3 with black Marshal on top;
+  (5,4) stack [F,P,P] size 3 white Pawns; (5,9) black General size 1.
+  
+  The Marshal at (4,4) could capture the Pawns at (5,4) (both size 3).
+  But after capture, the Marshal would be at (5,4) as size 1, and the
+  General at (5,9) could then attack it along the file. This violates
+  BR-ACTION-002 (Self Check), so the move is illegal. Tests that Self
+  Check evaluates the **post-move** state, including the fact that the
+  Marshal's stack size changed after capture.
 
 ---
 
@@ -944,14 +1022,15 @@ movement, validation, and game logic complete.
 |------|-------------|-------------|--------------|------------|
 | 0 | Docker toolchain | `docker compose run --rm check` + `test` exit 0 | Host Docker version mismatch | Pin `node:22-alpine` digest; document minimum Docker Engine version |
 | 1 | Types + scaffold | Compile + smoke test | Wrong coordinate system | Review BUSINESS_RULES.md glossary |
-| 2 | GSFEN parser | Parse 15 samples + reject invalid | Parsing edge case (malformed but accepted) | Add to invalid set |
-| 3 | GSFEN serializer | Round-trip 15 samples + exact text match | Canonicalization bug (wrong letter order) | Compare vs GSFEN.md canonical rules |
-| 4 | GAN parser | Parse all GAN.md examples | Ambiguous parse | Review ABNF grammar |
-| 5–6 | Movement engine | Parametric matrix (all piece×size×dir×obs) | Wrong direction mapping (player-relative) | Verify against BR glossary direction table |
-| 7 | Attack/Check | Marshal threat scenarios | Ignoring BR-MOVE-005 for attack | Review Attack definition in BR |
+| 2 | GSFEN parser | Parse 15 samples + reject invalid (43 + 59 tests) | Parsing edge case (malformed but accepted) | Add to invalid set |
+| 3 | GSFEN serializer | Round-trip 15 samples + exact text match (52 tests) | Canonicalization bug (wrong letter order) | Compare vs GSFEN.md canonical rules |
+| 4 | GAN parser | Parse all GAN.md examples (84 tests) + validate (16 tests) | Ambiguous parse | Review ABNF grammar |
+| 5 | GAN serializer | Round-trip all GAN.md examples (104 tests) | Canonicity violation (redundant outcome token) | Compare vs GAN.md A1–A6 rules |
+| 6 | Movement engine | Parametric matrix (all piece×size×dir×obs), 165 tests | Wrong direction mapping (player-relative) | Verify against BR glossary direction table |
+| 7 | Attack/Check | Marshal threat scenarios + exact-set enumeration (95 tests) | Ignoring BR-MOVE-005 for attack | Review Attack definition in BR |
 | 8 | Action validation | Each BR-xxx gets ≥1 legal + ≥1 illegal | Self Check not evaluating post-move state | Trace BR-ACTION-002 logic |
 | 9 | Deploy logic | Full deploy sequence + exposure | Marshal-first enforcement misses a case | Review BR-DEPLOY-003 |
-| 10 | Battle engine | Capture, stack, turncoat sequences | Stack composition after mixed-ownership turncoat | Manual GSFEN inspection via visualizer |
+| 10 | Battle engine | Capture, stack, turncoat sequences | Stack composition after mixed-ownership turncoat | Manual GSFEN inspection via position tester |
 | 11 | Terminal conditions | Checkmate/stalemate/repetition scenarios | Repetition includes deploy-phase states | Review BR-REPETITION-001 |
 | 12 | Public API | Integration: full game start→end | Error mutation (state changes on illegal) | Review BR-ACTION-003 |
 | 13 | Property + Gherkin | Invariants + all feature scenarios | Invariant false positive | Narrow to failing case |
