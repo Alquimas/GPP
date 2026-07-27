@@ -8,3 +8,12 @@ export * from './gsfen/serialize.js';
 export { parseGAN, parseSquare, parseTurncoat } from './gan/parse.js';
 // GAN validator — explicit re-exports (ValidationResult re-export conflicts with gsfen/validate)
 export { validateAction } from './gan/validate.js';
+// GAN serializer
+export {
+  serializeGAN,
+  serializeSquare,
+  serializeTurncoat,
+  serializePlacement,
+  serializeMove,
+  serializeArata,
+} from './gan/serialize.js';
