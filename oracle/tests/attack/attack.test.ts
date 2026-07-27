@@ -14,7 +14,6 @@
 import { describe, it, expect } from 'vitest';
 import { isSquareUnderAttack, isInCheck, isExposed } from '../../src/board/attack.js';
 import { getLegalDestinations } from '../../src/board/movement.js';
-import { PIECE_MOVEMENT } from '../../src/constants.js';
 import type { BoardCoord, PieceType, Player, Position, Stack } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 
@@ -56,35 +55,32 @@ describe('isSquareUnderAttack — basic scenarios', () => {
   /* ------ Step-only pieces at size 1 ------ */
 
   it.each([
-    { type: 'M' as PieceType, label: 'Marshal' },
-    { type: 'G' as PieceType, label: 'General (diag step)' },
-    { type: 'L' as PieceType, label: 'Lieutenant (orth step)' },
-    { type: 'J' as PieceType, label: 'Major' },
-    { type: 'S' as PieceType, label: 'Samurai' },
-    { type: 'E' as PieceType, label: 'Spear' },
-    { type: 'N' as PieceType, label: 'Knight' },
-    { type: 'F' as PieceType, label: 'Fortress' },
-    { type: 'P' as PieceType, label: 'Pawn' },
-    { type: 'C' as PieceType, label: 'Cannon (step)' },
-    { type: 'A' as PieceType, label: 'Archer (step B)' },
-    { type: 'U' as PieceType, label: 'Musketeer (step BL,BR)' },
-    { type: 'T' as PieceType, label: 'Captain' },
+    { type: 'M' as PieceType, label: 'Marshal', forward: true, backward: true },
+    { type: 'G' as PieceType, label: 'General', forward: true, backward: true },
+    { type: 'L' as PieceType, label: 'Lieutenant', forward: true, backward: true },
+    { type: 'J' as PieceType, label: 'Major', forward: true, backward: true },
+    { type: 'S' as PieceType, label: 'Samurai', forward: true, backward: true },
+    { type: 'E' as PieceType, label: 'Spear', forward: true, backward: true },
+    { type: 'N' as PieceType, label: 'Knight', forward: true, backward: true },
+    { type: 'Y' as PieceType, label: 'Spy', forward: false, backward: false },
+    { type: 'F' as PieceType, label: 'Fortress', forward: true, backward: false },
+    { type: 'P' as PieceType, label: 'Pawn', forward: true, backward: true },
+    { type: 'C' as PieceType, label: 'Cannon', forward: false, backward: true },
+    { type: 'A' as PieceType, label: 'Archer', forward: false, backward: true },
+    { type: 'U' as PieceType, label: 'Musketeer', forward: false, backward: false },
+    { type: 'T' as PieceType, label: 'Captain', forward: false, backward: true },
   ])(
-    '$label ($type) at centre — attacks adjacent square in each step direction at size 1',
-    ({ type }) => {
-      const def = PIECE_MOVEMENT[type];
-      if (def.step.length === 0) return; // skip pieces with no step at size 1
+    '$label ($type) at centre — directional attack test at size 1',
+    ({ type, forward, backward }) => {
       const pos = emptyPos();
       putPiece(pos, 5, 5, type, 'white');
-      // Place an enemy target at (5,4) — forward direction for white
+      // Place enemy targets in forward (5,4) and backward (5,6) directions
       putPiece(pos, 5, 4, 'P', 'black');
+      putPiece(pos, 5, 6, 'P', 'black');
 
-      // The piece should attack (5,4) if it's in a step direction
-      const attacks = isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white');
-      // Determine if (5,4) is reachable — for white, F = row-1
-      // Most pieces have F in their step directions, but not all
-      // We just verify that the function runs and returns a boolean
-      expect(typeof attacks).toBe('boolean');
+      // For white: F = row-1 = (5,4), B = row+1 = (5,6)
+      expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(forward);
+      expect(isSquareUnderAttack(pos, { col: 5, row: 6 }, 'white')).toBe(backward);
     },
   );
 
@@ -798,17 +794,37 @@ describe('GSFEN integration — attack/check/exposure states', () => {
   });
 
   it('dense-engagement — complex position with stacks', () => {
+    // Board layout (row 1 = top):
+    //   Row 1: p at (3,1), e at (7,1)
+    //   Row 2: GN stack at (5,2) [G bottom, N top]
+    //   Row 3: A at (3,3), M at (5,3), A at (7,3)
+    //   Row 5: f at (3,5), YN stack at (5,5)
+    //   Row 6: EP stack at (5,6)
+    //   Row 7: PS stack at (4,7), PU stack at (6,7)
+    //   Row 8: S at (3,8), g at (4,8), S at (7,8)
+    //   Row 9: m at (5,9)
+    // White Marshal at (5,9) — no black piece threatens it (nearest black pieces
+    // are at rows 1-3, too far for step movement, and row 8 has only white pieces).
+    // Black Marshal at (5,3) — no white piece reaches it (white pieces on rows 5-9
+    // are blocked or out of range).
     const pos = gsfenPos(
       '2,p,3,e,2/4,gn,4/2,a,1,m,1,a,2/9/2,YN,3,F,2/4,EP,4/3,PS,2,PU,2/2,s,2,G,s,2/4,M,4 w AC2E2JLSTYc2e2fjlnp 45',
     );
-    // Just verify the function runs without error and returns booleans
-    const checkW = isInCheck(pos, 'white');
-    const checkB = isInCheck(pos, 'black');
-    expect(typeof checkW).toBe('boolean');
-    expect(typeof checkB).toBe('boolean');
+    expect(isInCheck(pos, 'white')).toBe(false);
+    expect(isInCheck(pos, 'black')).toBe(false);
     const exp = isExposed(pos);
-    expect(typeof exp.white).toBe('boolean');
-    expect(typeof exp.black).toBe('boolean');
+    expect(exp.white).toBe(false);
+    expect(exp.black).toBe(false);
+
+    // Cross-check: Marshal squares are not under attack by opponent
+    expect(isSquareUnderAttack(pos, { col: 5, row: 9 }, 'black')).toBe(false);
+    expect(isSquareUnderAttack(pos, { col: 5, row: 3 }, 'white')).toBe(false);
+
+    // Sanity: white pieces DO attack some squares (the position is not dead)
+    // g (white General) at (4,8) has range movement — attacks along orthogonals
+    expect(isSquareUnderAttack(pos, { col: 4, row: 7 }, 'white')).toBe(true);
+    // Y (black Spy) at top of (5,5) stack — attacks diagonals
+    expect(isSquareUnderAttack(pos, { col: 4, row: 4 }, 'black')).toBe(true);
   });
 });
 
@@ -932,6 +948,161 @@ describe('Edge cases', () => {
 
 /* ------------------------------------------------------------------ */
 /*  Section 11 — getLegalDestinations cross-check                      */
+/* ------------------------------------------------------------------ */
+
+/* ------------------------------------------------------------------ */
+/*  Section 11 — Exact attack-set enumeration                          */
+/* ------------------------------------------------------------------ */
+
+describe('Exact attack-set enumeration', () => {
+  /**
+   * Helper: checks that a piece at the given position attacks EXACTLY the given
+   * set of squares and NO others among the checked candidates.
+   */
+  function assertExactAttackSet(
+    pos: Position,
+    _pieceCol: number,
+    _pieceRow: number,
+    player: Player,
+    expectedAttacked: { col: number; row: number }[],
+    notAttacked: { col: number; row: number }[],
+  ): void {
+    for (const sq of expectedAttacked) {
+      expect(
+        isSquareUnderAttack(pos, { col: sq.col as BoardCoord, row: sq.row as BoardCoord }, player),
+        `Expected (${sq.col},${sq.row}) to be attacked`,
+      ).toBe(true);
+    }
+    for (const sq of notAttacked) {
+      expect(
+        isSquareUnderAttack(pos, { col: sq.col as BoardCoord, row: sq.row as BoardCoord }, player),
+        `Expected (${sq.col},${sq.row}) to NOT be attacked`,
+      ).toBe(false);
+    }
+  }
+
+  it('Marshal at (5,5) size 1 — attacks EXACTLY the 8 neighbours', () => {
+    const pos = emptyPos();
+    putPiece(pos, 5, 5, 'M', 'white');
+    // Place enemies on all 8 neighbour squares so they can be tested
+    const neighbours = [
+      { col: 5, row: 4 }, // F
+      { col: 5, row: 6 }, // B
+      { col: 6, row: 5 }, // L
+      { col: 4, row: 5 }, // R
+      { col: 6, row: 4 }, // FL
+      { col: 4, row: 4 }, // FR
+      { col: 6, row: 6 }, // BL
+      { col: 4, row: 6 }, // BR
+    ];
+    for (const sq of neighbours) putPiece(pos, sq.col, sq.row, 'P', 'black');
+
+    assertExactAttackSet(pos, 5, 5, 'white', neighbours, [
+      { col: 5, row: 3 }, // 2 forward — out of step range
+      { col: 7, row: 5 }, // 2 left — out of step range
+      { col: 7, row: 3 }, // 2 FL — out of step range
+      { col: 5, row: 5 }, // own square
+    ]);
+  });
+
+  it('Fortress at (5,5) size 1 — attacks EXACTLY F, L, R, BL, BR (5 squares)', () => {
+    const pos = emptyPos();
+    putPiece(pos, 5, 5, 'F', 'white');
+    const attacked = [
+      { col: 5, row: 4 }, // F
+      { col: 6, row: 5 }, // L
+      { col: 4, row: 5 }, // R
+      { col: 6, row: 6 }, // BL
+      { col: 4, row: 6 }, // BR
+    ];
+    for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
+
+    assertExactAttackSet(pos, 5, 5, 'white', attacked, [
+      { col: 5, row: 6 }, // B — Fortress cannot go backward
+      { col: 6, row: 4 }, // FL — Fortress cannot go FL
+      { col: 4, row: 4 }, // FR — Fortress cannot go FR
+    ]);
+  });
+
+  it('Pawn at (5,5) size 1 — attacks EXACTLY F, B (2 squares)', () => {
+    const pos = emptyPos();
+    putPiece(pos, 5, 5, 'P', 'white');
+    const attacked = [
+      { col: 5, row: 4 }, // F
+      { col: 5, row: 6 }, // B
+    ];
+    for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
+
+    assertExactAttackSet(pos, 5, 5, 'white', attacked, [
+      { col: 6, row: 5 }, // L — Pawn cannot go sideways
+      { col: 4, row: 5 }, // R — Pawn cannot go sideways
+      { col: 6, row: 4 }, // FL — Pawn cannot go diagonal
+      { col: 4, row: 4 }, // FR — Pawn cannot go diagonal
+      { col: 6, row: 6 }, // BL — Pawn cannot go diagonal
+      { col: 4, row: 6 }, // BR — Pawn cannot go diagonal
+    ]);
+  });
+
+  it('Samurai at (5,5) size 1 — attacks EXACTLY F, FL, FR, B (4 squares)', () => {
+    const pos = emptyPos();
+    putPiece(pos, 5, 5, 'S', 'white');
+    const attacked = [
+      { col: 5, row: 4 }, // F
+      { col: 6, row: 4 }, // FL
+      { col: 4, row: 4 }, // FR
+      { col: 5, row: 6 }, // B
+    ];
+    for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
+
+    assertExactAttackSet(pos, 5, 5, 'white', attacked, [
+      { col: 6, row: 5 }, // L — Samurai cannot go L
+      { col: 4, row: 5 }, // R — Samurai cannot go R
+      { col: 6, row: 6 }, // BL — Samurai cannot go BL
+      { col: 4, row: 6 }, // BR — Samurai cannot go BR
+    ]);
+  });
+
+  it('Captain at (5,5) size 1 — attacks EXACTLY FL, FR, B (3 squares)', () => {
+    const pos = emptyPos();
+    putPiece(pos, 5, 5, 'T', 'white');
+    const attacked = [
+      { col: 6, row: 4 }, // FL
+      { col: 4, row: 4 }, // FR
+      { col: 5, row: 6 }, // B
+    ];
+    for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
+
+    assertExactAttackSet(pos, 5, 5, 'white', attacked, [
+      { col: 5, row: 4 }, // F — Captain cannot go F
+      { col: 6, row: 5 }, // L — Captain cannot go L
+      { col: 4, row: 5 }, // R — Captain cannot go R
+      { col: 6, row: 6 }, // BL — Captain cannot go BL
+      { col: 4, row: 6 }, // BR — Captain cannot go BR
+    ]);
+  });
+
+  it('Cannon at (5,5) size 1 — attacks EXACTLY L, R, B + jump forward 3', () => {
+    const pos = emptyPos();
+    putPiece(pos, 5, 5, 'C', 'white');
+    const attacked = [
+      { col: 6, row: 5 }, // L (step)
+      { col: 4, row: 5 }, // R (step)
+      { col: 5, row: 6 }, // B (step)
+      { col: 5, row: 2 }, // Jump forward 3: dest (0,+3) → (5, 5-3) = (5,2)
+    ];
+    for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
+
+    assertExactAttackSet(pos, 5, 5, 'white', attacked, [
+      { col: 5, row: 4 }, // F step — Cannon has no F step
+      { col: 5, row: 3 }, // Jump over-square — not a destination
+      { col: 5, row: 1 }, // Beyond jump — too far
+      { col: 6, row: 4 }, // FL — not a Cannon direction
+    ]);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Section 12 — Cross-check with getLegalDestinations                 */
 /* ------------------------------------------------------------------ */
 
 describe('Cross-check with getLegalDestinations', () => {

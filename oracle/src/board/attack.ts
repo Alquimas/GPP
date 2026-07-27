@@ -35,13 +35,13 @@ import { findPieceOnBoard, squareFromIndex, topPiece, stackSize } from './board.
  * @param targetSquare   The square being tested for attack.
  * @param byPlayer       The player whose pieces are the potential attackers.
  * @param sourceStackSize Optional: if provided, only pieces with exactly
- *                        this stack size are considered.
+ *                        this stack size (1, 2, or 3) are considered.
  */
 export function isSquareUnderAttack(
   position: Position,
   targetSquare: Square,
   byPlayer: Player,
-  sourceStackSize?: number,
+  sourceStackSize?: 1 | 2 | 3,
 ): boolean {
   const tc = targetSquare.col;
   const tr = targetSquare.row;
