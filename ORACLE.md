@@ -334,14 +334,22 @@ docker compose run --rm format-check  # exit 0, all files formatted
   - `Phase = 'deploy' | 'battle'`
   - `DoneFlag = Player | null`
   - `TurnState = { phase: Phase; activePlayer: Player; done: DoneFlag; counter: number }`
-  - `Hand` — `Partial<Record<PieceType, number>>` (absent key = count 0;
-    avoids populating all 14 keys at game start)
-  - `GameState` — `{ position: Position; turn: TurnState; hands: { white: Hand; black: Hand }; history: GameState[] }`
+  - `Hand` — `Record<PieceType, number>` (all 14 keys always present; count 0
+    means empty — a single canonical form, so Game States compare cleanly for
+    Repetition)
+  - `GameState` — `{ position: Position; turn: TurnState; hands: { white: Hand; black: Hand } }`
+    (snapshot only — Repetition compares these directly, per CONTEXT.md)
+  - `GlobalState` — `{ current: GameState; history: GameState[]; result: GameResult }`
+    (runtime container; history lives here, never inside a snapshot)
   - `Action` — discriminated union:
     - `{ kind: 'placement'; piece: PieceType; dest: Square; done: boolean }`
     - `{ kind: 'move'; origin: Square; dest: Square; outcome: 'stack' | 'capture' | null; turncoat: number[] }`
     - `{ kind: 'arata'; piece: PieceType; dest: Square; turncoat: number[] }`
-  - `GameResult` — `{ winner: Player } | { draw: 'repetition' | 'exposure' | 'stalemate' } | null`
+  - `GameResult` — discriminated union: `{ kind: 'ongoing' }` |
+    `{ kind: 'checkmate' | 'stalemate' | 'exposure'; loser: Player }` |
+    `{ kind: 'exposure-draw' }` | `{ kind: 'repetition' }`
+    (BR-TERMINATION-001/002: checkmate and stalemate are losses of the Active
+    Player; BR-DEPLOY-012: exposure is a loss for one player or a draw for both)
   - `MoveClass = 'step' | 'limited-range' | 'range' | 'jump'`
   - `Direction` — string literal union: `'F' | 'B' | 'L' | 'R' | 'FL' | 'FR' | 'BL' | 'BR'`
     (not an enum — zero runtime cost, erased at compile time)
@@ -367,9 +375,9 @@ docker compose run --rm format-check  # exit 0, all files formatted
 | Module system | ESM (`"type": "module"`) | Vitest and TS 5.7 handle ESM natively; all future tooling assumes it |
 | TypeScript target | `ES2022` | Structured result types, `?.`/`??` native; no downlevel pitfalls |
 | Module resolution | `Node16` | Correct ESM resolution; required for `"type": "module"` |
-| Strictness | `strict: true` + `noUnusedLocals` + `noUnusedParameters` + `exactOptionalPropertyTypes` | Catches unused code and `undefined` vs absent distinction (important for `GameResult`) |
+| Strictness | `strict: true` + `noUnusedLocals` + `noUnusedParameters` + `exactOptionalPropertyTypes` | Catches unused code and `undefined` vs absent distinction across the model |
 | Direction representation | String literal union (not enum) | Erased at compile time — no runtime code emitted |
-| Hand representation | `Partial<Record<PieceType, number>>` | Absent key = count 0; avoids constructing 28-key object per GameState |
+| Hand representation | `Record<PieceType, number>` | All keys always present — one canonical form so deep equality works for Repetition state comparison |
 | Position indexing | `position[row][col]`, row-major | Matches GSFEN row-first serialization; parsers handle coordinate translation |
 | Error classes | `class extends Error` | `instanceof` works in test assertions and consumer error-handling code |
 | Runtime dependencies | **Zero** | The Oracle is pure TypeScript types + logic; everything compiles away |
@@ -713,7 +721,7 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
 **Deploy → Battle transition** in `src/game/terminal.ts`:
 - `evaluateExposure(state): GameResult`
   - Per BR-DEPLOY-012: if exactly one Marshal under attack → that player
-    loses; if both → draw; otherwise → null (continue)
+    loses; if both → draw; otherwise → `{ kind: 'ongoing' }` (continue)
 
 **Checkpoint:**
 - A full deploy sequence: 25 placements for White + 25 for Black (or mixed
@@ -750,8 +758,9 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
 
 **State transition guarantees:**
 - Every `apply*` receives a pre-validated action (validation already passed)
-- Returns `ApplyResult = { state: GameState; result: GameResult }` where
-  `GameResult` is non-null only if the game ended by this action
+- Returns `ApplyResult = { state: GameState; result: GameResult }` —
+  `result.kind` is `'ongoing'` if the game continues, terminal if the
+  action ended the game
 
 **Checkpoint:**
 - A full deploy → battle sequence: execute 50 placements (or fewer with
@@ -812,12 +821,12 @@ class Game {
 
   // Read-only queries
   get state(): GameState
-  get result(): GameResult       // null if game ongoing
+  get result(): GameResult       // ongoing if the game continues
   get legalActions(): Action[]   // all legal actions for the current player
 
   // Action execution
   applyAction(action: Action): ApplyResult
-  //   On success: returns the new GameState + (maybe) terminal result
+  //   On success: returns the new GameState + terminal result (or ongoing)
   //   On failure: returns unchanged state + typed error with BR-xxx reference
 
   // Serialization
