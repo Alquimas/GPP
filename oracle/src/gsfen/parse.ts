@@ -16,7 +16,7 @@ import {
   type TurnState,
 } from '../types.js';
 import { GameError } from '../errors.js';
-import { EMPTY_HAND, START_GSFEN } from '../constants.js';
+import { EMPTY_HAND, START_GSFEN, ALL_PIECE_TYPES } from '../constants.js';
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -34,25 +34,7 @@ type FieldResult<T> = { ok: true; value: T } | { ok: false; error: GameError };
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-/** Canonical alphabetical piece type order (14 types). */
-const ALL_TYPES: PieceType[] = [
-  'A',
-  'C',
-  'E',
-  'F',
-  'G',
-  'J',
-  'L',
-  'M',
-  'N',
-  'P',
-  'S',
-  'T',
-  'U',
-  'Y',
-];
-
-const VALID_PIECE_SET = new Set<string>(ALL_TYPES);
+const VALID_PIECE_SET = new Set<string>(ALL_PIECE_TYPES);
 
 /** Safe cast: an already-validated piece letter → PieceType (centralises the unsafe cast). */
 function isPieceType(ch: string): ch is PieceType {
@@ -90,6 +72,8 @@ function isCountDigit(ch: string): boolean {
  * GSFEN row items are written Col 9 → Col 1 (left to right in Standard
  * Diagram).  Our internal Position uses position[row][col-1] where col 1
  * = rightmost, so we reverse the mapping.
+ *
+ * @throws {GameError} with rule 'C1' if row count != 9, 'C2' if row doesn't sum to 9, 'C3' if empty runs not merged
  */
 function parsePosition(posStr: string): FieldResult<Position> {
   const rows = posStr.split('/');
@@ -218,6 +202,8 @@ function parsePosition(posStr: string): FieldResult<Position> {
  * | db    | deploy     | black  | null   |
  * | dwB   | deploy     | white  | black  |
  * | dbW   | deploy     | black  | white  |
+ *
+ * @throws {GameError} with rule 'C1' if token is invalid
  */
 function parseTurn(turnStr: string): FieldResult<TurnState> {
   let phase: Phase;
@@ -274,6 +260,8 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
  *
  * Format: `-` when both empty, otherwise White (uppercase, alphabetical,
  * with optional count 2-4) followed by Black (lowercase, alphabetical).
+ *
+ * @throws {GameError} with rule 'C5' if hands are malformed
  */
 function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }> {
   // C5 / V8: `-` when both empty
@@ -435,6 +423,8 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
 /**
  * Parse the counter field.
  * Must be a positive integer with no leading zeros (C6).
+ *
+ * @throws {GameError} with rule 'C6' if counter has leading zeros or is < 1
  */
 function parseCounter(counterStr: string): FieldResult<number> {
   if (!/^[1-9]\d*$/.test(counterStr)) {
@@ -471,6 +461,7 @@ function parseCounter(counterStr: string): FieldResult<number> {
  * `validateState`).
  *
  * @param input - Raw GSFEN string to parse.
+ * @throws {GameError} with rule 'C1' if fields are wrong, 'C7' if startpos keyword is malformed
  */
 export function parseGSFEN(input: string): ParseResult {
   // C7: startpos keyword (lowercase, exact, no whitespace allowed per C1)

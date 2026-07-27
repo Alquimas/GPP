@@ -5,9 +5,9 @@
  * @module
  */
 
-import { type GameState, type PieceType, type Player } from '../types.js';
+import { type GameState, type Player } from '../types.js';
 import { GameError } from '../errors.js';
-import { INITIAL_COUNTS } from '../constants.js';
+import { INITIAL_COUNTS, ALL_PIECE_TYPES } from '../constants.js';
 import {
   countBoardPieces,
   countPieceOnBoard,
@@ -25,24 +25,6 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** All 14 piece types in canonical order. */
-const ALL_TYPES: PieceType[] = [
-  'A',
-  'C',
-  'E',
-  'F',
-  'G',
-  'J',
-  'L',
-  'M',
-  'N',
-  'P',
-  'S',
-  'T',
-  'U',
-  'Y',
-];
-
 // Board query helpers (countBoardPieces, hasAnyBoardPieces, countPieceOnBoard,
 // findPieceOnBoard) are now imported from ../board/board.js.
 
@@ -58,6 +40,13 @@ const ALL_TYPES: PieceType[] = [
  * parse-level concern.
  *
  * @param state - The GameState to validate.
+ * @throws {GameError} with rule:
+ *   - 'V2' if stack size not 1-3
+ *   - 'V3' if Marshal integrity violated
+ *   - 'V4' if inventory conservation violated
+ *   - 'V5' if Done flags inconsistent
+ *   - 'V6' if deploy-phase constraints violated
+ *   - 'V7' if counter bounds violated
  */
 export function validateState(state: GameState): ValidationResult {
   // -----------------------------------------------------------------------
@@ -155,7 +144,7 @@ export function validateState(state: GameState): ValidationResult {
     const boardCounts = countBoardPieces(state.position, player);
     const hand = state.hands[player];
 
-    for (const type of ALL_TYPES) {
+    for (const type of ALL_PIECE_TYPES) {
       const total = boardCounts[type] + hand[type];
       const initial = INITIAL_COUNTS[type];
       if (total > initial) {

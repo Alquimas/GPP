@@ -459,21 +459,40 @@ round-trip.
   - Counter: plain decimal, no leading zeros
   - Enforce canonical output: C2–C6 are *guarantees* of the serializer, not
     post-hoc checks
+- `src/index.ts` — add `export * from './gsfen/serialize.js'` to the barrel
 
 **Checkpoint:**
-- `parse(serialize(state))` round-trips for all 15 sample GSFENs + all
-  worked examples from GSFEN.md
+- `parse(serialize(state))` round-trips for all `.gsfen` fixture files
+  (glob: `gsfen/*.gsfen`) + all worked examples from GSFEN.md
 - `serialize(parse(gsfenStr))` returns exactly the original string for every
   canonical input (proving canonicalization is preserved)
+- **`startpos` keyword handled correctly:** `serialize(parse('startpos'))`
+  produces the expanded canonical string (`START_GSFEN`), not the keyword
+  `"startpos"` — `startpos` is a parse-only convenience alias, not a valid
+  serialization output
 - Passing test: `tests/gsfen/serialize.test.ts`
 
 **Verification:**
-- **Narrow:** Round-trip all known `.gsfen` files via `parse →
-  serialize → re-parse` and assert structural deep-equality of the
-  intermediate `GameState`.
-- **Plus:** For each sample, assert `serialize(parse(x)) === x.trim()` to
-  confirm the canonical form round-trips as identical text. This catches
-  ordering bugs (hands, rows) and run-merging bugs (C3).
+- **Primary (parametric round-trip):** Glob all `.gsfen` fixture files, parse
+  each, serialize back, then assert:
+  1. `serialize(parse(x)) === x.trim()` — exact text round-trip for canonical
+     inputs (catches ordering, run-merging, counter-formatting bugs)
+  2. `parse(serialize(state))` produces a `GameState` deeply equal to the
+     original — structural round-trip for any reachable state
+  This is the decisive evidence path: the two identities prove the serializer
+  inverts the parser and preserves canonical form. **Write this as a single
+  parametric test** (`test.each` over fixture list), not per-file hand-coded
+  assertions — the existing `verify.test.ts` already does detailed structural
+  spot-checks.
+- **Edge-case tests (handful):**
+  - Empty hands marker: `{ white: EMPTY_HAND, black: EMPTY_HAND }` → `"-"`
+  - Single-piece hand: `{ white: { ...EMPTY_HAND, M: 1 }, black: EMPTY_HAND }`
+    → `"M"` (count 1 omitted)
+  - Multi-count hand: a hand with counts ≥2 for several types
+  - Full compaction: a row with pieces at columns 1 and 9 produces the
+    minimal digit-run encoding
+- **Coverage target:** Every row encoding pattern (empty, mixed empty/piece,
+  stacks at various positions) appears in at least one fixture.
 
 ---
 

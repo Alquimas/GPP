@@ -1,5 +1,23 @@
 import { type Hand, type MovementDef, type PieceType } from './types.js';
 
+/** Canonical alphabetical order of all 14 piece types. */
+export const ALL_PIECE_TYPES: PieceType[] = [
+  'A',
+  'C',
+  'E',
+  'F',
+  'G',
+  'J',
+  'L',
+  'M',
+  'N',
+  'P',
+  'S',
+  'T',
+  'U',
+  'Y',
+];
+
 /** Letter → full English name. */
 export const PIECE_NAMES: Record<PieceType, string> = {
   A: 'Archer',
