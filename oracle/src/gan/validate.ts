@@ -14,6 +14,7 @@
 
 import { type Action, type GameState, type Square } from '../types.js';
 import { GameError } from '../errors.js';
+import { getStack, topPiece } from '../board/board.js';
 
 // ---------------------------------------------------------------------------
 // Exported types
@@ -62,14 +63,17 @@ function checkPhase(action: Action, state: GameState): ValidationResult {
         error: new GameError('Placement is only valid during the Deploy Phase (S1)', 'S1'),
       };
     }
-  } else {
-    // move or arata
+  } else if (action.kind === 'move' || action.kind === 'arata') {
     if (phase !== 'battle') {
       return {
         ok: false,
         error: new GameError('Move and Arata are only valid during the Battle Phase (S1)', 'S1'),
       };
     }
+  } else {
+    const _exhaustive: never = action;
+    void _exhaustive;
+    throw new Error(`Unknown action kind`);
   }
 
   return { ok: true };
@@ -231,7 +235,7 @@ function checkArataLegality(_action: Action, _state: GameState): ValidationResul
  *
  * @throws {GameError} with rule 'S5' on illegal turncoat.
  */
-function checkTurncoatLegality(action: Action, _state: GameState): ValidationResult {
+function checkTurncoatLegality(action: Action, state: GameState): ValidationResult {
   const turncoat = action.kind === 'placement' ? [] : action.turncoat;
 
   if (!turncoat || turncoat.length === 0) {
@@ -247,7 +251,24 @@ function checkTurncoatLegality(action: Action, _state: GameState): ValidationRes
         error: new GameError('Turncoat requires the outcome to be a Stack (S5)', 'S5'),
       };
     }
-    // TODO: Check that the acting piece at origin is a Captain (needs board state lookup)
+    // Check that the acting piece at origin is a Captain
+    const originStack = getStack(state.position, action.origin);
+    if (!originStack) {
+      return {
+        ok: false,
+        error: new GameError('Turncoat move requires a piece at origin (S5)', 'S5'),
+      };
+    }
+    const topPieceAtOrigin = topPiece(originStack);
+    if (topPieceAtOrigin.type !== 'T') {
+      return {
+        ok: false,
+        error: new GameError(
+          'Turncoat is only legal when the moving piece is a Captain (S5)',
+          'S5',
+        ),
+      };
+    }
   } else if (action.kind === 'arata') {
     // Arata: placed piece must be Captain
     if (action.piece !== 'T') {

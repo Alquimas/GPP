@@ -96,14 +96,20 @@ export function isInCheck(position: Position, player: Player): boolean {
   const locations = findPieceOnBoard(position, 'M', player);
   if (locations.length === 0) return false;
 
-  // Convert 0-indexed position indices to 1-indexed Square
-  const marshalSquare: Square = {
-    col: (locations[0].col + 1) as BoardCoord,
-    row: (locations[0].row + 1) as BoardCoord,
-  };
-
   const opponent: Player = player === 'white' ? 'black' : 'white';
-  return isSquareUnderAttack(position, marshalSquare, opponent);
+
+  // Check all Marshal locations (should be exactly one, but robust against corruption)
+  for (const loc of locations) {
+    const marshalSquare: Square = {
+      col: (loc.col + 1) as BoardCoord,
+      row: (loc.row + 1) as BoardCoord,
+    };
+    if (isSquareUnderAttack(position, marshalSquare, opponent)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /* ------------------------------------------------------------------ */

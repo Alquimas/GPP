@@ -55,11 +55,7 @@ function canLandOnStack(sourceSize: number, targetStack: Stack | null): boolean 
  * - 'stack'  → enemy, size < 3, top is not Marshal (player may choose)
  * - 'capture' → enemy, size = 3 OR top is Marshal (forced)
  */
-function determineOutcome(
-  _sourceSize: number,
-  targetStack: Stack | null,
-  player: Player,
-): MoveOutcome | null {
+function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcome | null {
   if (targetStack === null) return null;
   const top = topPiece(targetStack);
   if (top.owner === player) return null;
@@ -73,7 +69,7 @@ function determineOutcome(
  * For White: positive row = forward (row-1), positive col = left (col+1).
  * For Black: negate both components.
  */
-function applyDelta(origin: Square, delta: CoordDelta, player: Player): Square {
+function applyCoordDelta(origin: Square, delta: CoordDelta, player: Player): Square {
   if (player === 'white') {
     return {
       col: (origin.col + delta.col) as BoardCoord,
@@ -111,7 +107,7 @@ function computeStepMovement(
     results.push({
       dest,
       moveClass: 'step',
-      outcome: determineOutcome(sourceSize, targetStack, player),
+      outcome: determineOutcome(targetStack, player),
     });
   }
   return results;
@@ -162,7 +158,7 @@ function computeTraceMovement(
           results.push({
             dest: next,
             moveClass,
-            outcome: determineOutcome(sourceSize, targetStack, player),
+            outcome: determineOutcome(targetStack, player),
           });
         }
         break; // stop tracing past obstruction
@@ -206,6 +202,15 @@ function getScaledJumps(
   const extCol = base.dest.col - farthestOver.col;
   const extRow = base.dest.row - farthestOver.row;
 
+  // If extension vector is zero, no meaningful scaling possible beyond level 1
+  if (extCol === 0 && extRow === 0) {
+    patterns.push({
+      dest: { col: base.dest.col, row: base.dest.row },
+      over: base.over.map((o) => ({ col: o.col, row: o.row })),
+    });
+    return patterns;
+  }
+
   // Level 1
   let prevDest: CoordDelta = { col: base.dest.col, row: base.dest.row };
   let prevOver: CoordDelta[] = base.over.map((o) => ({ col: o.col, row: o.row }));
@@ -247,13 +252,13 @@ function computeJumpMovement(
   for (const base of baseJumps) {
     const patterns = getScaledJumps(base, sourceSize);
     for (const pattern of patterns) {
-      const destSquare = applyDelta(square, pattern.dest, player);
+      const destSquare = applyCoordDelta(square, pattern.dest, player);
       if (!squareInBounds(destSquare)) continue;
 
       // BR-PATH-002: check all jumped-over squares
       let blocked = false;
       for (const over of pattern.over) {
-        const overSquare = applyDelta(square, over, player);
+        const overSquare = applyCoordDelta(square, over, player);
         if (!squareInBounds(overSquare)) {
           blocked = true;
           break;
@@ -273,7 +278,7 @@ function computeJumpMovement(
       results.push({
         dest: destSquare,
         moveClass: 'jump',
-        outcome: determineOutcome(sourceSize, targetStack, player),
+        outcome: determineOutcome(targetStack, player),
       });
     }
   }

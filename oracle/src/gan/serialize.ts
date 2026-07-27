@@ -153,5 +153,10 @@ export function serializeGAN(action: Action): string {
       return serializeMove(action);
     case 'arata':
       return serializeArata(action);
+    default: {
+      const _exhaustive: never = action;
+      void _exhaustive;
+      throw new Error(`Unknown action kind`);
+    }
   }
 }

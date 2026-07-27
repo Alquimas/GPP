@@ -152,6 +152,10 @@ describe('S5 — Turncoat legality', () => {
   });
 
   it('accepts move with stack outcome and turncoat', () => {
+    const state = battleState();
+    // Place a Captain at origin (5,6) for the turncoat move
+    state.position[5][4] = [{ type: 'T', owner: 'white' }];
+
     const action: Action = {
       kind: 'move',
       origin: { col: 5, row: 6 },
@@ -159,7 +163,6 @@ describe('S5 — Turncoat legality', () => {
       outcome: 'stack',
       turncoat: [2],
     };
-    const state = battleState();
     const result = validateAction('5-6>5-5=+2', action, state);
     expect(result.ok).toBe(true);
   });

@@ -43,8 +43,8 @@ function isValidPiece(ch: string): ch is PieceType {
  * @throws {GameError} with rule 'A1' if the square is invalid.
  */
 export function parseSquare(s: string): Square {
-  // Must match exactly `{digit}-{digit}`
-  if (!/^\d-\d$/.test(s)) {
+  // Must match exactly `{digit 1-9}-{digit 1-9}`
+  if (!/^[1-9]-[1-9]$/.test(s)) {
     throw new GameError(
       `Invalid square notation "${s}"; expected format "{col}-{row}" with digits 1-9`,
       'A1',
@@ -54,14 +54,6 @@ export function parseSquare(s: string): Square {
   const [colStr, rowStr] = s.split('-');
   const col = parseInt(colStr, 10);
   const row = parseInt(rowStr, 10);
-
-  if (col < 1 || col > 9) {
-    throw new GameError(`Column must be 1-9, got ${col}`, 'A1');
-  }
-
-  if (row < 1 || row > 9) {
-    throw new GameError(`Row must be 1-9, got ${row}`, 'A1');
-  }
 
   return { col: col as BoardCoord, row: row as BoardCoord };
 }
@@ -114,15 +106,17 @@ export function parsePlacement(gan: string): Action {
     throw new GameError(`Placement string too short: "${gan}"`, 'A1');
   }
 
-  const piece = gan[0] as PieceType;
+  const pieceChar = gan[0];
 
   // Validate piece letter (A1)
-  if (!isValidPiece(piece)) {
+  if (!isValidPiece(pieceChar)) {
     throw new GameError(
       `Invalid piece letter "${gan[0]}" in placement; must be one of A, C, E, F, G, J, L, M, N, P, S, T, U, Y`,
       'A1',
     );
   }
+
+  const piece = pieceChar;
 
   // A4: Check for extra '!' — only one allowed, at end only
   const bangCount = (gan.match(/!/g) ?? []).length;
@@ -280,15 +274,17 @@ export function parseArata(gan: string): Action {
     throw new GameError(`Arata "${gan}" contains whitespace (A5)`, 'A5');
   }
 
-  const piece = gan[0] as PieceType;
+  const pieceChar = gan[0];
 
   // Validate piece letter
-  if (!isValidPiece(piece)) {
+  if (!isValidPiece(pieceChar)) {
     throw new GameError(
       `Invalid piece letter "${gan[0]}" in arata; must be one of A, C, E, F, G, J, L, M, N, P, S, T, U, Y`,
       'A1',
     );
   }
+
+  const piece = pieceChar;
 
   // A1: Must have '*' separator
   if (gan[1] !== '*') {
