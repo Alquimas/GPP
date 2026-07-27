@@ -7,7 +7,7 @@
  * @module
  */
 
-import type { Player, Position, Square } from '../types.js';
+import type { BoardCoord, Player, Position, Square } from '../types.js';
 import { getLegalDestinations } from './movement.js';
 import { findPieceOnBoard, topPiece, stackSize } from './board.js';
 
@@ -58,7 +58,7 @@ export function isSquareUnderAttack(
       if (sourceStackSize !== undefined && stackSize(stack) !== sourceStackSize) continue;
 
       // Convert 0-indexed position to 1-indexed Square
-      const sourceSquare: Square = { col: c + 1, row: r + 1 };
+      const sourceSquare: Square = { col: (c + 1) as BoardCoord, row: (r + 1) as BoardCoord };
 
       // getLegalDestinations already applies BR-MOVE-005 (stack size
       // landing restriction) and allows landing on enemy Marshals
@@ -98,8 +98,8 @@ export function isInCheck(position: Position, player: Player): boolean {
 
   // Convert 0-indexed position indices to 1-indexed Square
   const marshalSquare: Square = {
-    col: locations[0].col + 1,
-    row: locations[0].row + 1,
+    col: (locations[0].col + 1) as BoardCoord,
+    row: (locations[0].row + 1) as BoardCoord,
   };
 
   const opponent: Player = player === 'white' ? 'black' : 'white';

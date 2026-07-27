@@ -9,6 +9,7 @@ import {
   type GameState,
   type Hand,
   type Phase,
+  type Piece,
   type PieceType,
   type Player,
   type Position,
@@ -151,7 +152,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
         };
       }
 
-      const stack: Stack = [];
+      const pieces: Piece[] = [];
       for (const ch of item) {
         const upper = ch.toUpperCase();
         if (!isPieceType(upper)) {
@@ -161,8 +162,9 @@ function parsePosition(posStr: string): FieldResult<Position> {
           };
         }
         const owner: Player = ch === upper ? 'white' : 'black';
-        stack.push({ type: upper, owner });
+        pieces.push({ type: upper, owner });
       }
+      const stack = pieces as Stack;
 
       if (pos < 0) {
         return {

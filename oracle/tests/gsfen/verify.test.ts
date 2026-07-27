@@ -4,13 +4,9 @@ import { validateState } from '../../src/gsfen/validate.js';
 import { INITIAL_COUNTS, EMPTY_HAND } from '../../src/constants.js';
 import type { Hand } from '../../src/types.js';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function readFixture(name: string): string {
-  return readFileSync(join(__dirname, '..', '..', '..', 'gsfen', `${name}.gsfen`), 'utf-8').trim();
+  return readFileSync(`/gsfen/${name}.gsfen`, 'utf-8').trim();
 }
 
 function parseOk(gsfen: string) {

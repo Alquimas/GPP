@@ -11,14 +11,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { EMPTY_HAND, START_GSFEN } from '../../src/constants.js';
 import type { GameState, Hand, Position, Stack } from '../../src/types.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,7 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Read a .gsfen fixture file by name (without extension). */
 function readFixture(name: string): string {
-  return readFileSync(join(__dirname, '..', '..', '..', 'gsfen', `${name}.gsfen`), 'utf-8').trim();
+  return readFileSync(`/gsfen/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Assert a parse is successful and return the state. */
@@ -151,8 +147,8 @@ describe('serializeGSFEN — edge cases', () => {
       hands: { white: { ...EMPTY_HAND }, black: { ...EMPTY_HAND } },
     };
     // Manually put both Marshals on board for a valid state
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
 
     const serialized = serializeGSFEN(state);
     // The hands field should be "-"
@@ -248,8 +244,8 @@ describe('serializeGSFEN — canonical output guarantees', () => {
   it('never produces adjacent empty-run digits (C3 guarantee)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     // Add some pieces to create a non-trivial row
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
-    state.position[8][3] = [{ type: 'G', owner: 'white' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[8][3] = [{ type: 'G', owner: 'white' }] as Stack;
     state.hands.white.M = 0;
 
     const serialized = serializeGSFEN(state);

@@ -8,6 +8,7 @@
  */
 
 import type {
+  BoardCoord,
   CoordDelta,
   Direction,
   JumpPattern,
@@ -74,9 +75,15 @@ function determineOutcome(
  */
 function applyDelta(origin: Square, delta: CoordDelta, player: Player): Square {
   if (player === 'white') {
-    return { col: origin.col + delta.col, row: origin.row - delta.row };
+    return {
+      col: (origin.col + delta.col) as BoardCoord,
+      row: (origin.row - delta.row) as BoardCoord,
+    };
   }
-  return { col: origin.col - delta.col, row: origin.row + delta.row };
+  return {
+    col: (origin.col - delta.col) as BoardCoord,
+    row: (origin.row + delta.row) as BoardCoord,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -351,7 +358,7 @@ export function getLegalMoves(position: Position, player: Player): LegalMove[] {
       const stack = position[r][c];
       if (!stack) continue;
       if (topPiece(stack).owner === player) {
-        const square: Square = { col: c + 1, row: r + 1 };
+        const square: Square = { col: (c + 1) as BoardCoord, row: (r + 1) as BoardCoord };
         results.push(...getLegalDestinations(position, square, player));
       }
     }

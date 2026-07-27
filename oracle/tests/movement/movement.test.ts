@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { getLegalDestinations, getLegalMoves } from '../../src/board/movement.js';
 import { PIECE_MOVEMENT } from '../../src/constants.js';
-import type { PieceType, Player, Position, Square } from '../../src/types.js';
+import type { BoardCoord, PieceType, Player, Position, Square, Stack } from '../../src/types.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -21,7 +21,7 @@ function emptyPos(): Position {
 
 /** Place a single-piece stack at (col, row). */
 function putPiece(pos: Position, col: number, row: number, type: PieceType, owner: Player): void {
-  pos[row - 1][col - 1] = [{ type, owner }];
+  pos[row - 1][col - 1] = [{ type, owner }] as Stack;
 }
 
 /** Place a multi-piece stack. `items[0]` = bottom, `items[last]` = top. */
@@ -31,7 +31,7 @@ function putStack(
   row: number,
   items: { type: PieceType; owner: Player }[],
 ): void {
-  pos[row - 1][col - 1] = items.map((p) => ({ ...p }));
+  pos[row - 1][col - 1] = items.map((p) => ({ ...p })) as Stack;
 }
 
 function getSquareDesc(sq: Square): string {
@@ -44,7 +44,9 @@ function extractDestSq(moves: { dest: Square }[]): string[] {
 
 /** Collect all distinct destination squares for a piece. */
 function allDests(pos: Position, col: number, row: number, player: Player): string[] {
-  return extractDestSq(getLegalDestinations(pos, { col, row }, player));
+  return extractDestSq(
+    getLegalDestinations(pos, { col: col as BoardCoord, row: row as BoardCoord }, player),
+  );
 }
 
 /* ------------------------------------------------------------------ */

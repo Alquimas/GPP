@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { EMPTY_HAND, FULL_HAND } from '../../src/constants.js';
 import type { GameState, Player } from '../../src/types.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -14,7 +10,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Read a .gsfen fixture file by name (without extension). */
 function readFixture(name: string): string {
-  return readFileSync(join(__dirname, '..', '..', '..', 'gsfen', `${name}.gsfen`), 'utf-8').trim();
+  return readFileSync(`/gsfen/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Assert a parse is successful and return the state. */
@@ -149,12 +145,13 @@ describe('parseGSFEN — sample files', () => {
     // Row 5 (idx 4), Col 5 (idx 4): "PYT" — White Pawn, White Spy, White Captain
     const stack = state.position[4][4];
     expect(stack).not.toBeNull();
-    if (stack) {
-      expect(stack.length).toBe(3);
+    if (stack?.length === 3) {
       expect(stack[0].type).toBe('P');
       expect(stack[0].owner).toBe('white');
       expect(stack[1].type).toBe('Y');
       expect(stack[2].type).toBe('T');
+    } else if (stack) {
+      expect(stack.length).toBe(3);
     }
   });
 });
@@ -230,8 +227,8 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
     // Stack at (row 5, col 5) → position[4][4]
     const stack = state.position[4][4];
     expect(stack).not.toBeNull();
-    if (stack) {
-      expect(stack.length).toBe(3);
+    // Narrow tuple type via length check
+    if (stack?.length === 3) {
       // Bottom: White Pawn (P)
       expect(stack[0].type).toBe('P');
       expect(stack[0].owner).toBe('white');
@@ -241,6 +238,8 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
       // Top: White Captain (T)
       expect(stack[2].type).toBe('T');
       expect(stack[2].owner).toBe('white');
+    } else {
+      expect(stack).not.toBeNull();
     }
 
     expect(state.turn.phase).toBe('battle');
@@ -292,10 +291,12 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
     const state = result.state;
     const stack = state.position[8][4];
     expect(stack).not.toBeNull();
-    if (stack) {
-      expect(stack.length).toBe(2);
+    // Narrow tuple type via length check
+    if (stack?.length === 2) {
       expect(stack[0].type).toBe('M'); // bottom
       expect(stack[1].type).toBe('P'); // top
+    } else if (stack) {
+      expect(stack.length).toBe(2);
     }
   });
 });

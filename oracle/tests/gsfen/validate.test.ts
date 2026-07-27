@@ -2,12 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { validateState } from '../../src/gsfen/validate.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { EMPTY_HAND, FULL_HAND, INITIAL_COUNTS, START_GSFEN } from '../../src/constants.js';
 import type { GameState, Position, TurnState, Stack, PieceType } from '../../src/types.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Read a .gsfen fixture file. */
 function readFixture(name: string): string {
-  return readFileSync(join(__dirname, '..', '..', '..', 'gsfen', `${name}.gsfen`), 'utf-8').trim();
+  return readFileSync(`/gsfen/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Parse a GSFEN string and assert success. */
@@ -145,13 +141,13 @@ describe('validateState — V2 stack size', () => {
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
-    ];
+    ] as unknown as Stack;
     assertInvalid(state, 'V2');
   });
 
   it('rejects a stack of 0 pieces', () => {
     const state = emptyBattleState();
-    state.position[4][4] = [];
+    state.position[4][4] = [] as unknown as Stack;
     assertInvalid(state, 'V2');
   });
 });
@@ -163,7 +159,7 @@ describe('validateState — V3 Marshal integrity', () => {
     state.position[4][4] = [
       { type: 'M', owner: 'white' },
       { type: 'P', owner: 'white' },
-    ];
+    ] as Stack;
     assertInvalid(state, 'V3');
   });
 
@@ -176,17 +172,17 @@ describe('validateState — V3 Marshal integrity', () => {
   it('rejects Marshal in hand during battle', () => {
     const state = emptyBattleState();
     // Put Marshal on board for both players, but also Marshal in white's hand
-    state.position[4][4] = [{ type: 'M', owner: 'white' }];
-    state.position[4][3] = [{ type: 'M', owner: 'black' }];
+    state.position[4][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[4][3] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.white.M = 1;
     assertInvalid(state, 'V3');
   });
 
   it('rejects two Marshals on board for same player in battle', () => {
     const state = emptyBattleState();
-    state.position[4][4] = [{ type: 'M', owner: 'white' }];
-    state.position[4][5] = [{ type: 'M', owner: 'white' }];
-    state.position[4][3] = [{ type: 'M', owner: 'black' }];
+    state.position[4][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[4][5] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[4][3] = [{ type: 'M', owner: 'black' }] as Stack;
     assertInvalid(state, 'V3');
   });
 
@@ -197,14 +193,14 @@ describe('validateState — V3 Marshal integrity', () => {
 
   it('accepts valid deploys — Marshal on board as top of stack', () => {
     const state = emptyDeployState();
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.hands.white.M = 0;
     assertValid(state);
   });
 
   it('rejects deploy with Marshal both on board and in hand', () => {
     const state = emptyDeployState();
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     // Marshal still in hand (start state has it)
     assertInvalid(state, 'V3');
   });
@@ -212,7 +208,7 @@ describe('validateState — V3 Marshal integrity', () => {
   it('rejects deploy with Marshal in hand but other pieces on board', () => {
     const state = emptyDeployState();
     // Place a Pawn on board but keep Marshal in hand
-    state.position[8][4] = [{ type: 'P', owner: 'white' }];
+    state.position[8][4] = [{ type: 'P', owner: 'white' }] as Stack;
     assertInvalid(state, 'V3');
   });
 });
@@ -230,7 +226,7 @@ describe('validateState — V4 inventory conservation', () => {
     count: number,
   ): void {
     for (let i = 0; i < count; i++) {
-      state.position[4][i] = [{ type, owner }];
+      state.position[4][i] = [{ type, owner }] as Stack;
     }
   }
 
@@ -239,8 +235,8 @@ describe('validateState — V4 inventory conservation', () => {
       it(`${type} (initial ${INITIAL_COUNTS[type]})`, () => {
         const state = emptyBattleState();
         // Place both Marshals to satisfy V3
-        state.position[8][4] = [{ type: 'M', owner: 'white' }];
-        state.position[0][4] = [{ type: 'M', owner: 'black' }];
+        state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+        state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
         // Place initial + 1 pieces
         placePieces(state, type, 'white', INITIAL_COUNTS[type] + 1);
         assertInvalid(state, 'V4');
@@ -253,8 +249,8 @@ describe('validateState — V4 inventory conservation', () => {
       it(`${type} (initial ${INITIAL_COUNTS[type]})`, () => {
         const state = emptyBattleState();
         // Place both Marshals to satisfy V3
-        state.position[8][4] = [{ type: 'M', owner: 'white' }];
-        state.position[0][4] = [{ type: 'M', owner: 'black' }];
+        state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+        state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
         // Place initial + 1 pieces
         placePieces(state, type, 'black', INITIAL_COUNTS[type] + 1);
         assertInvalid(state, 'V4');
@@ -266,11 +262,11 @@ describe('validateState — V4 inventory conservation', () => {
     it('M (initial 1)', () => {
       const state = emptyDeployState();
       // Place 2 white Marshals on board, none in hand
-      state.position[8][4] = [{ type: 'M', owner: 'white' }];
-      state.position[8][5] = [{ type: 'M', owner: 'white' }];
+      state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+      state.position[8][5] = [{ type: 'M', owner: 'white' }] as Stack;
       state.hands.white.M = 0;
       // Place black Marshal to make it a valid deploy
-      state.position[0][4] = [{ type: 'M', owner: 'black' }];
+      state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
       state.hands.black.M = 0;
       // V3 deploy checks pass (M on board only, not in hand, other M at top)
       // V4 catches M: 2 on board > initial 1
@@ -281,10 +277,10 @@ describe('validateState — V4 inventory conservation', () => {
   describe('black over-count M (deploy)', () => {
     it('M (initial 1)', () => {
       const state = emptyDeployState();
-      state.position[0][4] = [{ type: 'M', owner: 'black' }];
-      state.position[0][5] = [{ type: 'M', owner: 'black' }];
+      state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
+      state.position[0][5] = [{ type: 'M', owner: 'black' }] as Stack;
       state.hands.black.M = 0;
-      state.position[8][4] = [{ type: 'M', owner: 'white' }];
+      state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
       state.hands.white.M = 0;
       assertInvalid(state, 'V4');
     });
@@ -308,7 +304,7 @@ describe('validateState — V5 Done flags', () => {
 
   it('accepts done flag when done player has Marshal on board', () => {
     const state = emptyDeployState();
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0;
     state.turn.done = 'black';
     state.turn.activePlayer = 'white';
@@ -337,10 +333,10 @@ describe('validateState — V6 deploy-phase constraints', () => {
   it('rejects white piece in black zone (row 1-3) during deploy', () => {
     const state = minimalDeployState();
     // Place both Marshals on board in correct zones
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     // White Pawn in black zone (row 1, col 1 — a separate square from Black Marshal)
-    state.position[0][0] = [{ type: 'P', owner: 'white' }];
+    state.position[0][0] = [{ type: 'P', owner: 'white' }] as Stack;
     state.hands.white.P = 3; // 1 board + 3 hand = 4 = initial
     state.hands.white.M = 0;
     state.hands.black.M = 0;
@@ -349,10 +345,10 @@ describe('validateState — V6 deploy-phase constraints', () => {
 
   it('rejects black piece in white zone (row 7-9) during deploy', () => {
     const state = minimalDeployState();
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     // Black Pawn in white zone (row 9, col 1 — separate from White Marshal)
-    state.position[8][0] = [{ type: 'P', owner: 'black' }];
+    state.position[8][0] = [{ type: 'P', owner: 'black' }] as Stack;
     state.hands.black.P = 3;
     state.hands.white.M = 0;
     state.hands.black.M = 0;
@@ -366,8 +362,8 @@ describe('validateState — V6 deploy-phase constraints', () => {
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'black' },
       { type: 'M', owner: 'white' }, // top = Marshal, passes V3
-    ];
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    ] as Stack;
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.white.P = 3;
     state.hands.black.P = 3;
     state.hands.white.M = 0;
@@ -377,13 +373,13 @@ describe('validateState — V6 deploy-phase constraints', () => {
 
   it('accepts deploy state with pieces in correct zones', () => {
     const state = minimalDeployState();
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     // Additional white piece in row 8 (idx 7)
-    state.position[7][4] = [{ type: 'P', owner: 'white' }];
+    state.position[7][4] = [{ type: 'P', owner: 'white' }] as Stack;
     state.hands.white.P = 3;
     // Additional black piece in row 2 (idx 1)
-    state.position[1][4] = [{ type: 'P', owner: 'black' }];
+    state.position[1][4] = [{ type: 'P', owner: 'black' }] as Stack;
     state.hands.black.P = 3;
     state.hands.white.M = 0;
     state.hands.black.M = 0;
@@ -414,8 +410,8 @@ describe('validateState — V7 counter bounds', () => {
     const state = emptyBattleState();
     state.turn.counter = 100;
     // Need Marshals
-    state.position[4][4] = [{ type: 'M', owner: 'white' }];
-    state.position[4][3] = [{ type: 'M', owner: 'black' }];
+    state.position[4][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[4][3] = [{ type: 'M', owner: 'black' }] as Stack;
     assertValid(state);
   });
 });
@@ -429,7 +425,7 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
-    ];
+    ] as unknown as Stack;
     // No Marshals at all (would be V3)
     assertInvalid(state, 'V2');
   });
@@ -440,12 +436,12 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
     state.position[4][4] = [
       { type: 'M', owner: 'white' },
       { type: 'P', owner: 'white' },
-    ];
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    ] as Stack;
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     // Also over-count A: 3 on board (initial 2) — uses row 5
-    state.position[4][5] = [{ type: 'A', owner: 'white' }];
-    state.position[4][6] = [{ type: 'A', owner: 'white' }];
-    state.position[4][7] = [{ type: 'A', owner: 'white' }];
+    state.position[4][5] = [{ type: 'A', owner: 'white' }] as Stack;
+    state.position[4][6] = [{ type: 'A', owner: 'white' }] as Stack;
+    state.position[4][7] = [{ type: 'A', owner: 'white' }] as Stack;
     // V3 fires first (Marshal not at top) before V4 would be checked
     assertInvalid(state, 'V3');
   });
@@ -453,12 +449,12 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
   it('V4 fires before V5: over-count + bad done flag', () => {
     const state = emptyBattleState();
     // Place both Marshals to pass V3
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     // V4: over-count Archer (3 on board, initial 2)
-    state.position[4][4] = [{ type: 'A', owner: 'white' }];
-    state.position[4][5] = [{ type: 'A', owner: 'white' }];
-    state.position[4][6] = [{ type: 'A', owner: 'white' }];
+    state.position[4][4] = [{ type: 'A', owner: 'white' }] as Stack;
+    state.position[4][5] = [{ type: 'A', owner: 'white' }] as Stack;
+    state.position[4][6] = [{ type: 'A', owner: 'white' }] as Stack;
     // V5 would also fail: done flag on active player
     state.turn.done = 'white';
     // V4 is checked before V5, so V4 fires first
@@ -470,12 +466,12 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
     // V5: done flag on active player
     state.turn.done = 'white'; // white is active
     // V6: white piece in black zone (row 1)
-    state.position[0][0] = [{ type: 'P', owner: 'white' }];
+    state.position[0][0] = [{ type: 'P', owner: 'white' }] as Stack;
     state.hands.white.P = 3;
     // Both Marshals on board in proper zones
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.hands.white.M = 0;
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0;
     // V5 fires before V6
     assertInvalid(state, 'V5');
@@ -484,12 +480,12 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
   it('V6 fires before V7: deploy zone violation + bad counter', () => {
     const state = emptyDeployState();
     // Place both Marshals in correct zones to pass V3
-    state.position[8][4] = [{ type: 'M', owner: 'white' }];
+    state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.hands.white.M = 0;
-    state.position[0][4] = [{ type: 'M', owner: 'black' }];
+    state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0;
     // V6: black piece in white zone (row 9)
-    state.position[8][0] = [{ type: 'P', owner: 'black' }];
+    state.position[8][0] = [{ type: 'P', owner: 'black' }] as Stack;
     state.hands.black.P = 4; // 1 board + 4 in FULL_HAND = 5 exceeds initial 4? No...
     // Use EMPTY_HAND-based state. Actually emptyDeployState uses FULL_HAND.
     // Black P initial is 4, FULL_HAND has P:4. Adding 1 board = 5 > 4, that's V4.

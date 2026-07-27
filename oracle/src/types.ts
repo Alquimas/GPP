@@ -11,6 +11,9 @@ export type Piece = {
   owner: Player;
 };
 
+/** 1-indexed board coordinate, constrained to the 9×9 grid. */
+export type BoardCoord = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
 /**
  * A board coordinate.
  * col: 1–9 (1 = rightmost in Standard Diagram)
@@ -18,8 +21,8 @@ export type Piece = {
  * Square 1-1 = top-right corner.
  */
 export type Square = {
-  col: number;
-  row: number;
+  col: BoardCoord;
+  row: BoardCoord;
 };
 
 /**
@@ -27,7 +30,7 @@ export type Square = {
  * Ordered bottom→top (Level 1 first, highest level last).
  * Length is always 1–3.
  */
-export type Stack = Piece[];
+export type Stack = [Piece] | [Piece, Piece] | [Piece, Piece, Piece];
 
 /**
  * The 9×9 board, row-major: position[row][col].

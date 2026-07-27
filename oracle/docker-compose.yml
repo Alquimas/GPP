@@ -4,6 +4,7 @@ services:
     command: ["vitest", "run"]
     volumes:
       - .:/app
+      - ../gsfen:/gsfen:ro
       - /app/node_modules
 
   check:
@@ -11,6 +12,7 @@ services:
     command: ["tsc", "--noEmit"]
     volumes:
       - .:/app
+      - ../gsfen:/gsfen:ro
       - /app/node_modules
 
   lint:
@@ -18,6 +20,7 @@ services:
     command: ["eslint", "src", "tests"]
     volumes:
       - .:/app
+      - ../gsfen:/gsfen:ro
       - /app/node_modules
 
   format:
@@ -25,6 +28,7 @@ services:
     command: ["prettier", "--write", "src/**/*.ts", "tests/**/*.ts", "*.{js,json,ts}"]
     volumes:
       - .:/app
+      - ../gsfen:/gsfen:ro
       - /app/node_modules
 
   format-check:
@@ -32,4 +36,5 @@ services:
     command: ["prettier", "--check", "src/**/*.ts", "tests/**/*.ts", "*.{js,json,ts}"]
     volumes:
       - .:/app
+      - ../gsfen:/gsfen:ro
       - /app/node_modules

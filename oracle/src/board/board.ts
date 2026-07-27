@@ -9,7 +9,16 @@
  * @module
  */
 
-import type { Direction, Piece, PieceType, Player, Position, Square, Stack } from '../types.js';
+import type {
+  BoardCoord,
+  Direction,
+  Piece,
+  PieceType,
+  Player,
+  Position,
+  Square,
+  Stack,
+} from '../types.js';
 
 /* ------------------------------------------------------------------ */
 /*  Private helper – iterates each occupied square on the board        */
@@ -118,7 +127,10 @@ export function findPieceOnBoard(
 
 /** Return the stack at a square, or null if empty. */
 export function getStack(position: Position, square: Square): Stack | null {
-  return position[square.row - 1]?.[square.col - 1] ?? null;
+  if (!squareInBounds(square)) {
+    throw new Error(`Square (${square.col}, ${square.row}) is out of bounds`);
+  }
+  return position[square.row - 1][square.col - 1] ?? null;
 }
 
 /**
@@ -126,6 +138,9 @@ export function getStack(position: Position, square: Square): Stack | null {
  * Does NOT mutate the original Position.
  */
 export function setStack(position: Position, square: Square, stack: Stack | null): Position {
+  if (!squareInBounds(square)) {
+    throw new Error(`Square (${square.col}, ${square.row}) is out of bounds`);
+  }
   const newPos = position.map((row) => [...row]);
   newPos[square.row - 1][square.col - 1] = stack;
   return newPos;
@@ -160,18 +175,21 @@ const WHITE_DIR_DELTA: Record<Direction, { col: number; row: number }> = {
  * @param row - 1-indexed row
  */
 export function applyDirection(
-  col: number,
-  row: number,
+  col: BoardCoord,
+  row: BoardCoord,
   direction: Direction,
   player: Player,
 ): Square | null {
+  if (!squareInBounds({ col, row })) {
+    throw new Error(`Input coordinates (${col}, ${row}) are out of bounds`);
+  }
   const base = WHITE_DIR_DELTA[direction];
   const dc = player === 'white' ? base.col : -base.col;
   const dr = player === 'white' ? base.row : -base.row;
   const newCol = col + dc;
   const newRow = row + dr;
   if (newCol < 1 || newCol > 9 || newRow < 1 || newRow > 9) return null;
-  return { col: newCol, row: newRow };
+  return { col: newCol as BoardCoord, row: newRow as BoardCoord };
 }
 
 /** True if the square has a stack whose top piece belongs to `player`. */

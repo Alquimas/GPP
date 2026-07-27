@@ -9,7 +9,7 @@
  * @module
  */
 
-import { type Action, type PieceType, type Square } from '../types.js';
+import { type Action, type BoardCoord, type PieceType, type Square } from '../types.js';
 import { GameError } from '../errors.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
 
@@ -63,7 +63,7 @@ export function parseSquare(s: string): Square {
     throw new GameError(`Row must be 1-9, got ${row}`, 'A1');
   }
 
-  return { col, row };
+  return { col: col as BoardCoord, row: row as BoardCoord };
 }
 
 // ---------------------------------------------------------------------------

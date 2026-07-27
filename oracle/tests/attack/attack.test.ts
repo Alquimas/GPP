@@ -15,7 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { isSquareUnderAttack, isInCheck, isExposed } from '../../src/board/attack.js';
 import { getLegalDestinations } from '../../src/board/movement.js';
 import { PIECE_MOVEMENT } from '../../src/constants.js';
-import type { PieceType, Player, Position } from '../../src/types.js';
+import type { BoardCoord, PieceType, Player, Position, Stack } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 
 /* ------------------------------------------------------------------ */
@@ -28,7 +28,7 @@ function emptyPos(): Position {
 
 /** Place a single-piece stack at (col, row). 1-indexed. */
 function putPiece(pos: Position, col: number, row: number, type: PieceType, owner: Player): void {
-  pos[row - 1][col - 1] = [{ type, owner }];
+  pos[row - 1][col - 1] = [{ type, owner }] as Stack;
 }
 
 /** Place a multi-piece stack. items[0] = bottom, items[last] = top. */
@@ -38,7 +38,7 @@ function putStack(
   row: number,
   items: { type: PieceType; owner: Player }[],
 ): void {
-  pos[row - 1][col - 1] = items.map((p) => ({ ...p }));
+  pos[row - 1][col - 1] = items.map((p) => ({ ...p })) as Stack;
 }
 
 /** Parse a GSFEN and return just the position. */
@@ -125,7 +125,9 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     for (const [c, r] of dirs) putPiece(pos, c, r, 'P', 'black');
 
     for (const [c, r] of dirs) {
-      expect(isSquareUnderAttack(pos, { col: c, row: r }, 'white')).toBe(true);
+      expect(
+        isSquareUnderAttack(pos, { col: c as BoardCoord, row: r as BoardCoord }, 'white'),
+      ).toBe(true);
     }
   });
 
@@ -263,8 +265,12 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 2, row: 1 }, 'white')).toBe(true);
     expect(isSquareUnderAttack(pos, { col: 2, row: 2 }, 'white')).toBe(true);
     // Off-board would-be squares
-    expect(isSquareUnderAttack(pos, { col: 1, row: 0 }, 'white')).toBe(false); // off-board F
-    expect(isSquareUnderAttack(pos, { col: 0, row: 1 }, 'white')).toBe(false); // off-board R
+    expect(isSquareUnderAttack(pos, { col: 1 as BoardCoord, row: 0 as BoardCoord }, 'white')).toBe(
+      false,
+    ); // off-board F
+    expect(isSquareUnderAttack(pos, { col: 0 as BoardCoord, row: 1 as BoardCoord }, 'white')).toBe(
+      false,
+    ); // off-board R
   });
 });
 
