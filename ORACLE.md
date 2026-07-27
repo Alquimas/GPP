@@ -318,7 +318,7 @@ docker compose run --rm format-check  # exit 0, all files formatted
 
 ---
 
-### Step 1 — Project Scaffold + Domain Types
+### Step 1 — Project Scaffold + Domain Types ✅
 
 **What to build:**
 - Initialize the project: `package.json` with vitest + typescript, `tsconfig.json`

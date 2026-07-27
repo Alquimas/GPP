@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Move Validator — Gungi</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #E8DCC8; color: #2A1A0A; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; padding: 24px;
+  }
+  h1 { font-family: Georgia, serif; font-size: 28px; color: #3B2A1C; margin-bottom: 8px; }
+  .subtitle { color: #7A6B55; font-style: italic; margin-bottom: 20px; font-size: 14px; }
+  .controls { display: flex; gap: 16px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .controls label { font-weight: 600; font-size: 14px; color: #3B2A1C; }
+  .controls select {
+    padding: 6px 12px; border: 2px solid #B8A68E; border-radius: 6px;
+    font-size: 14px; background: #FCF7EF; cursor: pointer;
+  }
+  #board {
+    display: grid; grid-template-columns: repeat(9, 56px); grid-template-rows: repeat(9, 56px);
+    border: 3px solid #5C3D2E; border-radius: 4px; background: #C8A882;
+    margin-bottom: 20px;
+  }
+  .cell {
+    position: relative; width: 56px; height: 56px;
+    border: 1px solid #A68B6A;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #5C3D2E;
+  }
+  .cell::before { content: ''; position: absolute; inset: 2px; border-radius: 3px; }
+  .cell.piece { background: #FCF7EF; font-size: 18px; font-weight: 700; color: #1a1a1a; z-index: 2; }
+  .cell.piece.white-piece { color: #1a1a1a; }
+  .cell.piece.black-piece { color: #e03030; }
+  .cell.move-step::before    { background: rgba(46, 160, 67, 0.45); }
+  .cell.move-limited::before { background: rgba(9, 105, 218, 0.35); }
+  .cell.move-range::before   { background: rgba(0, 150, 136, 0.35); }
+  .cell.move-jump::before    { background: rgba(227, 130, 15, 0.45); }
+  .cell.move-over::before    { background: rgba(154, 103, 224, 0.45); }
+  .cell .coord { position: absolute; bottom: 1px; right: 2px; font-size: 9px; color: #6B5038; opacity: 0.7; }
+  .col-header, .row-header {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #7A6B55;
+  }
+  .col-header { height: 24px; }
+  .row-header { width: 24px; }
+  .board-wrap { display: flex; flex-direction: column; align-items: center; }
+  .row-wrap { display: flex; }
+  #legend {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    font-size: 13px; margin-bottom: 16px;
+  }
+  .legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
+  .legend-swatch.s-step    { background: rgba(46, 160, 67, 0.6); }
+  .legend-swatch.s-limited { background: rgba(9, 105, 218, 0.5); }
+  .legend-swatch.s-range   { background: rgba(0, 150, 136, 0.5); }
+  .legend-swatch.s-jump    { background: rgba(227, 130, 15, 0.6); }
+  .legend-swatch.s-over    { background: rgba(154, 103, 224, 0.6); }
+  .legend-item { display: inline-flex; align-items: center; gap: 4px; }
+  #info {
+    font-size: 13px; color: #5C3D2E; background: #FCF7EF; padding: 10px 16px;
+    border-radius: 6px; border: 1px solid #B8A68E; max-width: 540px; text-align: center;
+  }
+</style>
+</head>
+<body>
+<h1>Gungi Move Validator</h1>
+<div class="subtitle">Piece placed at centre (5,6) on an empty board</div>
+<div class="controls">
+  <label>Piece: <select id="pieceSelect"></select></label>
+  <label>Stack: <select id="sizeSelect"><option>1</option><option>2</option><option>3</option></select></label>
+  <label>Perspective: <select id="playerSelect"><option value="white">White</option><option value="black">Black</option></select></label>
+</div>
+<div id="legend">
+  <span class="legend-item"><span class="legend-swatch s-step"></span>Step</span>
+  <span class="legend-item"><span class="legend-swatch s-limited"></span>Limited</span>
+  <span class="legend-item"><span class="legend-swatch s-range"></span>Range</span>
+  <span class="legend-item"><span class="legend-swatch s-jump"></span>Jump dest</span>
+  <span class="legend-item"><span class="legend-swatch s-over"></span>Jumped over</span>
+</div>
+<div class="board-wrap" id="boardWrap"></div>
+<div id="info">Select a piece type and stack size to see legal destination squares.</div>
+
+<script>
+/* =====================================================
+   PROTOTYPE — throwaway move validator
+   Question: "Does the movement data in PIECE_MOVEMENT
+   produce the right destinations from centre (5,5)?"
+   ===================================================== */
+
+// ── DIRECTION_DELTA (White's perspective) ─────────────
+const DD = {
+  F:  { col: 0, row:-1 }, B:  { col: 0, row: 1 },
+  L:  { col: 1, row: 0 }, R:  { col:-1, row: 0 },
+  FL: { col: 1, row:-1 }, FR: { col:-1, row:-1 },
+  BL: { col: 1, row: 1 }, BR: { col:-1, row: 1 },
+};
+
+// ── PIECE_MOVEMENT — inlined from oracle/src/constants.ts ──
+const PIECE_MOVEMENT = {
+  M: { step: ['F','B','L','R','FL','FR','BL','BR'], limitedRange:[], range:[], jumps:[] },
+  G: { step: ['FL','FR','BL','BR'], limitedRange:[], range:['F','B','L','R'], jumps:[] },
+  L: { step: ['F','B','L','R'], limitedRange:[], range:['FL','FR','BL','BR'], jumps:[] },
+  J: { step: ['F','B','L','R','FL','FR'], limitedRange:[], range:[], jumps:[] },
+  S: { step: ['F','FL','FR','B'], limitedRange:[], range:[], jumps:[] },
+  E: { step: ['FL','FR','B'], limitedRange:['F'], range:[], jumps:[] },
+  N: { step: ['L','R'], limitedRange:['F','B'], range:[], jumps:[] },
+  Y: { step:[], limitedRange:['FL','FR','BL','BR'], range:[], jumps:[] },
+  F: { step: ['F','L','R','BL','BR'], limitedRange:[], range:[], jumps:[] },
+  P: { step: ['F','B'], limitedRange:[], range:[], jumps:[] },
+  C: { step:['L','R','B'], limitedRange:[], range:[], jumps:[{dest:{col:0,row:3},over:[{col:0,row:1},{col:0,row:2}]}] },
+  A: { step:['B'], limitedRange:[], range:[], jumps:[
+    {dest:{col:-1,row:2},over:[{col:0,row:1}]},
+    {dest:{col:0,row:2},over:[{col:0,row:1}]},
+    {dest:{col:1,row:2},over:[{col:0,row:1}]}
+  ]},
+  U: { step:['BL','BR'], limitedRange:[], range:[], jumps:[{dest:{col:0,row:2},over:[{col:0,row:1}]}] },
+  T: { step:['FL','FR','B'], limitedRange:[], range:[], jumps:[] },
+};
+
+const PIECE_NAMES = {A:'Archer',C:'Cannon',E:'Spear',F:'Fortress',G:'General',J:'Major',L:'Lieutenant',M:'Marshal',N:'Knight',P:'Pawn',S:'Samurai',T:'Captain',U:'Musketeer',Y:'Spy'};
+const ALL_TYPES = ['M','G','L','J','S','E','N','Y','F','P','C','A','U','T'];
+
+function pieceLabel(t) { return t + ' — ' + PIECE_NAMES[t]; }
+
+// ── Compute offsets ───────────────────────────────────
+function computeOffsets(def, size) {
+  const offsets = [];
+
+  // Step movement
+  if (size === 1) {
+    for (const dir of def.step) {
+      const d = DD[dir];
+      offsets.push({col:d.col, row:d.row, cls:'step'});
+    }
+  } else {
+    for (const dir of def.step) {
+      const d = DD[dir];
+      for (let n = 1; n <= size; n++)
+        offsets.push({col:d.col*n, row:d.row*n, cls:'step'});
+    }
+  }
+
+  // Limited-range
+  const lrMax = 1 + size; // 2→3→4
+  for (const dir of def.limitedRange) {
+    const d = DD[dir];
+    for (let n = 1; n <= lrMax; n++)
+      offsets.push({col:d.col*n, row:d.row*n, cls:'limited'});
+  }
+
+  // Range
+  for (const dir of def.range) {
+    const d = DD[dir];
+    for (let n = 1; n <= 8; n++)
+      offsets.push({col:d.col*n, row:d.row*n, cls:'range'});
+  }
+
+  // Jump
+  for (const jp of def.jumps) {
+    offsets.push({col:jp.dest.col, row:jp.dest.row, cls:'jump'});
+    if (size >= 2) {
+      const extCol = jp.dest.col - jp.over[jp.over.length-1].col;
+      const extRow = jp.dest.row - jp.over[jp.over.length-1].row;
+      let prevCol = jp.dest.col, prevRow = jp.dest.row;
+      for (let lv = 2; lv <= size; lv++) {
+        const nc = prevCol + extCol, nr = prevRow + extRow;
+        offsets.push({col:nc, row:nr, cls:'jump'});
+        prevCol = nc; prevRow = nr;
+      }
+    }
+  }
+
+  return offsets;
+}
+
+// ── Apply offsets to origin (5,6), filter in-bounds ───
+function getDestinations(def, size, player) {
+  const origin = {col: 5, row: 6};
+  const sign = player === 'white' ? 1 : -1;
+  const offsets = computeOffsets(def, size);
+  const destinations = [];
+  const overSet = new Set();
+
+  function jumpToBoard(c, r) {
+    return {col: origin.col + sign * c, row: origin.row - sign * r};
+  }
+
+  for (const o of offsets) {
+    let col, row;
+    if (o.cls === 'jump') {
+      // Jump dest (c,r) = c units left, r units forward (player-relative coords).
+      // Board delta: White = (c, -r), Black = (-c, r).  Expressed with sign:
+      col = origin.col + sign * o.col;
+      row = origin.row - sign * o.row;
+    } else {
+      col = origin.col + sign * o.col;
+      row = origin.row + sign * o.row;
+    }
+    if (col < 1 || col > 9 || row < 1 || row > 9) continue;
+    // Stack-size landing restriction (BR-MOVE-005): not applied here —
+    // board is empty, so all destinations are reachable at any stack size.
+    destinations.push({col, row, cls: o.cls});
+  }
+
+  // Compute jumped-over squares for jumps
+  for (const jp of def.jumps) {
+    // Base over squares (level 1)
+    for (const sq of jp.over) {
+      const b = jumpToBoard(sq.col, sq.row);
+      if (b.col >= 1 && b.col <= 9 && b.row >= 1 && b.row <= 9)
+        overSet.add(b.col+','+b.row);
+    }
+
+    if (size >= 2) {
+      const extCol = jp.dest.col - jp.over[jp.over.length-1].col;
+      const extRow = jp.dest.row - jp.over[jp.over.length-1].row;
+      let prevCol = jp.dest.col, prevRow = jp.dest.row;
+      for (let lv = 2; lv <= size; lv++) {
+        // Previous level's destination becomes a jumped-over square
+        const b = jumpToBoard(prevCol, prevRow);
+        if (b.col >= 1 && b.col <= 9 && b.row >= 1 && b.row <= 9)
+          overSet.add(b.col+','+b.row);
+        prevCol += extCol;
+        prevRow += extRow;
+      }
+    }
+  }
+
+  // Deduplicate destinations — if multiple classes reach the same square, keep higher-priority
+  // Priority: step < limited < range < jump (jump survives)
+  const order = {step:0, limited:1, range:2, jump:3};
+  const destMap = new Map();
+  for (const d of destinations) {
+    const key = d.col+','+d.row;
+    if (!destMap.has(key) || order[d.cls] > order[destMap.get(key).cls])
+      destMap.set(key, d);
+  }
+
+  // Over squares: exclude squares that are also destinations
+  const overSquares = [];
+  for (const key of overSet) {
+    if (!destMap.has(key)) {
+      const [c, r] = key.split(',').map(Number);
+      overSquares.push({col: c, row: r});
+    }
+  }
+
+  return {
+    destinations: [...destMap.values()].sort((a,b) => a.row-b.row || a.col-b.col),
+    overSquares: overSquares.sort((a,b) => a.row-b.row || a.col-b.col),
+  };
+}
+
+// ── Render ─────────────────────────────────────────────
+const pieceSelect = document.getElementById('pieceSelect');
+ALL_TYPES.forEach(t => {
+  const opt = document.createElement('option');
+  opt.value = t; opt.textContent = pieceLabel(t);
+  pieceSelect.appendChild(opt);
+});
+
+function render() {
+  const type = pieceSelect.value;
+  const size = parseInt(document.getElementById('sizeSelect').value);
+  const player = document.getElementById('playerSelect').value;
+  const def = PIECE_MOVEMENT[type];
+  if (!def) return;
+
+  const { destinations, overSquares } = getDestinations(def, size, player);
+  const destMap = new Map();
+  destinations.forEach(d => destMap.set(d.col+','+d.row, d.cls));
+  const overMap = new Map();
+  overSquares.forEach(s => overMap.set(s.col+','+s.row, true));
+  const sign = player === 'white' ? 1 : -1;
+
+  // Build board HTML
+  const boardWrap = document.getElementById('boardWrap');
+  let html = '<div class="row-wrap">';
+  html += '<div class="row-header"></div>';
+  for (let c = 1; c <= 9; c++)
+    html += `<div class="col-header">${c}</div>`;
+  html += '</div>';
+
+  for (let r = 1; r <= 9; r++) {
+    html += '<div class="row-wrap">';
+    html += `<div class="row-header">${r}</div>`;
+    for (let c = 1; c <= 9; c++) {
+      const isOrigin = (c === 5 && r === 6);
+      const destCls = destMap.get(c+','+r);
+      const isOver = overMap.has(c+','+r);
+      let classes = 'cell';
+      if (isOrigin) classes += ' piece ' + (player === 'white' ? 'white-piece' : 'black-piece');
+      else if (destCls) classes += ' move-' + destCls;
+      else if (isOver) classes += ' move-over';
+      const content = isOrigin ? (sign === 1 ? type : type.toLowerCase()) : '';
+      const coord = (r === 9 || c === 1) ? c+','+r : '';
+      html += `<div class="${classes}">${content}<span class="coord">${coord}</span></div>`;
+    }
+    html += '</div>';
+  }
+  boardWrap.innerHTML = html;
+
+  // Update info
+  document.getElementById('info').textContent =
+    `${destMap.size} legal destinations — ${pieceLabel(type)} at Stack ${size} (${player})`;
+}
+
+pieceSelect.addEventListener('change', render);
+document.getElementById('sizeSelect').addEventListener('change', render);
+document.getElementById('playerSelect').addEventListener('change', render);
+
+// ── Initial render ────────────────────────────────────
+pieceSelect.value = 'M';
+render();
+</script>
+</body>
+</html>
