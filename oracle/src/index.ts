@@ -17,3 +17,8 @@ export {
   serializeMove,
   serializeArata,
 } from './gan/serialize.js';
+// Game engine — validation types from the shared module
+export type { ValidationResult, PlayValidation } from './game/validation.js';
+export { validateMove, validateArata, validatePlay } from './game/battle.js';
+export { validatePlacement } from './game/deploy.js';
+export { applyMove, applyArata } from './game/apply.js';
