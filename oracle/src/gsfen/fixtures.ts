@@ -5,7 +5,7 @@
  *
  * Fixtures live in two subdirectories under `oracle/fixtures/`:
  *   `valid/`         — 48 states that pass parseGSFEN + validateState
- *   `invalid/parse/` —  8 states that fail parse-level validation (BR-GSFEN-CANON-001–007 errors)
+ *   `invalid/parse/` —  8 states that fail parse-level validation (BR-GSFEN-CANON-* errors)
  *
  * (Module-init validation via validateState() is not done here due to a
  * circular dependency: parse → constants → fixtures. Valid fixtures are
@@ -135,7 +135,7 @@ export const WHITE_DONE_MULTI_COUNT_HAND  = _WHITE_DONE_MULTI_COUNT_HAND;
 export const WHITE_MARSHAL_AT_5_9         = _WHITE_MARSHAL_AT_5_9;
 
 // ---------------------------------------------------------------------------
-// Parse-invalid fixtures — fail parse-level validation (BR-GSFEN-CANON-001–007 errors)
+// Parse-invalid fixtures — fail parse-level validation (BR-GSFEN-CANON-* errors)
 // ---------------------------------------------------------------------------
 
 export const C2_UNKNOWN_PIECE           = readInvalidParse('c2-unknown-piece');

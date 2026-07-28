@@ -50,7 +50,7 @@ export type Stack = [Piece] | [Piece, Piece] | [Piece, Piece, Piece];
  * `validatePosition()` before use, or use `emptyPosition()` as the seed.
  *
  * Parsers (GSFEN, GAN) may produce malformed data — the semantic
- * validators (`validateState`, BR-GSFEN-VALID-002) catch stack-shape violations, but
+ * validators (`validateState`, BR-GSFEN-VALID-*) catch stack-shape violations, but
  * `validatePosition()` is the cheaper, earlier guard for the 9×9 shape.
  */
 export type Position = (Stack | null)[][];

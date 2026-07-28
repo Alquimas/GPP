@@ -45,18 +45,19 @@ describe('parseGSFEN — startpos keyword', () => {
     expect(state.hands.black).toEqual(FULL_HAND);
   });
 
-  it('startpos with leading/trailing whitespace is rejected (BR-GSFEN-CANON-001)', () => {
+  it('startpos with leading/trailing whitespace is rejected (BR-GSFEN-CANON-SEPARATOR-WHITESPACE)', () => {
     const result = parseGSFEN('  startpos  ');
     expect(result.ok).toBe(false);
     if (result.ok) return; // unreachable — narrows type to error branch
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-001');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-SEPARATOR-WHITESPACE');
   });
 
-  it('Startpos (capital S) is NOT the keyword', () => {
+  it('Startpos (capital S) is NOT the keyword (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT)', () => {
     const result = parseGSFEN('Startpos');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-001');
+    // "Startpos" has no spaces → split(' ') gives ['Startpos'] → length 1 ≠ 4
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT');
   });
 });
 
@@ -241,23 +242,24 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
 });
 
 describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
-  it('BR-GSFEN-CANON-003: adjacent empty runs not merged (4,1 instead of 5)', () => {
+  it('BR-GSFEN-CANON-POSITION-COMPRESSION: adjacent empty runs not merged (4,1 instead of 5)', () => {
     const result = parseGSFEN(C3_ADJACENT_EMPTY_RUNS);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-003');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-COMPRESSION');
   });
 
-  it('BR-GSFEN-CANON-006: leading zero in counter', () => {
+  it('BR-GSFEN-CANON-COUNTER-LEADING-ZERO: leading zero in counter', () => {
     const result = parseGSFEN(C6_LEADING_ZERO_COUNTER_FULL);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-006');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-COUNTER-LEADING-ZERO');
   });
 
-  it('BR-GSFEN-VALID-003 bug: lowercase m on row 9 (Black Marshal in wrong zone + White Marshal missing)', () => {
-    // This should parse OK (the parser just checks BR-GSFEN-CANON-001–007), the semantic
-    // validation (BR-GSFEN-VALID-003, BR-GSFEN-VALID-006) would reject it.
+  it('lowercase m on row 9 (Black Marshal in wrong zone) — parse succeeds, validation rejects', () => {
+    // This should parse OK (the parser checks canonical form only).
+    // Semantic validation (BR-GSFEN-VALID-004 deploy zone, BR-GSFEN-VALID-001-COUNT)
+    // would reject it.
     const result = parseGSFEN(V3_BLACK_MARSHAL_WRONG_ZONE);
     // It parses correctly — lowercase = black owner
     expect(result.ok).toBe(true);
@@ -270,9 +272,9 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
     }
   });
 
-  it('BR-GSFEN-VALID-003: Marshal not at top of stack', () => {
+  it('Marshal not at top of stack (BR-GSFEN-VALID-001-TOP) — parse succeeds, validation rejects', () => {
     const result = parseGSFEN(MP_STACK_DEPLOY_CTR2);
-    // Parser parses it fine (BR-GSFEN-CANON-001–007 ok), validation should catch it
+    // Parser parses it fine (canonical form ok), validation catches BR-GSFEN-VALID-001-TOP
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const state = result.state;
@@ -289,58 +291,60 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
 });
 
 describe('parseGSFEN — additional invalid cases', () => {
-  it('wrong number of fields', () => {
+  it('wrong number of fields (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT)', () => {
     const result = parseGSFEN('a b c');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-001');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT');
   });
 
-  it('empty input', () => {
+  it('empty input (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT)', () => {
     const result = parseGSFEN('');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-001');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT');
   });
 
-  it('wrong number of rows', () => {
+  it('wrong number of rows (BR-GSFEN-CANON-POSITION-ROW-COUNT)', () => {
     const result = parseGSFEN('9/9/9 w - 1');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-001');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-ROW-COUNT');
   });
 
-  it('unknown piece letter', () => {
+  it('unknown piece letter (BR-GSFEN-CANON-POSITION-STACK-SPELLING)', () => {
     const result = parseGSFEN(C2_UNKNOWN_PIECE);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-002');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-STACK-SPELLING');
   });
 
-  it('invalid turn token', () => {
+  it('invalid turn token (BR-GSFEN-CANON-TURN-TOKEN)', () => {
     const result = parseGSFEN('9/9/9/9/9/9/9/9/9 x - 1');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-001');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-TURN-TOKEN');
   });
 
-  it('stack with 4 letters', () => {
+  it('stack with 4 letters (BR-GSFEN-CANON-POSITION-STACK-SPELLING)', () => {
     const result = parseGSFEN(STACK_OF_FOUR);
     expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-STACK-SPELLING');
   });
 
-  it('hand duplicate letter', () => {
+  it('hand duplicate letter (BR-GSFEN-CANON-HANDS-DUPLICATE)', () => {
     const result = parseGSFEN(C5_DUPLICATE_LETTER);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-005');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-HANDS-DUPLICATE');
   });
 
-  it('hand non-alphabetical order', () => {
+  it('hand non-alphabetical order (BR-GSFEN-CANON-HANDS-ALPHABETICAL)', () => {
     const result = parseGSFEN(C5_NON_ALPHABETICAL);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-005');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-HANDS-ALPHABETICAL');
   });
 
   it('hand lowercase only (white empty, black has piece)', () => {
@@ -351,18 +355,18 @@ describe('parseGSFEN — additional invalid cases', () => {
     expect(result.state.hands.white.A).toBe(0);
   });
 
-  it('counter with leading zero', () => {
+  it('counter with leading zero (BR-GSFEN-CANON-COUNTER-LEADING-ZERO)', () => {
     const result = parseGSFEN(C6_LEADING_ZERO_COUNTER);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-006');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-COUNTER-LEADING-ZERO');
   });
 
-  it('row does not sum to 9 squares', () => {
+  it('row does not sum to 9 squares (BR-GSFEN-CANON-POSITION-SQUARE-COUNT)', () => {
     const result = parseGSFEN(ROW_NOT_9);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('BR-GSFEN-CANON-002');
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-SQUARE-COUNT');
   });
 });
 

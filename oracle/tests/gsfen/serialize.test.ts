@@ -134,7 +134,7 @@ describe('GSFEN round-trip — GSFEN.md worked examples', () => {
 // ---------------------------------------------------------------------------
 
 describe('serializeGSFEN — edge cases', () => {
-  it('empty hands marker: both hands empty → "-"', () => {
+  it('empty hands marker: both hands empty → "-" (BR-GSFEN-CANON-HANDS-EMPTY-MARKER)', () => {
     const state: GameState = {
       position: Array.from({ length: 9 }, () => new Array<Stack | null>(9).fill(null)),
       turn: { phase: 'battle', activePlayer: 'white', done: null, counter: 1 },
@@ -150,7 +150,7 @@ describe('serializeGSFEN — edge cases', () => {
     expect(parts[2]).toBe('-');
   });
 
-  it('single-piece hand: count 1 omitted', () => {
+  it('single-piece hand: count 1 omitted (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)', () => {
     // White holds exactly one Marshal, black holds nothing
     const whiteHand: Hand = { ...EMPTY_HAND, M: 1 };
     const state: GameState = {
@@ -160,7 +160,6 @@ describe('serializeGSFEN — edge cases', () => {
     };
     // No pieces on board yet (startpos-like, Marshal still in hand)
     const serialized = serializeGSFEN(state);
-    // White's hand: "M", black's: "" (but combined they should be "M")
     // White hand "M" + black hand "" = "M"
     const parts = serialized.split(' ');
     expect(parts[2]).toBe('M');
@@ -207,7 +206,7 @@ describe('serializeGSFEN — edge cases', () => {
     expect(rows[0]).toBe('M,7,P');
   });
 
-  it('counter serializes without leading zeros', () => {
+  it('counter serializes without leading zeros (BR-GSFEN-CANON-COUNTER-LEADING-ZERO)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     const serialized = serializeGSFEN(state);
     const parts = serialized.split(' ');
@@ -233,7 +232,7 @@ describe('serializeGSFEN — edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('serializeGSFEN — canonical output guarantees', () => {
-  it('never produces adjacent empty-run digits (BR-GSFEN-CANON-003 guarantee)', () => {
+  it('never produces adjacent empty-run digits (BR-GSFEN-CANON-POSITION-COMPRESSION guarantee)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     // Add some pieces to create a non-trivial row
     state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
@@ -259,7 +258,7 @@ describe('serializeGSFEN — canonical output guarantees', () => {
     }
   });
 
-  it('counter has no leading zeros (BR-GSFEN-CANON-006 guarantee)', () => {
+  it('counter has no leading zeros (BR-GSFEN-CANON-COUNTER-LEADING-ZERO guarantee)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     // Change counter to a value that could have leading zeros
     state.turn.counter = 42;

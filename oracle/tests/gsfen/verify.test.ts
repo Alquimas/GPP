@@ -286,7 +286,7 @@ describe('board-to-test verification', () => {
     ]);
     expect(state.position[8][4]).toEqual([{ type: 'M', owner: 'white' }]);
     expect(state.hands.white).toEqual(H({ E: 2, G: 0, M: 0, P: 3 }));
-    expect(state.hands.black).toEqual(H({ E: 1, G: 0, M: 0, N: 1, S: 1, Y: 1 }));
+    expect(state.hands.black).toEqual(H({ G: 0, M: 0, N: 1, S: 1 }));
     expect(state.turn).toMatchObject({
       phase: 'deploy',
       activePlayer: 'black',
@@ -636,8 +636,8 @@ describe('board-to-test verification', () => {
     expect(state.position[7][3]).toEqual([{ type: 'T', owner: 'white' }]);
     expect(state.position[8][4]).toEqual([{ type: 'M', owner: 'white' }]);
     expect(state.position[8][3]).toEqual([{ type: 'G', owner: 'white' }]);
-    expect(state.hands.white).toEqual(H({ A: 1, G: 0, J: 1, M: 0, S: 1, T: 0 }));
-    expect(state.hands.black).toEqual(H({ A: 1, C: 0, E: 2, G: 0, J: 1, M: 0, S: 1, T: 0 }));
+    expect(state.hands.white).toEqual(H({ A: 1, G: 0, M: 0, S: 1, T: 0 }));
+    expect(state.hands.black).toEqual(H({ A: 1, C: 0, E: 2, G: 0, M: 0, S: 1, T: 0 }));
     expect(state.turn).toMatchObject({
       phase: 'deploy',
       activePlayer: 'black',

@@ -1,6 +1,15 @@
 /**
  * GSFEN parser — parses Gungi Stacking Forsyth-Edwards Notation strings
- * into GameState objects, validating canonical form (BR-GSFEN-CANON-001–007).
+ * into GameState objects, validating canonical form.
+ *
+ * Canonical-form rules are organised by the field they constrain
+ * (see GSFEN.md §Canonicalization):
+ *   - BR-GSFEN-CANON-SEPARATOR-*   — field separation
+ *   - BR-GSFEN-CANON-POSITION-*    — Position field
+ *   - BR-GSFEN-CANON-TURN-*        — Turn field
+ *   - BR-GSFEN-CANON-HANDS-*       — Hands field
+ *   - BR-GSFEN-CANON-COUNTER-*     — Counter field
+ *   - BR-GSFEN-CANON-KEYWORD-*     — startpos keyword
  *
  * @module
  */
@@ -74,18 +83,23 @@ function isCountDigit(ch: string): boolean {
  * Diagram).  Our internal Position uses position[row][col-1] where col 1
  * = rightmost, so we reverse the mapping.
  *
- * @throws {GameError} with rule 'BR-GSFEN-CANON-001' if row count != 9, 'BR-GSFEN-CANON-002' if row doesn't sum to 9, 'BR-GSFEN-CANON-003' if empty runs not merged
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization → Position rules):
+ *   - BR-GSFEN-CANON-POSITION-ROW-COUNT     — exactly 9 rows
+ *   - BR-GSFEN-CANON-POSITION-SQUARE-COUNT   — each row sums to 9 squares
+ *   - BR-GSFEN-CANON-POSITION-COMPRESSION    — no adjacent empty-run items
+ *   - BR-GSFEN-CANON-POSITION-STACK-SPELLING — valid piece letters, stack depth 1–3
+ *   - BR-GSFEN-CANON-POSITION-EMPTY-ITEM     — no bare commas or empty segments
  */
 function parsePosition(posStr: string): FieldResult<Position> {
   const rows = posStr.split('/');
 
-  // BR-GSFEN-CANON-001: exactly 9 rows
+  // BR-GSFEN-CANON-POSITION-ROW-COUNT: exactly 9 rows
   if (rows.length !== 9) {
     return {
       ok: false,
       error: new GameError(
         `Position field must have exactly 9 rows (slashes), got ${rows.length}`,
-        'BR-GSFEN-CANON-001',
+        'BR-GSFEN-CANON-POSITION-ROW-COUNT',
       ),
     };
   }
@@ -97,7 +111,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
     if (rowStr === '') {
       return {
         ok: false,
-        error: new GameError(`Row ${r + 1} is empty`, 'BR-GSFEN-CANON-002'),
+        error: new GameError(`Row ${r + 1} is empty`, 'BR-GSFEN-CANON-POSITION-EMPTY-ITEM'),
       };
     }
 
@@ -111,20 +125,23 @@ function parsePosition(posStr: string): FieldResult<Position> {
       if (item === '') {
         return {
           ok: false,
-          error: new GameError(`Empty item in row ${r + 1}`, 'BR-GSFEN-CANON-002'),
+          error: new GameError(
+            `Empty item in row ${r + 1}`,
+            'BR-GSFEN-CANON-POSITION-EMPTY-ITEM',
+          ),
         };
       }
 
       // --- Empty run: a single digit 1-9 ---
       if (/^[1-9]$/.test(item)) {
-        // BR-GSFEN-CANON-003: No adjacent empty runs
+        // BR-GSFEN-CANON-POSITION-COMPRESSION: No adjacent empty runs
         if (prevWasDigit) {
           return {
             ok: false,
-        error: new GameError(
-          `Row ${r + 1}: adjacent empty-run items must be merged (BR-GSFEN-CANON-003) — write 5, not 4,1`,
-          'BR-GSFEN-CANON-003',
-        ),
+            error: new GameError(
+              `Row ${r + 1}: adjacent empty-run items must be merged (BR-GSFEN-CANON-POSITION-COMPRESSION) — write 5, not 4,1`,
+              'BR-GSFEN-CANON-POSITION-COMPRESSION',
+            ),
           };
         }
         const count = parseInt(item, 10);
@@ -132,7 +149,10 @@ function parsePosition(posStr: string): FieldResult<Position> {
           if (pos < 0) {
             return {
               ok: false,
-              error: new GameError(`Row ${r + 1} exceeds 9 squares`, 'BR-GSFEN-CANON-002'),
+              error: new GameError(
+                `Row ${r + 1} exceeds 9 squares`,
+                'BR-GSFEN-CANON-POSITION-SQUARE-COUNT',
+              ),
             };
           }
           row[pos] = null;
@@ -145,10 +165,14 @@ function parsePosition(posStr: string): FieldResult<Position> {
       // --- Stack: 1-3 piece letters ---
       prevWasDigit = false;
 
+      // BR-GSFEN-CANON-POSITION-STACK-SPELLING: stack depth 1–3 (defence-in-depth, BR-STACK-001)
       if (item.length < 1 || item.length > 3) {
         return {
           ok: false,
-          error: new GameError(`Stack must have 1-3 pieces in row ${r + 1}, got "${item}"`, 'BR-GSFEN-CANON-002'),
+          error: new GameError(
+            `Stack must have 1-3 pieces in row ${r + 1}, got "${item}" (BR-GSFEN-CANON-POSITION-STACK-SPELLING)`,
+            'BR-GSFEN-CANON-POSITION-STACK-SPELLING',
+          ),
         };
       }
 
@@ -158,37 +182,42 @@ function parsePosition(posStr: string): FieldResult<Position> {
         if (!isPieceType(upper)) {
           return {
             ok: false,
-            error: new GameError(`Unknown piece letter "${ch}" in row ${r + 1}`, 'BR-GSFEN-CANON-002'),
+            error: new GameError(
+              `Unknown piece letter "${ch}" in row ${r + 1} (BR-GSFEN-CANON-POSITION-STACK-SPELLING)`,
+              'BR-GSFEN-CANON-POSITION-STACK-SPELLING',
+            ),
           };
         }
         const owner: Player = ch === upper ? 'white' : 'black';
         pieces.push({ type: upper, owner });
       }
-  // SAFETY: the cast is safe because `item.length` was validated to be
-  // in 1..3 at the top of this branch (see the `item.length < 1 || item.length > 3`
-  // guard above).  Each character produces exactly one Piece, so
-  // `pieces.length === item.length ∈ {1,2,3}`, satisfying the Stack
-  // tuple type.  `validateState` (BR-GSFEN-VALID-002) re-checks this invariant after
-  // parsing as a defence-in-depth measure.
+      // SAFETY: the cast is safe because `item.length` was validated to be
+      // in 1..3 at the top of this branch (see the `item.length < 1 || item.length > 3`
+      // guard above).  Each character produces exactly one Piece, so
+      // `pieces.length === item.length ∈ {1,2,3}`, satisfying the Stack
+      // tuple type.
       const stack = pieces as Stack;
 
       if (pos < 0) {
         return {
           ok: false,
-          error: new GameError(`Row ${r + 1} exceeds 9 squares`, 'BR-GSFEN-CANON-002'),
+          error: new GameError(
+            `Row ${r + 1} exceeds 9 squares`,
+            'BR-GSFEN-CANON-POSITION-SQUARE-COUNT',
+          ),
         };
       }
       row[pos] = stack;
       pos--;
     }
 
-    // BR-GSFEN-CANON-002: verify exactly 9 squares
+    // BR-GSFEN-CANON-POSITION-SQUARE-COUNT: verify exactly 9 squares
     if (pos !== -1) {
       return {
         ok: false,
         error: new GameError(
-          `Row ${r + 1} has fewer than 9 squares (row total does not sum to 9)`,
-          'BR-GSFEN-CANON-002',
+          `Row ${r + 1} has fewer than 9 squares (row total does not sum to 9) (BR-GSFEN-CANON-POSITION-SQUARE-COUNT)`,
+          'BR-GSFEN-CANON-POSITION-SQUARE-COUNT',
         ),
       };
     }
@@ -211,7 +240,8 @@ function parsePosition(posStr: string): FieldResult<Position> {
  * | dwB   | deploy     | white  | black  |
  * | dbW   | deploy     | black  | white  |
  *
- * @throws {GameError} with rule 'BR-GSFEN-CANON-001' if token is invalid
+ * Canonical-form rule enforced (GSFEN.md §Canonicalization → Turn rules):
+ *   - BR-GSFEN-CANON-TURN-TOKEN — must be one of the six valid tokens
  */
 function parseTurn(turnStr: string): FieldResult<TurnState> {
   let phase: Phase;
@@ -252,7 +282,10 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
     default:
       return {
         ok: false,
-        error: new GameError(`Invalid turn token "${turnStr}"`, 'BR-GSFEN-CANON-001'),
+        error: new GameError(
+          `Invalid turn token "${turnStr}" (BR-GSFEN-CANON-TURN-TOKEN) — must be one of: w, b, dw, db, dwB, dbW`,
+          'BR-GSFEN-CANON-TURN-TOKEN',
+        ),
       };
   }
 
@@ -269,10 +302,16 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
  * Format: `-` when both empty, otherwise White (uppercase, alphabetical,
  * with optional count 2-4) followed by Black (lowercase, alphabetical).
  *
- * @throws {GameError} with rule 'BR-GSFEN-CANON-005' if hands are malformed
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization → Hand rules):
+ *   - BR-GSFEN-CANON-HANDS-EMPTY-MARKER    — `-` when both empty
+ *   - BR-GSFEN-CANON-HANDS-SECTION-ORDER   — White (uppercase) before Black (lowercase)
+ *   - BR-GSFEN-CANON-HANDS-ALPHABETICAL    — letters alphabetical within each section
+ *   - BR-GSFEN-CANON-HANDS-DUPLICATE       — each letter at most once per section
+ *   - BR-GSFEN-CANON-HANDS-COUNT-FORMAT    — counts 2–4, omitted when 1
+ *   - BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR — no stray characters
  */
 function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }> {
-  // BR-GSFEN-CANON-005 / BR-GSFEN-VALID-008: `-` when both empty
+  // BR-GSFEN-CANON-HANDS-EMPTY-MARKER: `-` when both empty
   if (handsStr === '-') {
     return { ok: true, value: { white: EMPTY_HAND, black: EMPTY_HAND } };
   }
@@ -281,7 +320,10 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
   if (handsStr === '') {
     return {
       ok: false,
-      error: new GameError('Hands field is empty; use "-" for both empty hands', 'BR-GSFEN-CANON-005'),
+      error: new GameError(
+        'Hands field is empty; use "-" for both empty hands (BR-GSFEN-CANON-HANDS-EMPTY-MARKER)',
+        'BR-GSFEN-CANON-HANDS-EMPTY-MARKER',
+      ),
     };
   }
 
@@ -296,49 +338,61 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
     const ch = handsStr[i];
 
     if (isWhitePieceChar(ch)) {
-      // Single uppercase piece (count = 1) — ch is now PieceType
-      if (lastWhiteLetter !== '' && ch <= lastWhiteLetter) {
-        return {
-          ok: false,
-        error: new GameError(
-          `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}") (BR-GSFEN-CANON-005) — alphabetical order is A C E F G J L M N P S T U Y`,
-          'BR-GSFEN-CANON-005',
-        ),
-        };
-      }
+      // BR-GSFEN-CANON-HANDS-DUPLICATE: each letter at most once (check before alphabetical)
       if (white[ch] > 0) {
         return {
           ok: false,
-          error: new GameError(`Hands: duplicate white piece letter "${ch}" (BR-GSFEN-CANON-005) — each letter appears at most once`, 'BR-GSFEN-CANON-005'),
+          error: new GameError(
+            `Hands: duplicate white piece letter "${ch}" (BR-GSFEN-CANON-HANDS-DUPLICATE) — each letter appears at most once`,
+            'BR-GSFEN-CANON-HANDS-DUPLICATE',
+          ),
+        };
+      }
+      // BR-GSFEN-CANON-HANDS-ALPHABETICAL: letters in alphabetical order
+      if (lastWhiteLetter !== '' && ch <= lastWhiteLetter) {
+        return {
+          ok: false,
+          error: new GameError(
+            `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL) — alphabetical order is A C E F G J L M N P S T U Y`,
+            'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
+          ),
         };
       }
       white[ch] = 1;
       lastWhiteLetter = ch;
       i++;
     } else if (isCountDigit(ch)) {
-      // Count prefix — look ahead at next character
+      // BR-GSFEN-CANON-HANDS-COUNT-FORMAT: count must be followed by a piece letter
       if (i + 1 >= len) {
         return {
           ok: false,
-          error: new GameError('Hands: expected piece letter after count at end of string', 'BR-GSFEN-CANON-005'),
+          error: new GameError(
+            'Hands: expected piece letter after count at end of string (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)',
+            'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
+          ),
         };
       }
       const next = handsStr[i + 1];
       if (isWhitePieceChar(next)) {
         const count = parseInt(ch, 10);
+        // BR-GSFEN-CANON-HANDS-DUPLICATE (check before alphabetical)
+        if (white[next] > 0) {
+          return {
+            ok: false,
+            error: new GameError(
+              `Hands: duplicate white piece letter "${next}" (BR-GSFEN-CANON-HANDS-DUPLICATE)`,
+              'BR-GSFEN-CANON-HANDS-DUPLICATE',
+            ),
+          };
+        }
+        // BR-GSFEN-CANON-HANDS-ALPHABETICAL
         if (lastWhiteLetter !== '' && next <= lastWhiteLetter) {
           return {
             ok: false,
             error: new GameError(
-              `Hands: white pieces not in alphabetical order ("${next}" after "${lastWhiteLetter}")`,
-              'BR-GSFEN-CANON-005',
+              `Hands: white pieces not in alphabetical order ("${next}" after "${lastWhiteLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL)`,
+              'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
             ),
-          };
-        }
-        if (white[next] > 0) {
-          return {
-            ok: false,
-            error: new GameError(`Hands: duplicate white piece letter "${next}"`, 'BR-GSFEN-CANON-005'),
           };
         }
         white[next] = count;
@@ -360,49 +414,63 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
     const ch = handsStr[i];
 
     if (isBlackPieceChar(ch)) {
-      if (lastBlackLetter !== '' && ch <= lastBlackLetter) {
-        return {
-          ok: false,
-        error: new GameError(
-          `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}") (BR-GSFEN-CANON-005) — alphabetical order is a c e f g j l m n p s t u y`,
-          'BR-GSFEN-CANON-005',
-        ),
-        };
-      }
       const upper = toUpperPieceType(ch);
+      // BR-GSFEN-CANON-HANDS-DUPLICATE (check before alphabetical)
       if (black[upper] > 0) {
         return {
           ok: false,
-          error: new GameError(`Hands: black duplicate piece letter "${ch}" (BR-GSFEN-CANON-005) — each letter appears at most once`, 'BR-GSFEN-CANON-005'),
+          error: new GameError(
+            `Hands: black duplicate piece letter "${ch}" (BR-GSFEN-CANON-HANDS-DUPLICATE) — each letter appears at most once`,
+            'BR-GSFEN-CANON-HANDS-DUPLICATE',
+          ),
+        };
+      }
+      // BR-GSFEN-CANON-HANDS-ALPHABETICAL
+      if (lastBlackLetter !== '' && ch <= lastBlackLetter) {
+        return {
+          ok: false,
+          error: new GameError(
+            `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL) — alphabetical order is a c e f g j l m n p s t u y`,
+            'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
+          ),
         };
       }
       black[upper] = 1;
       lastBlackLetter = ch;
       i++;
     } else if (isCountDigit(ch)) {
+      // BR-GSFEN-CANON-HANDS-COUNT-FORMAT
       if (i + 1 >= len) {
         return {
           ok: false,
-          error: new GameError('Hands: expected piece letter after count at end of string', 'BR-GSFEN-CANON-005'),
+          error: new GameError(
+            'Hands: expected piece letter after count at end of string (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)',
+            'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
+          ),
         };
       }
       const next = handsStr[i + 1];
       if (isBlackPieceChar(next)) {
         const count = parseInt(ch, 10);
+        const upper = toUpperPieceType(next);
+        // BR-GSFEN-CANON-HANDS-DUPLICATE (check before alphabetical)
+        if (black[upper] > 0) {
+          return {
+            ok: false,
+            error: new GameError(
+              `Hands: duplicate black piece letter "${next}" (BR-GSFEN-CANON-HANDS-DUPLICATE)`,
+              'BR-GSFEN-CANON-HANDS-DUPLICATE',
+            ),
+          };
+        }
+        // BR-GSFEN-CANON-HANDS-ALPHABETICAL
         if (lastBlackLetter !== '' && next <= lastBlackLetter) {
           return {
             ok: false,
             error: new GameError(
-              `Hands: black pieces not in alphabetical order ("${next}" after "${lastBlackLetter}")`,
-              'BR-GSFEN-CANON-005',
+              `Hands: black pieces not in alphabetical order ("${next}" after "${lastBlackLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL)`,
+              'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
             ),
-          };
-        }
-        const upper = toUpperPieceType(next);
-        if (black[upper] > 0) {
-          return {
-            ok: false,
-            error: new GameError(`Hands: duplicate black piece letter "${next}"`, 'BR-GSFEN-CANON-005'),
           };
         }
         black[upper] = count;
@@ -412,15 +480,19 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
         return {
           ok: false,
           error: new GameError(
-            `Hands: expected lowercase piece letter after count, got "${next}"`,
-            'BR-GSFEN-CANON-005',
+            `Hands: expected lowercase piece letter after count, got "${next}" (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)`,
+            'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
           ),
         };
       }
     } else {
+      // BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR
       return {
         ok: false,
-        error: new GameError(`Hands: unexpected character "${ch}" at position ${i}`, 'BR-GSFEN-CANON-005'),
+        error: new GameError(
+          `Hands: unexpected character "${ch}" at position ${i} (BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR)`,
+          'BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR',
+        ),
       };
     }
   }
@@ -430,28 +502,26 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
 
 /**
  * Parse the counter field.
- * Must be a positive integer with no leading zeros (BR-GSFEN-CANON-006).
+ * Must be a positive integer with no leading zeros.
  *
- * @throws {GameError} with rule 'BR-GSFEN-CANON-006' if counter has leading zeros or is < 1
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization → Counter rules):
+ *   - BR-GSFEN-CANON-COUNTER-LEADING-ZERO — no leading zeros
+ *   - BR-GSFEN-CANON-COUNTER-POSITIVE     — must be ≥ 1 (parser regex guarantees this)
  */
 function parseCounter(counterStr: string): FieldResult<number> {
+  // BR-GSFEN-CANON-COUNTER-LEADING-ZERO + BR-GSFEN-CANON-COUNTER-POSITIVE:
+  // The regex /^[1-9]\d*$/ rejects both leading zeros and zero/negative values.
   if (!/^[1-9]\d*$/.test(counterStr)) {
     return {
       ok: false,
-        error: new GameError(
-          `Counter must be a positive integer (no leading zeros), got "${counterStr}" (BR-GSFEN-CANON-006) — e.g. 1 not 01`,
-          'BR-GSFEN-CANON-006',
-        ),
+      error: new GameError(
+        `Counter must be a positive integer (no leading zeros), got "${counterStr}" (BR-GSFEN-CANON-COUNTER-LEADING-ZERO / BR-GSFEN-CANON-COUNTER-POSITIVE)`,
+        'BR-GSFEN-CANON-COUNTER-LEADING-ZERO',
+      ),
     };
   }
 
   const n = parseInt(counterStr, 10);
-  if (n < 1) {
-    return {
-      ok: false,
-      error: new GameError(`Counter must be >= 1`, 'BR-GSFEN-CANON-006'),
-    };
-  }
 
   return { ok: true, value: n };
 }
@@ -465,46 +535,56 @@ function parseCounter(counterStr: string): FieldResult<number> {
  *
  * Accepts the `startpos` keyword (expanded to START_GSFEN) and full 4-field
  * GSFEN strings.  Returns a ParseResult — on success the GameState is
- * well-formed (BR-GSFEN-CANON-001–007) but not necessarily semantically valid (see
- * `validateState`).
+ * well-formed (canonical form satisfied) but not necessarily semantically
+ * valid (see `validateState`).
+ *
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization):
+ *   - BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT — exactly 4 fields
+ *   - BR-GSFEN-CANON-SEPARATOR-WHITESPACE  — single-space separation, no embedded whitespace
+ *   - BR-GSFEN-CANON-KEYWORD-CASE          — `startpos` is lowercase and exact
  *
  * @param input - Raw GSFEN string to parse.
- * @throws {GameError} with rule 'BR-GSFEN-CANON-001' if fields are wrong, 'BR-GSFEN-CANON-007' if startpos keyword is malformed
  */
 export function parseGSFEN(input: string): ParseResult {
-  // BR-GSFEN-CANON-007: startpos keyword (lowercase, exact, no whitespace allowed per BR-GSFEN-CANON-001)
+  // BR-GSFEN-CANON-KEYWORD-CASE: startpos keyword (lowercase, exact)
   if (input === 'startpos') {
     return parseGSFEN(START_GSFEN);
   }
 
-  // BR-GSFEN-CANON-001: No leading or trailing whitespace
+  // BR-GSFEN-CANON-SEPARATOR-WHITESPACE: No leading or trailing whitespace
   if (input !== input.trim()) {
     return {
       ok: false,
-        error: new GameError('GSFEN must not have leading or trailing whitespace (BR-GSFEN-CANON-001) — trim the string', 'BR-GSFEN-CANON-001'),
+      error: new GameError(
+        'GSFEN must not have leading or trailing whitespace (BR-GSFEN-CANON-SEPARATOR-WHITESPACE) — trim the string',
+        'BR-GSFEN-CANON-SEPARATOR-WHITESPACE',
+      ),
     };
   }
 
-  // BR-GSFEN-CANON-001: Fields separated by exactly one space (U+0020).
+  // BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT: Fields separated by exactly one space (U+0020).
   // Using split on single space — multi-space segments produce empty strings,
   // which makes the resulting array longer than 4.
   const parts = input.split(' ');
   if (parts.length !== 4) {
     return {
       ok: false,
-        error: new GameError(
-          `GSFEN must have exactly 4 single-space-separated fields (BR-GSFEN-CANON-001), got ${parts.length} segments — format: <position> <turn> <hands> <counter>`,
-          'BR-GSFEN-CANON-001',
-        ),
+      error: new GameError(
+        `GSFEN must have exactly 4 single-space-separated fields (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT), got ${parts.length} segments — format: <position> <turn> <hands> <counter>`,
+        'BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT',
+      ),
     };
   }
 
-  // BR-GSFEN-CANON-001: No non-space whitespace characters (tabs, etc.) embedded in any field
+  // BR-GSFEN-CANON-SEPARATOR-WHITESPACE: No non-space whitespace characters (tabs, etc.)
   for (const p of parts) {
     if (/\s/.test(p)) {
       return {
         ok: false,
-        error: new GameError('GSFEN fields must not contain tabs or other whitespace (BR-GSFEN-CANON-001) — use single spaces only', 'BR-GSFEN-CANON-001'),
+        error: new GameError(
+          'GSFEN fields must not contain tabs or other whitespace (BR-GSFEN-CANON-SEPARATOR-WHITESPACE) — use single spaces only',
+          'BR-GSFEN-CANON-SEPARATOR-WHITESPACE',
+        ),
       };
     }
   }

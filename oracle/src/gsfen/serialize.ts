@@ -1,13 +1,15 @@
 /**
  * GSFEN serializer — converts a GameState into a canonical GSFEN string.
  *
- * The output is always canonical (BR-GSFEN-CANON-001–007 compliant):
- * - BR-GSFEN-CANON-002: exactly 9 squares per row
- * - BR-GSFEN-CANON-003: empty runs maximally merged (no adjacent digit items)
- * - BR-GSFEN-CANON-004: stack letters bottom→top, case encodes ownership
- * - BR-GSFEN-CANON-005: hands alphabetical within each section, counts omitted when 1
- * - BR-GSFEN-CANON-006: no leading zeros on counter
- * - BR-GSFEN-CANON-007: `startpos` keyword is never emitted (always expanded)
+ * The output is always canonical (see GSFEN.md §Canonicalization):
+ * - BR-GSFEN-CANON-POSITION-SQUARE-COUNT:    exactly 9 squares per row
+ * - BR-GSFEN-CANON-POSITION-COMPRESSION:     empty runs maximally merged (no adjacent digit items)
+ * - BR-GSFEN-CANON-POSITION-STACK-SPELLING:  stack letters bottom→top, case encodes ownership
+ * - BR-GSFEN-CANON-HANDS-ALPHABETICAL:       hands alphabetical within each section, counts omitted when 1
+ * - BR-GSFEN-CANON-HANDS-SECTION-ORDER:      White's section (uppercase) precedes Black's (lowercase)
+ * - BR-GSFEN-CANON-HANDS-EMPTY-MARKER:       `-` when both Hands are empty
+ * - BR-GSFEN-CANON-COUNTER-LEADING-ZERO:     no leading zeros on counter
+ * - BR-GSFEN-CANON-KEYWORD-CASE:             `startpos` keyword is never emitted (always expanded)
  *
  * @module
  */
@@ -101,9 +103,12 @@ function serializeTurn(turn: TurnState): string {
 /**
  * Serialize the Hands field.
  *
- * BR-GSFEN-CANON-005: White's section precedes Black's. Letters alphabetical within each
- * section, each at most once. Counts omitted when 1 (count ≥ 2 prefixed).
- * `-` when both Hands are empty.
+ * BR-GSFEN-CANON-HANDS-* rules:
+ *   - EMPTY-MARKER:  `-` when both Hands are empty
+ *   - SECTION-ORDER: White's section (uppercase) precedes Black's (lowercase)
+ *   - ALPHABETICAL:  letters alphabetical within each section
+ *   - DUPLICATE:     each letter at most once per section
+ *   - COUNT-FORMAT:  counts omitted when 1 (count ≥ 2 prefixed)
  */
 function serializeHands(hands: {
   white: Record<PieceType, number>;
