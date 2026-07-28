@@ -23,31 +23,50 @@
 Replace all inline GSFEN strings across the codebase with named constants
 from a central barrel, validated at module-init time.
 
-**Structure:**
+**Current state (curation complete):**
 
 ```
 oracle/fixtures/
-├── valid/              # Canonical, passes validateState (populated during curation)
-│   ├── startpos.gsfen
+├── valid/                         # 48 .gsfen — all pass validateState
+│   ├── all-on-board.gsfen
 │   ├── battle-start.gsfen
-│   └── ...
-├── invalid/            # Intentionally invalid (for negative tests)
-│   ├── marshal-below-pawn.gsfen
-│   └── ...
-├── *.gsfen             # Current fixture files (moved from gsfen/; to be sorted)
+│   ├── ...
+│   └── white-marshal-at-5-9.gsfen
+├── invalid/
+│   └── parse/                     # 8 .gsfen — format errors (C-code failures)
+│       ├── c2-unknown-piece.gsfen
+│       ├── c3-adjacent-empty-runs.gsfen
+│       ├── c5-duplicate-letter.gsfen
+│       ├── c5-non-alphabetical.gsfen
+│       ├── c6-leading-zero-counter.gsfen
+│       ├── c6-leading-zero-counter-full.gsfen
+│       ├── row-not-9.gsfen
+│       └── stack-of-four.gsfen
+└── gsfen-fixture-report.html      # validation report (generated, not tracked)
 ```
 
-**Barrel:** `oracle/src/gsfen/fixtures.ts` exports every fixture as a named
-constant. On module load, every fixture in `valid/` is run through
-`validateState()` and throws if any fails.
+**Curation notes:**
+
+- All 56 `.gsfen` files have been sorted into `valid/` or `invalid/parse/`.
+  No root-level `.gsfen` files remain.
+- 4 fixtures originally in `invalid/` passed validation — they were moved
+  to `valid/` after confirmation:
+  `deploy-enemy-top`, `gan-battle-state`, `mp-stack-deploy-ctr2`,
+  `v3-black-marshal-wrong-zone`.
+- The `invalid/` directory now contains only format-error fixtures in its
+  `parse/` subdirectory. All intentionally fail at the parse stage (C-rule).
+
+**Remaining work:** The barrel at `oracle/src/gsfen/fixtures.ts` does not
+exist yet. It will export every fixture as a named constant and run
+`validateState()` on all `valid/` entries at module-init time.
 
 **Policy:** No inline GSFEN strings anywhere in `src/` or `tests/` — every
 string lives in a `.gsfen` file. Enforced by CONTEXT.md and a CI check
 (see T3).
 
-**Deferred:** Unresolved at curation time — how to handle "valid but
-transitional" states that test incomplete features. Decide when curation
-reveals the actual shape.
+**Deferred:** How to handle "valid but transitional" states that test
+incomplete features. Decide when the healing pass (Phase 1) reveals the
+actual shape.
 
 ### T2 — Rule browser (Phase 3)
 

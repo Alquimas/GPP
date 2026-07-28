@@ -71,28 +71,48 @@ These documents, in the project root, collectively define the Gungi specificatio
 1. **Never hand-write a GSFEN string without validating it.** Use the CLI (`npm run gsfen -- check "<string>"`) to confirm correctness before using any GSFEN in code or tests. A string that "looks right" is very often wrong in at least one of the traps above.
 2. **No inline GSFEN strings in source or test code.** Every GSFEN string must live in a `.gsfen` fixture file under `oracle/fixtures/valid/` or `oracle/fixtures/invalid/` and be imported via the constants barrel (`oracle/src/gsfen/fixtures.ts`). Exceptions require a documented rationale in the commit message. A CI check (via `gsfen-find.sh`) enforces this after Phase 0 of the tooling plan (see `oracle/TOOLING.md`).
 3. **Prefer an existing fixture over writing a new GSFEN string.** The `oracle/fixtures/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to an existing fixture state.
-4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. The constants barrel validates every valid fixture against `validateState()` at module-init time. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
+4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. Every fixture lives in a `.gsfen` file and is exported as a named constant from `oracle/src/gsfen/fixtures.ts`. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
 5. **Learn from rule codes.** A C-code (C1-C7) is a canonical-form error — fix the string format. A V-code (V2-V7) is a semantic error — fix the position/hands/turn arrangement. A BR-xxx code is a business rule violation.
 6. **Honour step-awareness markers.** Code marked `@internal`, `@step N`, or guarded by `throwIfNotImplemented` is scaffolding — it works for its limited purpose but will be replaced. Do not build on top of it. Tests using `it.fails` document behaviour that is known to be incomplete.
 
 ## Fixture Library
 
-The 21 `.gsfen` files in `oracle/fixtures/` cover the major state shapes:
+The **56 `.gsfen` files** across two directories cover the major state shapes:
+
+**`oracle/fixtures/valid/`** — 48 states that pass `validateState()`.
 
 | Fixture | Description |
 |---|---|
-| `startpos` | Game start (empty board) |
+| `startpos` / `startpos-expanded` | Game start (empty board) — keyword and expanded forms |
 | `all-on-board` | All pieces deployed |
-| `battle-start` / `battle-midgame` | Battle-phase states |
+| `battle-start` / `battle-midgame` / `battle-mid-variant` | Battle-phase states |
 | `black-done-declared` / `white-done-declared` | Deploy with done flag |
-| `deploy-near-end` / `deploy-stacks-in-zones` | Deploy-phase shapes |
+| `deploy-phase-ctr1` / `deploy-phase-ctr3` / `deploy-black-ctr2-g` | Deploy-phase with specified counters |
+| `deploy-near-end` / `deploy-stacks-in-zones` / `deploy-full-stack-ppp` | Deploy-phase shapes |
+| `both-marshals-placed` / `both-marshals-deploy-ctr2` / `both-marshals-battle-nohands` | Marshal position states |
+| `white-marshal-at-5-9` / `marshal-alone-battle` / `black-turn-marshal-only` | Marshal-specific scenarios |
 | `capture-aftermath` / `deep-capture-exchange` / `some-captured` | Post-capture states |
 | `dense-engagement` / `sparse-board` | Board density extremes |
 | `three-deep-stacks` / `triple-stack-battlefield` | Stack size extremes |
 | `empty-hands-endgame` | Battle end with empty hands |
-| `both-marshals-placed` / `white-marshal-at-5-9` | Marshal position states |
-| `one-side-fully-deployed` | Asymmetric deploy |
+| `one-side-fully-deployed` / `lowercase-hand` / `piece-at-col1` / `piece-at-col9` | Edge cases |
+| `choice-pos` / `self-check-pos` / `size-mismatch-afg` / `row-with-P-and-T` | Attack/movement scenarios |
+| `enemy-marshal-stack-test` / `friendly-stack-test` / `friendly-stack-with-hands` | Stack interaction scenarios |
+| `forced-capture` / `arata-zone-test` / `gan-battle-state` | Arata/Move edge cases |
+| `mp-stack-deploy-ctr2` / `mp-stack-deploy-ctr3` | Marshal+Pawn stack in deploy |
+| `example4-mixed-stack` / `deploy-enemy-top` / `v3-black-marshal-wrong-zone` | Categorization (valid despite name) |
 | `white-done-multi-count-hand` | Hand with count ≥ 2 |
+
+**`oracle/fixtures/invalid/parse/`** — 8 states that fail parse-level validation (C1-C7 errors).
+
+| Fixture | Error Class |
+|---|---|
+| `c2-unknown-piece` | C2 — unknown piece letter |
+| `c3-adjacent-empty-runs` | C3 — adjacent empty runs not merged |
+| `c5-duplicate-letter` / `c5-non-alphabetical` | C5 — stack letter ordering |
+| `c6-leading-zero-counter` / `c6-leading-zero-counter-full` | C6 — leading zero in counter |
+| `row-not-9` | C1 — row count ≠ 9 |
+| `stack-of-four` | C3 — stack depth > 3 |
 
 To use a fixture: read from `oracle/fixtures/<name>.gsfen`, parse, and mutate.
 
@@ -163,3 +183,29 @@ Output format: `file:line:match` (same as `grep -rn`).
 ### Requirements
 
 Uses `ripgrep` if available, otherwise falls back to `grep -E` (GNU grep or compatible).
+
+## Docker
+
+All tests and code quality checks should be run inside the container to ensure
+a consistent environment. A `Dockerfile` and `docker-compose.yml` in
+`oracle/` define the available services.
+
+```bash
+# Run all tests (vitest)
+docker compose run --rm test
+
+# Run TypeScript type check
+docker compose run --rm check
+
+# Run linter
+docker compose run --rm lint
+
+# Format code with Prettier (writes to mounted source)
+docker compose run --rm format
+
+# Check formatting without writing
+docker compose run --rm format-check
+```
+
+All services mount the `oracle/` directory as `/app` and share a persisted
+`node_modules` volume so dependency installs are reused across runs.
