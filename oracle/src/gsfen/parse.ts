@@ -125,10 +125,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
       if (item === '') {
         return {
           ok: false,
-          error: new GameError(
-            `Empty item in row ${r + 1}`,
-            'BR-GSFEN-CANON-POSITION-EMPTY-ITEM',
-          ),
+          error: new GameError(`Empty item in row ${r + 1}`, 'BR-GSFEN-CANON-POSITION-EMPTY-ITEM'),
         };
       }
 

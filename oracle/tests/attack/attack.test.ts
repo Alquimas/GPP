@@ -16,7 +16,12 @@ import { isSquareUnderAttack, isInCheck, isExposed } from '../../src/board/attac
 import { getLegalDestinations } from '../../src/board/movement.js';
 import type { BoardCoord, PieceType, Player, Position, Stack } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
-import { BATTLE_START, BOTH_MARSHALS_DEPLOY_CTR2, BOTH_MARSHALS_PLACED, DENSE_ENGAGEMENT } from '../../src/gsfen/fixtures.js';
+import {
+  BATTLE_START,
+  BOTH_MARSHALS_DEPLOY_CTR2,
+  BOTH_MARSHALS_PLACED,
+  DENSE_ENGAGEMENT,
+} from '../../src/gsfen/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */

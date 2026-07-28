@@ -6,53 +6,95 @@
  *
  * ## Error classes
  * - {@link GameError} — base class for all rule violations.
- * - {@link IllegalActionError} — extends GameError with the illegal Action.
- *
- * {@link GameErrorKind} discriminates the error category for consumer
- * routing: deploy, move, arata, self-check, terminal, or general.
  *
  * @module
  */
 
-import type { Action } from './types.js';
-
-export type GameErrorKind = 'deploy' | 'move' | 'arata' | 'self-check' | 'terminal' | 'general';
+/**
+ * The closed vocabulary of rule identifiers that a GameError can cite.
+ *
+ * Adding a new rule identifier requires updating this union —
+ * the compiler will catch every miss.
+ */
+export type GameRule =
+  // Business rules — Battle Phase actions
+  | 'BR-ACTION-001'
+  | 'BR-ACTION-002'
+  | 'BR-CAPTURE-002'
+  | 'BR-MOVE-002'
+  | 'BR-MOVE-003'
+  | 'BR-MOVE-004'
+  | 'BR-PLAY-002'
+  | 'BR-STACK-002'
+  | 'BR-STACK-004'
+  | 'BR-STACK-006'
+  // Business rules — Deploy Phase
+  | 'BR-DEPLOY-001'
+  | 'BR-DEPLOY-002'
+  | 'BR-DEPLOY-003'
+  | 'BR-DEPLOY-004'
+  | 'BR-DEPLOY-005'
+  // Business rules — Arata
+  | 'BR-ARATA-001'
+  | 'BR-ARATA-002'
+  | 'BR-ARATA-003'
+  | 'BR-ARATA-005'
+  | 'BR-ARATA-006'
+  | 'BR-ARATA-007'
+  // GAN grammar rules
+  | 'BR-GAN-GRAMMAR-001'
+  | 'BR-GAN-GRAMMAR-002'
+  | 'BR-GAN-GRAMMAR-003'
+  | 'BR-GAN-GRAMMAR-004'
+  | 'BR-GAN-GRAMMAR-005'
+  | 'BR-GAN-GRAMMAR-006'
+  | 'BR-GAN-GRAMMAR-007'
+  | 'BR-GAN-GRAMMAR-008'
+  | 'BR-GAN-GRAMMAR-009'
+  | 'BR-GAN-GRAMMAR-010'
+  | 'BR-GAN-GRAMMAR-011'
+  // GAN semantic validity rules
+  | 'BR-GAN-VALID-001'
+  | 'BR-GAN-VALID-002'
+  | 'BR-GAN-VALID-005'
+  | 'BR-GAN-VALID-006'
+  // GSFEN canonical-form rules
+  | 'BR-GSFEN-CANON-COUNTER-LEADING-ZERO'
+  | 'BR-GSFEN-CANON-HANDS-ALPHABETICAL'
+  | 'BR-GSFEN-CANON-HANDS-COUNT-FORMAT'
+  | 'BR-GSFEN-CANON-HANDS-DUPLICATE'
+  | 'BR-GSFEN-CANON-HANDS-EMPTY-MARKER'
+  | 'BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR'
+  | 'BR-GSFEN-CANON-POSITION-COMPRESSION'
+  | 'BR-GSFEN-CANON-POSITION-EMPTY-ITEM'
+  | 'BR-GSFEN-CANON-POSITION-ROW-COUNT'
+  | 'BR-GSFEN-CANON-POSITION-SQUARE-COUNT'
+  | 'BR-GSFEN-CANON-POSITION-STACK-SPELLING'
+  | 'BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT'
+  | 'BR-GSFEN-CANON-SEPARATOR-WHITESPACE'
+  | 'BR-GSFEN-CANON-TURN-TOKEN'
+  // GSFEN semantic validity rules
+  | 'BR-GSFEN-VALID-001-BOTH'
+  | 'BR-GSFEN-VALID-001-COUNT'
+  | 'BR-GSFEN-VALID-001-FIRST'
+  | 'BR-GSFEN-VALID-001-HAND'
+  | 'BR-GSFEN-VALID-001-TOP'
+  | 'BR-GSFEN-VALID-002'
+  | 'BR-GSFEN-VALID-003'
+  | 'BR-GSFEN-VALID-004'
+  | 'BR-GSFEN-VALID-005';
 
 /**
  * Base error class for all game rule violations.
- * Carries the BR-xxx rule reference and an optional kind discriminator.
+ * Carries the BR-xxx rule reference.
  */
 export class GameError extends Error {
   /** The BR-xxx rule identifier this error violates. */
-  rule: string;
+  rule: GameRule;
 
-  /** Optional discriminator identifying the error category. */
-  kind: GameErrorKind;
-
-  constructor(message: string, rule: string, { kind }: { kind?: GameErrorKind } = {}) {
+  constructor(message: string, rule: GameRule) {
     super(message);
     this.name = 'GameError';
     this.rule = rule;
-    this.kind = kind ?? 'general';
-  }
-}
-
-/** An action that was attempted but violates one or more rules. */
-export class IllegalActionError extends GameError {
-  /** The illegal action that was attempted. */
-  action: Action;
-
-  constructor(
-    message: string,
-    rule: string,
-    action: Action,
-    { kind }: { kind?: GameErrorKind } = {},
-  ) {
-    // Under exactOptionalPropertyTypes, `{ kind }` when kind is undefined
-    // creates a property with value undefined, which doesn't match the
-    // parent's `{ kind?: GameErrorKind }` parameter type. Spread conditionally.
-    super(message, rule, kind !== undefined ? { kind } : {});
-    this.name = 'IllegalActionError';
-    this.action = action;
   }
 }

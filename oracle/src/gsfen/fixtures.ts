@@ -36,66 +36,66 @@ function readInvalidParse(name: string): string {
 // Valid fixtures — pass parseGSFEN + validateState
 // ---------------------------------------------------------------------------
 
-export const ALL_ON_BOARD                   = readValid('all-on-board');
-export const ARATA_ZONE_TEST                = readValid('arata-zone-test');
-export const BATTLE_MID_VARIANT             = readValid('battle-mid-variant');
-export const BATTLE_MIDGAME                 = readValid('battle-midgame');
-export const BATTLE_MINIMAL                 = readValid('battle-minimal');
-export const BATTLE_START                   = readValid('battle-start');
-export const BLACK_DONE_DECLARED            = readValid('black-done-declared');
-export const BLACK_TURN_MARSHAL_ONLY        = readValid('black-turn-marshal-only');
-export const BOTH_MARSHALS_BATTLE_NOHANDS   = readValid('both-marshals-battle-nohands');
-export const BOTH_MARSHALS_DEPLOY_CTR2      = readValid('both-marshals-deploy-ctr2');
-export const BOTH_MARSHALS_PLACED           = readValid('both-marshals-placed');
-export const CAPTURE_AFTERMATH              = readValid('capture-aftermath');
-export const CHOICE_POS                     = readValid('choice-pos');
-export const DEEP_CAPTURE_EXCHANGE          = readValid('deep-capture-exchange');
-export const DENSE_ENGAGEMENT               = readValid('dense-engagement');
-export const DEPLOY_BLACK_CTR2              = readValid('deploy-black-ctr2');
-export const DEPLOY_BLACK_MARSHAL_PLACED    = readValid('deploy-black-marshal-placed');
-export const DEPLOY_BOTH_MARSHALS_PAWN      = readValid('deploy-both-marshals-pawn');
-export const DEPLOY_FULL_STACK_PAWNS        = readValid('deploy-full-stack-pawns');
-export const DEPLOY_MARSHAL_COL1            = readValid('deploy-marshal-col1');
-export const DEPLOY_MARSHAL_COL9            = readValid('deploy-marshal-col9');
-export const DEPLOY_MARSHAL_ON_TOP          = readValid('deploy-marshal-on-top');
-export const DEPLOY_NEAR_END                = readValid('deploy-near-end');
-export const DEPLOY_PHASE_CTR1              = readValid('deploy-phase-ctr1');
-export const DEPLOY_PHASE_CTR3              = readValid('deploy-phase-ctr3');
-export const DEPLOY_STACKS_IN_ZONES         = readValid('deploy-stacks-in-zones');
-export const EMPTY_HANDS_ENDGAME            = readValid('empty-hands-endgame');
-export const ENEMY_MARSHAL_STACK_TEST       = readValid('enemy-marshal-stack-test');
-export const EXAMPLE4_MIXED_STACK           = readValid('example4-mixed-stack');
-export const FORCED_CAPTURE                 = readValid('forced-capture');
-export const FRIENDLY_STACK_TEST            = readValid('friendly-stack-test');
-export const FRIENDLY_STACK_WITH_HANDS      = readValid('friendly-stack-with-hands');
-export const MARSHAL_ALONE_BATTLE           = readValid('marshal-alone-battle');
-export const MP_STACK_DEPLOY_CTR3           = readValid('mp-stack-deploy-ctr3');
-export const ONE_SIDE_FULLY_DEPLOYED        = readValid('one-side-fully-deployed');
-export const ROW_WITH_P_AND_T               = readValid('row-with-P-and-T');
-export const SELF_CHECK_POS                 = readValid('self-check-pos');
-export const SIZE_MISMATCH_AFG              = readValid('size-mismatch-afg');
-export const SOME_CAPTURED                  = readValid('some-captured');
-export const SPARSE_BOARD                   = readValid('sparse-board');
-export const STARTPOS                       = readValid('startpos');
-export const STARTPOS_EXPANDED              = readValid('startpos-expanded');
-export const THREE_DEEP_STACKS              = readValid('three-deep-stacks');
-export const TRIPLE_STACK_BATTLEFIELD       = readValid('triple-stack-battlefield');
-export const WHITE_DONE_DECLARED            = readValid('white-done-declared');
-export const WHITE_DONE_MULTI_COUNT_HAND    = readValid('white-done-multi-count-hand');
-export const WHITE_MARSHAL_AT_5_9           = readValid('white-marshal-at-5-9');
+export const ALL_ON_BOARD = readValid('all-on-board');
+export const ARATA_ZONE_TEST = readValid('arata-zone-test');
+export const BATTLE_MID_VARIANT = readValid('battle-mid-variant');
+export const BATTLE_MIDGAME = readValid('battle-midgame');
+export const BATTLE_MINIMAL = readValid('battle-minimal');
+export const BATTLE_START = readValid('battle-start');
+export const BLACK_DONE_DECLARED = readValid('black-done-declared');
+export const BLACK_TURN_MARSHAL_ONLY = readValid('black-turn-marshal-only');
+export const BOTH_MARSHALS_BATTLE_NOHANDS = readValid('both-marshals-battle-nohands');
+export const BOTH_MARSHALS_DEPLOY_CTR2 = readValid('both-marshals-deploy-ctr2');
+export const BOTH_MARSHALS_PLACED = readValid('both-marshals-placed');
+export const CAPTURE_AFTERMATH = readValid('capture-aftermath');
+export const CHOICE_POS = readValid('choice-pos');
+export const DEEP_CAPTURE_EXCHANGE = readValid('deep-capture-exchange');
+export const DENSE_ENGAGEMENT = readValid('dense-engagement');
+export const DEPLOY_BLACK_CTR2 = readValid('deploy-black-ctr2');
+export const DEPLOY_BLACK_MARSHAL_PLACED = readValid('deploy-black-marshal-placed');
+export const DEPLOY_BOTH_MARSHALS_PAWN = readValid('deploy-both-marshals-pawn');
+export const DEPLOY_FULL_STACK_PAWNS = readValid('deploy-full-stack-pawns');
+export const DEPLOY_MARSHAL_COL1 = readValid('deploy-marshal-col1');
+export const DEPLOY_MARSHAL_COL9 = readValid('deploy-marshal-col9');
+export const DEPLOY_MARSHAL_ON_TOP = readValid('deploy-marshal-on-top');
+export const DEPLOY_NEAR_END = readValid('deploy-near-end');
+export const DEPLOY_PHASE_CTR1 = readValid('deploy-phase-ctr1');
+export const DEPLOY_PHASE_CTR3 = readValid('deploy-phase-ctr3');
+export const DEPLOY_STACKS_IN_ZONES = readValid('deploy-stacks-in-zones');
+export const EMPTY_HANDS_ENDGAME = readValid('empty-hands-endgame');
+export const ENEMY_MARSHAL_STACK_TEST = readValid('enemy-marshal-stack-test');
+export const EXAMPLE4_MIXED_STACK = readValid('example4-mixed-stack');
+export const FORCED_CAPTURE = readValid('forced-capture');
+export const FRIENDLY_STACK_TEST = readValid('friendly-stack-test');
+export const FRIENDLY_STACK_WITH_HANDS = readValid('friendly-stack-with-hands');
+export const MARSHAL_ALONE_BATTLE = readValid('marshal-alone-battle');
+export const MP_STACK_DEPLOY_CTR3 = readValid('mp-stack-deploy-ctr3');
+export const ONE_SIDE_FULLY_DEPLOYED = readValid('one-side-fully-deployed');
+export const ROW_WITH_P_AND_T = readValid('row-with-P-and-T');
+export const SELF_CHECK_POS = readValid('self-check-pos');
+export const SIZE_MISMATCH_AFG = readValid('size-mismatch-afg');
+export const SOME_CAPTURED = readValid('some-captured');
+export const SPARSE_BOARD = readValid('sparse-board');
+export const STARTPOS = readValid('startpos');
+export const STARTPOS_EXPANDED = readValid('startpos-expanded');
+export const THREE_DEEP_STACKS = readValid('three-deep-stacks');
+export const TRIPLE_STACK_BATTLEFIELD = readValid('triple-stack-battlefield');
+export const WHITE_DONE_DECLARED = readValid('white-done-declared');
+export const WHITE_DONE_MULTI_COUNT_HAND = readValid('white-done-multi-count-hand');
+export const WHITE_MARSHAL_AT_5_9 = readValid('white-marshal-at-5-9');
 
 // ---------------------------------------------------------------------------
 // Parse-invalid fixtures — fail parse-level validation (BR-GSFEN-CANON-* errors)
 // ---------------------------------------------------------------------------
 
-export const C2_UNKNOWN_PIECE           = readInvalidParse('c2-unknown-piece');
-export const C3_ADJACENT_EMPTY_RUNS     = readInvalidParse('c3-adjacent-empty-runs');
-export const C5_DUPLICATE_LETTER        = readInvalidParse('c5-duplicate-letter');
-export const C5_NON_ALPHABETICAL        = readInvalidParse('c5-non-alphabetical');
-export const C6_LEADING_ZERO_COUNTER    = readInvalidParse('c6-leading-zero-counter');
+export const C2_UNKNOWN_PIECE = readInvalidParse('c2-unknown-piece');
+export const C3_ADJACENT_EMPTY_RUNS = readInvalidParse('c3-adjacent-empty-runs');
+export const C5_DUPLICATE_LETTER = readInvalidParse('c5-duplicate-letter');
+export const C5_NON_ALPHABETICAL = readInvalidParse('c5-non-alphabetical');
+export const C6_LEADING_ZERO_COUNTER = readInvalidParse('c6-leading-zero-counter');
 export const C6_LEADING_ZERO_COUNTER_FULL = readInvalidParse('c6-leading-zero-counter-full');
-export const ROW_NOT_9                  = readInvalidParse('row-not-9');
-export const STACK_OF_FOUR              = readInvalidParse('stack-of-four');
+export const ROW_NOT_9 = readInvalidParse('row-not-9');
+export const STACK_OF_FOUR = readInvalidParse('stack-of-four');
 
 // ---------------------------------------------------------------------------
 // Lookup record: name → content for dynamic fixture access in tests
@@ -142,7 +142,7 @@ export const FIXTURES: Record<string, string> = {
   'size-mismatch-afg': SIZE_MISMATCH_AFG,
   'some-captured': SOME_CAPTURED,
   'sparse-board': SPARSE_BOARD,
-  'startpos': STARTPOS,
+  startpos: STARTPOS,
   'startpos-expanded': STARTPOS_EXPANDED,
   'three-deep-stacks': THREE_DEEP_STACKS,
   'triple-stack-battlefield': TRIPLE_STACK_BATTLEFIELD,

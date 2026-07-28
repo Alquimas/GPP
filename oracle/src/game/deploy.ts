@@ -47,7 +47,7 @@ function isInDeployZone(row: number, player: Player): boolean {
  * 3. BR-DEPLOY-003: Marshal must be first placement per player
  * 4. BR-DEPLOY-004: Destination within deploy zone
  * 5. BR-DEPLOY-005/006: Target is empty or friendly-topped stack under size 3
- * 6. Marshal stacking restriction: no stacking on Marshal
+ * 6. BR-STACK-004: No stacking on a Marshal-topped target
  * 7. BR-DEPLOY-007: Done declaration (syntactically valid if present)
  *
  * @param state - Current GameState.
@@ -137,14 +137,6 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
       return {
         ok: false,
         error: new GameError('Cannot place on a full stack (size 3)', 'BR-DEPLOY-005'),
-      };
-    }
-
-    // Marshal must be placed on an empty square (cannot stack on anything)
-    if (piece === 'M') {
-      return {
-        ok: false,
-        error: new GameError('Marshal must be placed on an empty square', 'BR-DEPLOY-005'),
       };
     }
   }

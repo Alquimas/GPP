@@ -11,7 +11,14 @@ import { describe, it, expect } from 'vitest';
 import type { Action, GameState, PieceType, Square } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validatePlacement } from '../../src/game/deploy.js';
-import { BOTH_MARSHALS_BATTLE_NOHANDS, DEPLOY_BLACK_CTR2, DEPLOY_FULL_STACK_PAWNS, DEPLOY_PHASE_CTR3, MP_STACK_DEPLOY_CTR3, STARTPOS_EXPANDED } from '../../src/gsfen/fixtures.js';
+import {
+  BOTH_MARSHALS_BATTLE_NOHANDS,
+  DEPLOY_BLACK_CTR2,
+  DEPLOY_FULL_STACK_PAWNS,
+  DEPLOY_PHASE_CTR3,
+  MP_STACK_DEPLOY_CTR3,
+  STARTPOS_EXPANDED,
+} from '../../src/gsfen/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */

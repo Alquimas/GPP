@@ -79,14 +79,6 @@ function assertStack(
   }
 }
 
-/**
- * Format assertion message with fixture name context.
- * Returns a function that wraps expect calls with a prefix.
- */
-function ctx(name: string) {
-  return (msg: string) => `${name}: ${msg}`;
-}
-
 // ---------------------------------------------------------------------------
 // Structural invariant helpers
 // ---------------------------------------------------------------------------
@@ -224,7 +216,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(FULL_HAND);
     expect(state.hands.black).toEqual(FULL_HAND);
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'white', counter: 1, done: null,
+      phase: 'deploy',
+      activePlayer: 'white',
+      counter: 1,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -236,7 +231,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ M: 0 }));
     expect(state.hands.black).toEqual(H({ M: 0 }));
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'white', counter: 3, done: null,
+      phase: 'deploy',
+      activePlayer: 'white',
+      counter: 3,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -249,7 +247,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(EMPTY_HAND);
     expect(state.hands.black).toEqual(EMPTY_HAND);
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 1, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 1,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -261,7 +262,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ G: 0, M: 0, P: 3 }));
     expect(state.hands.black).toEqual(H({ G: 0, M: 0, N: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 1, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 1,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -279,7 +283,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ A: 0, E: 2, G: 0, M: 0, P: 3, S: 0, T: 0, Y: 1 }));
     expect(state.hands.black).toEqual(H({ A: 1, G: 0, M: 0, N: 1, S: 0, Y: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 14, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 14,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -292,7 +299,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ G: 0, M: 0 }));
     expect(state.hands.black).toEqual(H({ G: 0, M: 0 }));
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'white', counter: 5, done: 'black',
+      phase: 'deploy',
+      activePlayer: 'white',
+      counter: 5,
+      done: 'black',
     });
     checkStructuralInvariants(state);
   });
@@ -308,7 +318,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ G: 0, J: 1, M: 0, N: 1, P: 2, Y: 1 }));
     expect(state.hands.black).toEqual(H({ A: 0, J: 1, M: 0, N: 1, Y: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'black', counter: 22, done: null,
+      phase: 'battle',
+      activePlayer: 'black',
+      counter: 22,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -324,7 +337,10 @@ describe('fixture structural invariants', () => {
       H({ A: 0, E: 2, G: 0, J: 1, M: 0, N: 1, P: 1, S: 0, T: 0, U: 0, Y: 0 }),
     );
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 45, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 45,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -336,7 +352,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ E: 2, G: 0, M: 0, P: 3 }));
     expect(state.hands.black).toEqual(H({ G: 0, M: 0, N: 1, S: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'black', counter: 12, done: null,
+      phase: 'deploy',
+      activePlayer: 'black',
+      counter: 12,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -352,7 +371,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ G: 0, M: 0, P: 3, S: 1 }));
     expect(state.hands.black).toEqual(H({ A: 1, E: 2, G: 0, M: 0 }));
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'white', counter: 9, done: null,
+      phase: 'deploy',
+      activePlayer: 'white',
+      counter: 9,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -364,7 +386,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ G: 0, M: 0, P: 3 }));
     expect(state.hands.black).toEqual(H({ G: 0, M: 0, N: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'black', counter: 6, done: 'white',
+      phase: 'deploy',
+      activePlayer: 'black',
+      counter: 6,
+      done: 'white',
     });
     checkStructuralInvariants(state);
   });
@@ -375,7 +400,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ M: 0 }));
     expect(state.hands.black).toEqual(H());
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'black', counter: 2, done: null,
+      phase: 'deploy',
+      activePlayer: 'black',
+      counter: 2,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -398,7 +426,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ E: 2, G: 0, M: 0, N: 1, P: 1, S: 1, T: 0, Y: 1 }));
     expect(state.hands.black).toEqual(H({ A: 1, E: 2, G: 0, M: 0, N: 1, T: 0, Y: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'black', counter: 18, done: null,
+      phase: 'battle',
+      activePlayer: 'black',
+      counter: 18,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -415,7 +446,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ A: 0, E: 2, G: 0, M: 0, N: 1, P: 0, T: 0 }));
     expect(state.hands.black).toEqual(H({ E: 2, G: 0, M: 0, N: 1, P: 3, S: 1, Y: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 20, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 20,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -430,7 +464,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ M: 0, N: 1, P: 2 }));
     expect(state.hands.black).toEqual(H({ E: 2, F: 1, M: 0, S: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 35, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 35,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -462,7 +499,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ E: 2, F: 1, G: 0, M: 0, N: 1, P: 3, S: 1, T: 0, Y: 1 }));
     expect(state.hands.black).toEqual(H({ E: 2, F: 1, G: 0, M: 0, N: 1, P: 3, S: 1, T: 0, Y: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 30, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 30,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -474,7 +514,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ A: 0, G: 0, M: 0, P: 3 }));
     expect(state.hands.black).toEqual(H({ G: 0, M: 0, N: 0, S: 1 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 40, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 40,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -487,7 +530,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(EMPTY_HAND);
     expect(state.hands.black).toEqual(H({ M: 0 }));
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'black', counter: 3, done: null,
+      phase: 'battle',
+      activePlayer: 'black',
+      counter: 3,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -499,7 +545,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(EMPTY_HAND);
     expect(state.hands.black).toEqual(EMPTY_HAND);
     expect(state.turn).toMatchObject({
-      phase: 'battle', activePlayer: 'white', counter: 60, done: null,
+      phase: 'battle',
+      activePlayer: 'white',
+      counter: 60,
+      done: null,
     });
     checkStructuralInvariants(state);
   });
@@ -511,7 +560,10 @@ describe('fixture structural invariants', () => {
     expect(state.hands.white).toEqual(H({ A: 1, G: 0, M: 0, S: 1, T: 0 }));
     expect(state.hands.black).toEqual(H({ A: 1, C: 0, E: 2, G: 0, M: 0, S: 1, T: 0 }));
     expect(state.turn).toMatchObject({
-      phase: 'deploy', activePlayer: 'black', counter: 13, done: 'white',
+      phase: 'deploy',
+      activePlayer: 'black',
+      counter: 13,
+      done: 'white',
     });
     checkStructuralInvariants(state);
   });

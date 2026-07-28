@@ -34,6 +34,4 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
  * validatePlay) which apply the action speculatively to check that
  * the Active Player's Marshal is not left in Check (BR-ACTION-002).
  */
-export type PlayValidation =
-  | { ok: true; afterState: GameState }
-  | { ok: false; error: GameError };
+export type PlayValidation = { ok: true; afterState: GameState } | { ok: false; error: GameError };

@@ -1,45 +1,26 @@
 /**
  * GAN semantic validation — checks BR-GAN-VALID-001–006 from the GAN specification.
  *
- * For Step 4, implements checks that don't depend on movement/attack modules:
- * - BR-GAN-VALID-001: Phase match (placement → deploy; move/arata → battle)
- * - BR-GAN-VALID-002: Placement legality (piece in hand, marshal first, deploy zone, target empty/friendly)
- * - BR-GAN-VALID-005: Turncoat legality (present only if piece is Captain and outcome is stacking)
- * - BR-GAN-VALID-006: Done legality (only on placements)
- *
- * BR-GAN-VALID-003 (Move legality) and BR-GAN-VALID-004 (Arata legality) are stubbed with TODOs for later steps.
+ * Most checks delegate to the game-layer validators in `game/deploy.ts` and
+ * `game/battle.ts`. This module provides the GAN-specific phase check (VALID-001),
+ * turncoat preconditions (VALID-005), done legality (VALID-006), and maps
+ * game-layer rule codes to the GAN validation vocabulary.
  *
  * @module
  */
 
-import { type Action, type GameState, type Square } from '../types.js';
+import { type Action, type GameState } from '../types.js';
 import { GameError } from '../errors.js';
 import { getStack, topPiece } from '../board/board.js';
+import type { ValidationResult } from '../game/validation.js';
+import { validatePlacement } from '../game/deploy.js';
+import { validateMove, validateArata } from '../game/battle.js';
 
 // ---------------------------------------------------------------------------
 // Exported types
 // ---------------------------------------------------------------------------
 
-export type ValidationResult = { ok: true } | { ok: false; error: GameError };
-
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/** Deploy zone rows per player (GAN coordinates 1-9). */
-const DEPLOY_ZONE_ROWS: Record<'white' | 'black', number[]> = {
-  white: [7, 8, 9],
-  black: [1, 2, 3],
-};
-
-/**
- * Check if a square (col, row) is within a player's deploy zone.
- * White deploy zone: rows 7-9
- * Black deploy zone: rows 1-3
- */
-function isInDeployZone(square: Square, player: 'white' | 'black'): boolean {
-  return DEPLOY_ZONE_ROWS[player].includes(square.row);
-}
+export type { ValidationResult };
 
 // ---------------------------------------------------------------------------
 // Validation functions (BR-GAN-VALID-001–006)
@@ -60,14 +41,20 @@ function checkPhase(action: Action, state: GameState): ValidationResult {
     if (phase !== 'deploy') {
       return {
         ok: false,
-        error: new GameError('Placement is only valid during the Deploy Phase (BR-GAN-VALID-001)', 'BR-GAN-VALID-001'),
+        error: new GameError(
+          'Placement is only valid during the Deploy Phase (BR-GAN-VALID-001)',
+          'BR-GAN-VALID-001',
+        ),
       };
     }
   } else if (action.kind === 'move' || action.kind === 'arata') {
     if (phase !== 'battle') {
       return {
         ok: false,
-        error: new GameError('Move and Arata are only valid during the Battle Phase (BR-GAN-VALID-001)', 'BR-GAN-VALID-001'),
+        error: new GameError(
+          'Move and Arata are only valid during the Battle Phase (BR-GAN-VALID-001)',
+          'BR-GAN-VALID-001',
+        ),
       };
     }
   } else {
@@ -82,141 +69,39 @@ function checkPhase(action: Action, state: GameState): ValidationResult {
 /**
  * BR-GAN-VALID-002 — Placement legality.
  *
- * Checks:
- * - Piece is in the placing Player's Hand (count > 0)
- * - If it's a Marshal, this must be the Player's first Placement
- *   (Marshal count in Hand is still at initial value 1)
- * - Square is within the Player's deploy zone
- * - Square is either empty or a friendly-topped Stack under size 3
- *   (and the top piece is not a Marshal — Marshal can never stack below)
+ * Delegates to `validatePlacement` from the game layer.
  *
  * @throws {GameError} with rule 'BR-GAN-VALID-002' on illegal placement.
  */
 function checkPlacementLegality(action: Action, state: GameState): ValidationResult {
   if (action.kind !== 'placement') return { ok: true };
-
-  const { piece, dest } = action;
-  const player = state.turn.activePlayer;
-  const hand = state.hands[player];
-
-  // Piece must be in hand
-  if (hand[piece] < 1) {
-    return {
-      ok: false,
-      error: new GameError(`Piece ${piece} is not in ${player}'s hand (BR-GAN-VALID-002)`, 'BR-GAN-VALID-002'),
-    };
-  }
-
-  // Marshal must be the first placement (initial count is 1)
-  // If Marshal hasn't been placed yet, count is still 1
-  if (piece === 'M') {
-    // It's fine if it's still in hand — this is the Marshal placement
-    // The deploy order is validated by "Marshal first" rule
-    // If Marshal count < initial, it means the Marshal was already placed
-    // Actually, BR-DEPLOY-003 says the Marshal must be the first placement
-    // We check: if Marshal is being placed, and any other piece has been placed
-    // (count < initial for that piece), that's valid only if no other pieces
-    // were placed before. For simplicity, we trust the game flow — the
-    // placement order enforcement is handled at the game level. Here we just
-    // check if Marshal is in hand.
-  } else {
-    // Non-Marshal piece: Marshal must already be placed
-    // (i.e., White Marshal count in White's hand should be 0 for White's placements)
-    // Actually this is tricky because we need to know whose turn it is.
-    // If the active player still has their Marshal in hand, they must place it first.
-    if (hand.M === 1) {
-      return {
-        ok: false,
-        error: new GameError(`Must place Marshal before other pieces (BR-GAN-VALID-002)`, 'BR-GAN-VALID-002'),
-      };
-    }
-  }
-
-  // Square must be in deploy zone
-  if (!isInDeployZone(dest, player)) {
-    return {
-      ok: false,
-      error: new GameError(
-        `Square ${dest.col}-${dest.row} is not in ${player}'s deploy zone (BR-GAN-VALID-002)`,
-        'BR-GAN-VALID-002',
-      ),
-    };
-  }
-
-  // Row index: GAN row 1 = position index 0, GAN row 9 = position index 8
-  const rowIdx = dest.row - 1;
-  const colIdx = dest.col - 1;
-  const targetStack = state.position[rowIdx][colIdx];
-
-  // Square must be empty or a friendly-topped Stack under size 3
-  if (targetStack !== null) {
-    if (targetStack.length >= 3) {
-      return {
-        ok: false,
-        error: new GameError(`Cannot place on a full stack at ${dest.col}-${dest.row} (BR-GAN-VALID-002)`, 'BR-GAN-VALID-002'),
-      };
-    }
-
-    const topPiece = targetStack[targetStack.length - 1];
-
-    // Must be friendly-topped
-    if (topPiece.owner !== player) {
-      return {
-        ok: false,
-        error: new GameError(
-          `Cannot place on an enemy-controlled square at ${dest.col}-${dest.row} (BR-GAN-VALID-002)`,
-          'BR-GAN-VALID-002',
-        ),
-      };
-    }
-
-    // Marshal cannot be placed on top of any stack (BR-DEPLOY-005/006)
-    // Actually, Marshal placement: special rule — it must be on an empty square
-    if (piece === 'M' && targetStack.length > 0) {
-      return {
-        ok: false,
-        error: new GameError(
-          `Marshal must be placed on an empty square, not on a stack (BR-GAN-VALID-002)`,
-          'BR-GAN-VALID-002',
-        ),
-      };
-    }
-  }
-
-  return { ok: true };
+  return validatePlacement(state, action);
 }
 
 /**
- * BR-GAN-VALID-003 — Move legality (stub for Step 6).
+ * BR-GAN-VALID-003 — Move legality.
  *
- * TODO: Implement in Step 6 — depends on movement rules.
- *
- * Checks:
- * - origin holds a Stack whose top Piece belongs to the Active Player
- * - dest is reachable by that Piece's movement rules
- * - landing satisfies BR-MOVE-005 stack-size restriction
- * - outcome is present exactly when BR-GAN-CANON-001 requires it
- * - resulting position does not leave the mover's own Marshal in Check
+ * Delegates to `validateMove` from the game layer (Step 6–8),
+ * which validates phase, origin ownership, reachability,
+ * outcome canonicity, Marshal stacking, and Self Check.
  */
-function checkMoveLegality(_action: Action, _state: GameState): ValidationResult {
-  // TODO: Implement BR-GAN-VALID-003 when movement/attack modules are available (Step 6)
-  return { ok: true };
+function checkMoveLegality(action: Action, state: GameState): ValidationResult {
+  if (action.kind !== 'move') return { ok: true };
+  const result = validateMove(state, action);
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 /**
- * BR-GAN-VALID-004 — Arata legality (stub for Step 6–7).
+ * BR-GAN-VALID-004 — Arata legality.
  *
- * TODO: Implement in Step 6–7 — depends on board helpers.
- *
- * Checks:
- * - piece is in Hand and is not Marshal
- * - dest is within Arata placement zone
- * - dest is empty or friendly-topped under size 3
- * - Self Check applies
+ * Delegates to `validateArata` from the game layer (Step 6–8),
+ * which validates phase, hand contents, arata zone, target square,
+ * and Self Check.
  */
-function checkArataLegality(_action: Action, _state: GameState): ValidationResult {
-  // TODO: Implement BR-GAN-VALID-004 when board helpers are available (Step 6–7)
-  return { ok: true };
+function checkArataLegality(action: Action, state: GameState): ValidationResult {
+  if (action.kind !== 'arata') return { ok: true };
+  const result = validateArata(state, action);
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
 /**
@@ -248,7 +133,10 @@ function checkTurncoatLegality(action: Action, state: GameState): ValidationResu
     if (action.outcome !== 'stack') {
       return {
         ok: false,
-        error: new GameError('Turncoat requires the outcome to be a Stack (BR-GAN-VALID-005)', 'BR-GAN-VALID-005'),
+        error: new GameError(
+          'Turncoat requires the outcome to be a Stack (BR-GAN-VALID-005)',
+          'BR-GAN-VALID-005',
+        ),
       };
     }
     // Check that the acting piece at origin is a Captain
@@ -256,7 +144,10 @@ function checkTurncoatLegality(action: Action, state: GameState): ValidationResu
     if (!originStack) {
       return {
         ok: false,
-        error: new GameError('Turncoat move requires a piece at origin (BR-GAN-VALID-005)', 'BR-GAN-VALID-005'),
+        error: new GameError(
+          'Turncoat move requires a piece at origin (BR-GAN-VALID-005)',
+          'BR-GAN-VALID-005',
+        ),
       };
     }
     const topPieceAtOrigin = topPiece(originStack);
@@ -303,7 +194,7 @@ function checkDoneLegality(action: Action, _state: GameState): ValidationResult 
 
   // The action is a move or arata — there is no `done` property on these types
   // If we're here, it wasn't parsed as a placement, so it's fine.
-   // Done legality is enforced at parse time (BR-GAN-GRAMMAR-011: `!` only on placements),
+  // Done legality is enforced at parse time (BR-GAN-GRAMMAR-011: `!` only on placements),
   // so by the time we reach validation, a move/arata with `!` would have
   // already been rejected by the parser.
   return { ok: true };

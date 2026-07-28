@@ -2,7 +2,25 @@ import { describe, it, expect } from 'vitest';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { EMPTY_HAND, FULL_HAND } from '../../src/constants.js';
 import type { GameState, Player } from '../../src/types.js';
-import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLICATE_LETTER, C5_NON_ALPHABETICAL, C6_LEADING_ZERO_COUNTER, C6_LEADING_ZERO_COUNTER_FULL, DEPLOY_BLACK_MARSHAL_PLACED, DEPLOY_MARSHAL_COL1, DEPLOY_MARSHAL_COL9, DEPLOY_MARSHAL_ON_TOP, EXAMPLE4_MIXED_STACK, FIXTURES, ROW_NOT_9, ROW_WITH_P_AND_T, STACK_OF_FOUR, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
+import {
+  BLACK_DONE_DECLARED,
+  C2_UNKNOWN_PIECE,
+  C3_ADJACENT_EMPTY_RUNS,
+  C5_DUPLICATE_LETTER,
+  C5_NON_ALPHABETICAL,
+  C6_LEADING_ZERO_COUNTER,
+  C6_LEADING_ZERO_COUNTER_FULL,
+  DEPLOY_BLACK_MARSHAL_PLACED,
+  DEPLOY_MARSHAL_COL1,
+  DEPLOY_MARSHAL_COL9,
+  DEPLOY_MARSHAL_ON_TOP,
+  EXAMPLE4_MIXED_STACK,
+  FIXTURES,
+  ROW_NOT_9,
+  ROW_WITH_P_AND_T,
+  STACK_OF_FOUR,
+  WHITE_MARSHAL_AT_5_9,
+} from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

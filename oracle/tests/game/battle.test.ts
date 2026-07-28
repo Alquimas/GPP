@@ -16,7 +16,20 @@ import type { Action, GameState, PieceType, Square, TurncoatLevels } from '../..
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateMove, validateArata, validatePlay } from '../../src/game/battle.js';
 import { getStack, stackSize, topPiece } from '../../src/board/board.js';
-import { ARATA_ZONE_TEST, BATTLE_MID_VARIANT, BLACK_TURN_MARSHAL_ONLY, CHOICE_POS, DEPLOY_PHASE_CTR1, ENEMY_MARSHAL_STACK_TEST, FORCED_CAPTURE, FRIENDLY_STACK_TEST, FRIENDLY_STACK_WITH_HANDS, MARSHAL_ALONE_BATTLE, SELF_CHECK_POS, SIZE_MISMATCH_AFG } from '../../src/gsfen/fixtures.js';
+import {
+  ARATA_ZONE_TEST,
+  BATTLE_MID_VARIANT,
+  BLACK_TURN_MARSHAL_ONLY,
+  CHOICE_POS,
+  DEPLOY_PHASE_CTR1,
+  ENEMY_MARSHAL_STACK_TEST,
+  FORCED_CAPTURE,
+  FRIENDLY_STACK_TEST,
+  FRIENDLY_STACK_WITH_HANDS,
+  MARSHAL_ALONE_BATTLE,
+  SELF_CHECK_POS,
+  SIZE_MISMATCH_AFG,
+} from '../../src/gsfen/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -71,9 +84,7 @@ describe('validateMove', () => {
   describe('BR-PLAY-002 — phase check', () => {
     it('rejects a move during deploy phase', () => {
       // Deploy-phase state (STARTPOS-like): any move must be rejected.
-      const state = gsfenState(
-        DEPLOY_PHASE_CTR1,
-      );
+      const state = gsfenState(DEPLOY_PHASE_CTR1);
       const r = validateMove(state, move(5, 9, 4, 9));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-PLAY-002');
@@ -207,9 +218,7 @@ describe('validateMove', () => {
       // BR-STACK-004 prohibits ANY piece from being placed or moved on top of
       // a Marshal — friendly or enemy. The Marshal is never actually captured;
       // Checkmate ends the Game before Capture resolves.
-      const state = gsfenState(
-        ENEMY_MARSHAL_STACK_TEST,
-      );
+      const state = gsfenState(ENEMY_MARSHAL_STACK_TEST);
       const r = validateMove(state, move(5, 9, 5, 8, null));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-004');
@@ -293,9 +302,7 @@ describe('validateArata', () => {
 
   it('rejects arata onto a full stack (BR-ARATA-005)', () => {
     // AFG size 3 at (5,7) — cannot stack on top
-    const state = gsfenState(
-      SIZE_MISMATCH_AFG,
-    );
+    const state = gsfenState(SIZE_MISMATCH_AFG);
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-005');
@@ -305,9 +312,7 @@ describe('validateArata', () => {
     // Use a position where (5,7) is within White's arata zone AND has an enemy top.
     // White's most advanced piece is at row 5 (General), zone = rows 5-9.
     // Row 7 has a Black Pawn [p] at (5,7) — within zone, enemy-topped.
-    const state = gsfenState(
-      ARATA_ZONE_TEST,
-    );
+    const state = gsfenState(ARATA_ZONE_TEST);
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-006');

@@ -11,7 +11,7 @@
  * |--------|---------|
  * | `types.js` | Core domain types (Player, Piece, GameState, Action, GameResult, etc.) |
  * | `constants.js` | Piece data, initial counts, movement patterns, START_GSFEN |
- * | `errors.js` | GameError and IllegalActionError typed error hierarchy |
+ * | `errors.js` | GameError — typed error carrying BR-xxx rule reference |
  * | `gsfen/parse.js` | parseGSFEN — GSFEN string → GameState |
  * | `gsfen/validate.js` | validateState, validateAction — semantic validity (V-codes) |
  * | `gsfen/serialize.js` | serializeGSFEN — GameState → canonical GSFEN string |

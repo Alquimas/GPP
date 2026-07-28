@@ -24,12 +24,13 @@ import {
   findPieceOnBoard,
   hasAnyBoardPieces,
 } from '../board/board.js';
+import type { ValidationResult } from '../game/validation.js';
 
 // ---------------------------------------------------------------------------
 // Exported types
 // ---------------------------------------------------------------------------
 
-export type ValidationResult = { ok: true } | { ok: false; error: GameError };
+export type { ValidationResult };
 
 // ---------------------------------------------------------------------------
 // Validator

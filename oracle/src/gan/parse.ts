@@ -62,7 +62,10 @@ export function parseSquare(s: string): Square {
   const sq = trySquare(col, row);
   if (!sq) {
     // Defensive: regex should prevent this path from ever executing.
-    throw new GameError(`Invalid square "${s}" (internal — regex should have rejected)`, 'BR-GAN-GRAMMAR-004');
+    throw new GameError(
+      `Invalid square "${s}" (internal — regex should have rejected)`,
+      'BR-GAN-GRAMMAR-004',
+    );
   }
   return sq;
 }
@@ -94,7 +97,10 @@ export function parseTurncoat(s: string): TurncoatLevels {
   if (levels === '2') return [2];
   if (levels === '12') return [1, 2];
 
-  throw new GameError(`Invalid turncoat levels "${s}"; expected "+1", "+2", or "+12"`, 'BR-GAN-GRAMMAR-010');
+  throw new GameError(
+    `Invalid turncoat levels "${s}"; expected "+1", "+2", or "+12"`,
+    'BR-GAN-GRAMMAR-010',
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -133,13 +139,19 @@ export function parsePlacement(gan: string): Action {
 
   // BR-GAN-GRAMMAR-009: No internal whitespace
   if (/\s/.test(gan)) {
-    throw new GameError(`Placement "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`, 'BR-GAN-GRAMMAR-009');
+    throw new GameError(
+      `Placement "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`,
+      'BR-GAN-GRAMMAR-009',
+    );
   }
 
   // BR-GAN-GRAMMAR-011: Check for extra '!' — only one allowed, at end only
   const bangCount = (gan.match(/!/g) ?? []).length;
   if (bangCount > 1) {
-    throw new GameError(`Placement "${gan}" has multiple "!" markers (BR-GAN-GRAMMAR-011)`, 'BR-GAN-GRAMMAR-011');
+    throw new GameError(
+      `Placement "${gan}" has multiple "!" markers (BR-GAN-GRAMMAR-011)`,
+      'BR-GAN-GRAMMAR-011',
+    );
   }
 
   const hasDone = bangCount === 1;
@@ -155,12 +167,18 @@ export function parsePlacement(gan: string): Action {
 
   // BR-GAN-GRAMMAR-011: '!' must be at the very end if present
   if (hasDone && gan[gan.length - 1] !== '!') {
-    throw new GameError(`Placement "${gan}" has "!" not at the end (BR-GAN-GRAMMAR-011)`, 'BR-GAN-GRAMMAR-011');
+    throw new GameError(
+      `Placement "${gan}" has "!" not at the end (BR-GAN-GRAMMAR-011)`,
+      'BR-GAN-GRAMMAR-011',
+    );
   }
 
   // BR-GAN-GRAMMAR-008: No trailing characters after '!'
   if (hasDone && squareStr.length + 2 !== gan.length) {
-    throw new GameError(`Placement "${gan}" has trailing characters after "!" (BR-GAN-GRAMMAR-008)`, 'BR-GAN-GRAMMAR-008');
+    throw new GameError(
+      `Placement "${gan}" has trailing characters after "!" (BR-GAN-GRAMMAR-008)`,
+      'BR-GAN-GRAMMAR-008',
+    );
   }
 
   const dest = parseSquare(squareStr);
@@ -192,12 +210,18 @@ export function parsePlacement(gan: string): Action {
 export function parseMove(gan: string): Action {
   // BR-GAN-GRAMMAR-009: No internal whitespace
   if (/\s/.test(gan)) {
-    throw new GameError(`Move "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`, 'BR-GAN-GRAMMAR-009');
+    throw new GameError(
+      `Move "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`,
+      'BR-GAN-GRAMMAR-009',
+    );
   }
 
   // BR-GAN-GRAMMAR-008: No unexpected characters — only allow digits, '-', '>', '=', 'x', '+'
   if (!/^[\d>=\-x+]+$/.test(gan)) {
-    throw new GameError(`Move "${gan}" contains invalid characters (BR-GAN-GRAMMAR-008)`, 'BR-GAN-GRAMMAR-008');
+    throw new GameError(
+      `Move "${gan}" contains invalid characters (BR-GAN-GRAMMAR-008)`,
+      'BR-GAN-GRAMMAR-008',
+    );
   }
 
   // BR-GAN-GRAMMAR-005: The separator between squares must be '>'
@@ -212,7 +236,10 @@ export function parseMove(gan: string): Action {
   // BR-GAN-GRAMMAR-006: There must be exactly one '>'
   const sepCount = (gan.match(/>/g) ?? []).length;
   if (sepCount !== 1) {
-    throw new GameError(`Move "${gan}" has multiple ">" separators (BR-GAN-GRAMMAR-006)`, 'BR-GAN-GRAMMAR-006');
+    throw new GameError(
+      `Move "${gan}" has multiple ">" separators (BR-GAN-GRAMMAR-006)`,
+      'BR-GAN-GRAMMAR-006',
+    );
   }
 
   const originStr = gan.slice(0, sepIndex);
@@ -227,7 +254,10 @@ export function parseMove(gan: string): Action {
 
   // BR-GAN-GRAMMAR-007: Destination is the first 3 characters
   if (remainder.length < 3) {
-    throw new GameError(`Move "${gan}" missing destination square (BR-GAN-GRAMMAR-007)`, 'BR-GAN-GRAMMAR-007');
+    throw new GameError(
+      `Move "${gan}" missing destination square (BR-GAN-GRAMMAR-007)`,
+      'BR-GAN-GRAMMAR-007',
+    );
   }
 
   const destStr = remainder.slice(0, 3);
@@ -291,7 +321,10 @@ export function parseArata(gan: string): Action {
 
   // BR-GAN-GRAMMAR-009: No internal whitespace
   if (/\s/.test(gan)) {
-    throw new GameError(`Arata "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`, 'BR-GAN-GRAMMAR-009');
+    throw new GameError(
+      `Arata "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`,
+      'BR-GAN-GRAMMAR-009',
+    );
   }
 
   const pieceChar = gan[0];
@@ -308,20 +341,29 @@ export function parseArata(gan: string): Action {
 
   // BR-GAN-GRAMMAR-005: Must have '*' separator
   if (gan[1] !== '*') {
-    throw new GameError(`Arata "${gan}" must use "*" separator between piece and square (BR-GAN-GRAMMAR-005)`, 'BR-GAN-GRAMMAR-005');
+    throw new GameError(
+      `Arata "${gan}" must use "*" separator between piece and square (BR-GAN-GRAMMAR-005)`,
+      'BR-GAN-GRAMMAR-005',
+    );
   }
 
   // BR-GAN-GRAMMAR-006: There must be exactly one '*'
   const starCount = (gan.match(/\*/g) ?? []).length;
   if (starCount !== 1) {
-    throw new GameError(`Arata "${gan}" has multiple "*" separators (BR-GAN-GRAMMAR-006)`, 'BR-GAN-GRAMMAR-006');
+    throw new GameError(
+      `Arata "${gan}" has multiple "*" separators (BR-GAN-GRAMMAR-006)`,
+      'BR-GAN-GRAMMAR-006',
+    );
   }
 
   let remainder = gan.slice(2); // Everything after piece and '*'
 
   // BR-GAN-GRAMMAR-007: Parse destination square (first 3 chars)
   if (remainder.length < 3) {
-    throw new GameError(`Arata "${gan}" missing destination square (BR-GAN-GRAMMAR-007)`, 'BR-GAN-GRAMMAR-007');
+    throw new GameError(
+      `Arata "${gan}" missing destination square (BR-GAN-GRAMMAR-007)`,
+      'BR-GAN-GRAMMAR-007',
+    );
   }
 
   const destStr = remainder.slice(0, 3);
@@ -380,7 +422,10 @@ export function parseGAN(gan: string): ParseResult {
     if (gan !== gan.trim()) {
       return {
         ok: false,
-        error: new GameError('GAN string must not have leading or trailing whitespace (BR-GAN-GRAMMAR-009)', 'BR-GAN-GRAMMAR-009'),
+        error: new GameError(
+          'GAN string must not have leading or trailing whitespace (BR-GAN-GRAMMAR-009)',
+          'BR-GAN-GRAMMAR-009',
+        ),
       };
     }
 

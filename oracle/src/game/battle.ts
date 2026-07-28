@@ -9,7 +9,7 @@
 
 import type { Action, BoardCoord, GameState, Player } from '../types.js';
 import { GameError } from '../errors.js';
-import { getStack, topPiece, stackSize } from '../board/board.js';
+import { getStack, squareFromIndex, topPiece, stackSize } from '../board/board.js';
 import { getLegalDestinations } from '../board/movement.js';
 import { isInCheck } from '../board/attack.js';
 import { applyMove, applyArata } from './apply.js';
@@ -87,7 +87,10 @@ function validateOutcome(
  * on the board — though in practice this can't happen because the
  * first action must be a deploy placement).
  */
-function getArataZone(player: Player, state: GameState): { minRow: BoardCoord; maxRow: BoardCoord } {
+function getArataZone(
+  player: Player,
+  state: GameState,
+): { minRow: BoardCoord; maxRow: BoardCoord } {
   if (player === 'white') {
     // White: between Row 9 (own edge) and the smallest Row containing any White piece
     let mostAdvanced: BoardCoord = 9; // default: no pieces → own edge only
@@ -97,7 +100,7 @@ function getArataZone(player: Player, state: GameState): { minRow: BoardCoord; m
         if (stack !== null) {
           for (const piece of stack) {
             if (piece.owner === 'white') {
-              const row = (r + 1) as BoardCoord;
+              const row = squareFromIndex(r, c).row;
               if (row < mostAdvanced) {
                 mostAdvanced = row;
               }
@@ -116,7 +119,7 @@ function getArataZone(player: Player, state: GameState): { minRow: BoardCoord; m
         if (stack !== null) {
           for (const piece of stack) {
             if (piece.owner === 'black') {
-              const row = (r + 1) as BoardCoord;
+              const row = squareFromIndex(r, c).row;
               if (row > mostAdvanced) {
                 mostAdvanced = row;
               }
@@ -234,9 +237,7 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
   if (isInCheck(afterState.position, player)) {
     return {
       ok: false,
-      error: new GameError('Move would leave own Marshal in check', 'BR-ACTION-002', {
-        kind: 'self-check',
-      }),
+      error: new GameError('Move would leave own Marshal in check', 'BR-ACTION-002'),
     };
   }
 
@@ -355,9 +356,7 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
   if (isInCheck(afterState.position, player)) {
     return {
       ok: false,
-      error: new GameError('Arata would leave own Marshal in check', 'BR-ACTION-002', {
-        kind: 'self-check',
-      }),
+      error: new GameError('Arata would leave own Marshal in check', 'BR-ACTION-002'),
     };
   }
 

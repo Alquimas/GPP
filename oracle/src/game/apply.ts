@@ -34,7 +34,7 @@ type ArataAction = Extract<Action, { kind: 'arata' }>;
 function cloneState(state: GameState): GameState {
   return {
     position: state.position.map((row) =>
-      row.map((cell) => (cell === null ? null : ([...cell] as const) as typeof cell)),
+      row.map((cell) => (cell === null ? null : ([...cell] as const as typeof cell))),
     ),
     turn: { ...state.turn, done: state.turn.done },
     hands: {
@@ -56,7 +56,10 @@ function detachTop(stack: ReturnType<typeof getStack>): { newStack: typeof stack
 }
 
 /** Remove all enemy pieces from a stack (capture), keep friendly ones. */
-function removeEnemyPieces(stack: NonNullable<ReturnType<typeof getStack>>, friendlyOwner: Player): ReturnType<typeof getStack> {
+function removeEnemyPieces(
+  stack: NonNullable<ReturnType<typeof getStack>>,
+  friendlyOwner: Player,
+): ReturnType<typeof getStack> {
   const remaining = stack.filter((p) => p.owner === friendlyOwner);
   if (remaining.length === 0) return null;
   return createStack(remaining);
@@ -97,7 +100,10 @@ export function applyMove(state: GameState, action: MoveAction): GameState {
   if (targetStack === null) {
     // Empty square — place piece alone
     newState.position = setStack(newState.position, dest, createStack([movingPiece]));
-  } else if (outcome === 'capture' || (outcome === null && topPiece(targetStack).owner !== movingPiece.owner)) {
+  } else if (
+    outcome === 'capture' ||
+    (outcome === null && topPiece(targetStack).owner !== movingPiece.owner)
+  ) {
     // Capture: outcome is either explicit 'capture', or null with enemy-topped target
     // (null on enemy-topped target means capture is forced — validated by validateOutcome).
     // Remove enemy pieces, keep friendly, then add moving piece on top.

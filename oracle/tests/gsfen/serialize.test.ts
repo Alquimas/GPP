@@ -14,7 +14,13 @@ import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { EMPTY_HAND, START_GSFEN } from '../../src/constants.js';
 import type { GameState, Hand, Position, Stack } from '../../src/types.js';
-import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, FIXTURES, WHITE_DONE_MULTI_COUNT_HAND, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
+import {
+  BLACK_DONE_DECLARED,
+  EXAMPLE4_MIXED_STACK,
+  FIXTURES,
+  WHITE_DONE_MULTI_COUNT_HAND,
+  WHITE_MARSHAL_AT_5_9,
+} from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
