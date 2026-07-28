@@ -96,6 +96,39 @@ The 21 `.gsfen` files in `oracle/fixtures/` cover the major state shapes:
 
 To use a fixture: read from `oracle/fixtures/<name>.gsfen`, parse, and mutate.
 
+## GSFEN CLI
+
+`oracle/script/gsfen.ts` — validate and visualize GSFEN strings from the command line.
+
+### Usage
+
+```bash
+# Run via npm (recommended — handles tsx runner)
+npm run gsfen -- check "<gsfen string>"
+npm run gsfen -- show "<gsfen string>"
+
+# Read from a .gsfen fixture file
+npm run gsfen -- check --file oracle/fixtures/valid/battle-start.gsfen
+npm run gsfen -- show --file oracle/fixtures/valid/battle-start.gsfen
+
+# Run directly via tsx
+npx tsx oracle/script/gsfen.ts check "startpos"
+npx tsx oracle/script/gsfen.ts show "4,m,4/9/9/9/9/9/9/9/4,M,4 w - 1"
+```
+
+### Subcommands
+
+| Command | Description |
+|---|---|
+| `check <string>` | Parse + validate a GSFEN string. Exits 0 on success, prints error to stderr and exits 1 on failure. |
+| `check --file <path>` | Same but reads from a file. |
+| `show <string>` | Parse a GSFEN string and display a visual board layout, hands, and turn state. Exits 1 on parse error. |
+| `show --file <path>` | Same but reads from a file. |
+
+### Requirements
+
+Run from the `oracle/` directory (the CWD that `npm run` sets).
+
 ## GSFEN Finder
 
 `oracle/script/gsfen-find.sh` — find all GSFEN strings across the project using a regex.

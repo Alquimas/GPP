@@ -1,19 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { validateState } from '../../src/gsfen/validate.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
-import { readFileSync } from 'node:fs';
 import { EMPTY_HAND, FULL_HAND, INITIAL_COUNTS, START_GSFEN } from '../../src/constants.js';
-import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
+import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, FIXTURES, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 import type { GameState, Position, TurnState, Stack, PieceType } from '../../src/types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Read a .gsfen fixture file. */
-function readFixture(name: string): string {
-  return readFileSync(`fixtures/valid/${name}.gsfen`, 'utf-8').trim();
-}
 
 /** Parse a GSFEN string and assert success. */
 function parseOk(gsfen: string): GameState {
@@ -103,7 +97,7 @@ describe('validateState — valid states', () => {
       'white-done-multi-count-hand',
     ];
     for (const name of validSamples) {
-      const raw = name === 'startpos' ? 'startpos' : readFixture(name);
+      const raw = FIXTURES[name];
       const state = parseOk(raw);
       const result = validateState(state);
       expect(

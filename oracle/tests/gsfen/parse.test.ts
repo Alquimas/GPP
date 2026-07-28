@@ -1,18 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { EMPTY_HAND, FULL_HAND } from '../../src/constants.js';
 import type { GameState, Player } from '../../src/types.js';
-import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLICATE_LETTER, C5_NON_ALPHABETICAL, C6_LEADING_ZERO_COUNTER, C6_LEADING_ZERO_COUNTER_FULL, EXAMPLE4_MIXED_STACK, LOWERCASE_HAND, MP_STACK_DEPLOY_CTR2, PIECE_AT_COL1, PIECE_AT_COL9, ROW_NOT_9, ROW_WITH_P_AND_T, STACK_OF_FOUR, V3_BLACK_MARSHAL_WRONG_ZONE, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
+import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLICATE_LETTER, C5_NON_ALPHABETICAL, C6_LEADING_ZERO_COUNTER, C6_LEADING_ZERO_COUNTER_FULL, EXAMPLE4_MIXED_STACK, FIXTURES, LOWERCASE_HAND, MP_STACK_DEPLOY_CTR2, PIECE_AT_COL1, PIECE_AT_COL9, ROW_NOT_9, ROW_WITH_P_AND_T, STACK_OF_FOUR, V3_BLACK_MARSHAL_WRONG_ZONE, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Read a .gsfen fixture file by name (without extension). */
-function readFixture(name: string): string {
-  return readFileSync(`fixtures/valid/${name}.gsfen`, 'utf-8').trim();
-}
 
 /** Assert a parse is successful and return the state. */
 function assertOk(result: ParseResult): GameState {
@@ -87,7 +81,7 @@ describe('parseGSFEN — sample files', () => {
   for (const { name, phase, active, expectedCounter } of samples) {
     it(`parses ${name}.gsfen correctly`, () => {
       // startpos.gsfen just contains "startpos"
-      const raw = name === 'startpos' ? 'startpos' : readFixture(name);
+      const raw = FIXTURES[name];
       const result = parseGSFEN(raw);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
@@ -100,7 +94,7 @@ describe('parseGSFEN — sample files', () => {
   }
 
   it('battle-start has expected board setup', () => {
-    const raw = readFixture('battle-start');
+    const raw = FIXTURES['battle-start'];
     const state = assertOk(parseGSFEN(raw));
 
     // Row 1 (idx 0): 4 empty, Black Marshal (m) at Col 5, 4 empty
@@ -123,7 +117,7 @@ describe('parseGSFEN — sample files', () => {
   });
 
   it('sparse-board parses successfully (9 rows after fix)', () => {
-    const raw = readFixture('sparse-board');
+    const raw = FIXTURES['sparse-board'];
     const result = parseGSFEN(raw);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -134,14 +128,14 @@ describe('parseGSFEN — sample files', () => {
   });
 
   it('all-on-board has both hands empty (-)', () => {
-    const raw = readFixture('all-on-board');
+    const raw = FIXTURES['all-on-board'];
     const state = assertOk(parseGSFEN(raw));
     expect(state.hands.white).toEqual(EMPTY_HAND);
     expect(state.hands.black).toEqual(EMPTY_HAND);
   });
 
   it('three-deep-stacks has stacks with 3 pieces', () => {
-    const raw = readFixture('three-deep-stacks');
+    const raw = FIXTURES['three-deep-stacks'];
     const state = assertOk(parseGSFEN(raw));
     // Row 5 (idx 4), Col 5 (idx 4): "PYT" — White Pawn, White Spy, White Captain
     const stack = state.position[4][4];
@@ -393,23 +387,30 @@ describe('parseGSFEN — coordinate mapping', () => {
     }
   });
 
-  it('full row mapping is correct: 3,P,2,T,2', () => {
-    // GSFEN row: "3" (Cols 9,8,7 empty), "P" (Col 6 White Pawn),
-    //            "2" (Cols 5,4 empty), "T" (Col 3 White Captain),
+  it('full row mapping is correct: M,2,P,2,T,2', () => {
+    // GSFEN row: "M" (Col 9 White Marshal),
+    //            "2" (Cols 8,7 empty), "P" (Col 6 White Pawn),
+    //            "2" (Cols 5,4 empty), "T" (Col 3 Black Marshal),
     //            "2" (Cols 2,1 empty)
     // position[row][*]:
-    //   idx 8 (Col 9): null
+    //   idx 8 (Col 9): [White Marshal]
     //   idx 7 (Col 8): null
     //   idx 6 (Col 7): null
     //   idx 5 (Col 6): [White Pawn]
     //   idx 4 (Col 5): null
     //   idx 3 (Col 4): null
-    //   idx 2 (Col 3): [White Captain]
+    //   idx 2 (Col 3): [Black Marshal]
     //   idx 1 (Col 2): null
     //   idx 0 (Col 1): null
     const state = assertOk(parseGSFEN(ROW_WITH_P_AND_T));
 
-    expect(state.position[0][8]).toBeNull(); // Col 9
+    const col9 = state.position[0][8]; // Col 9
+    expect(col9).not.toBeNull();
+    if (col9) {
+      expect(col9[0].type).toBe('M');
+      expect(col9[0].owner).toBe('white');
+    }
+
     expect(state.position[0][7]).toBeNull(); // Col 8
     expect(state.position[0][6]).toBeNull(); // Col 7
 
@@ -426,8 +427,8 @@ describe('parseGSFEN — coordinate mapping', () => {
     const col3 = state.position[0][2]; // Col 3
     expect(col3).not.toBeNull();
     if (col3) {
-      expect(col3[0].type).toBe('T');
-      expect(col3[0].owner).toBe('white');
+      expect(col3[0].type).toBe('M');
+      expect(col3[0].owner).toBe('black');
     }
 
     expect(state.position[0][1]).toBeNull(); // Col 2

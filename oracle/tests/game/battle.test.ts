@@ -64,48 +64,6 @@ function placement(piece: PieceType, dc: number, dr: number, done = false): Acti
 }
 
 /* ------------------------------------------------------------------ */
-/*  Fixtures                                                           */
-/* ------------------------------------------------------------------ */
-
-/** Battle-midgame: White to move, turn 14 */
-const BATTLE_W = BATTLE_MID_VARIANT;
-
-/** Simple battle position: White Marshal at (5,9), empty board, White turn. */
-const MARSHAL_ALONE = MARSHAL_ALONE_BATTLE;
-
-/** Battle: White size-2 stack at (5,9), single Black Pawn at (5,8) — choice exists. */
-// CHOICE_POS — imported from fixtures barrel
-
-/** Battle: White size-3 stack at (5,9), Black 3-stack at (5,8) — capture forced. */
-// FORCED_CAPTURE — imported from fixtures barrel
-
-/** Battle: White size-1 Marshal at (5,9), friendly size-3 stack at (5,7) — too tall. */
-const SIZE_MISMATCH = SIZE_MISMATCH_AFG;
-
-/** Black-turn position: Black Marshal at (5,1), White Marshal at (5, 9), open board. */
-const BLACK_TURN = BLACK_TURN_MARSHAL_ONLY;
-
-/**
- * Friendly stacking test case — White Marshal at (5,9), White Pawn at (5,8).
- * Marshal moves forward to (5,8) → automatic stacking on friendly piece.
- * All other pieces are in hands. Black Marshal at (5,1) is far away.
- */
-const FRIENDLY_STACK = FRIENDLY_STACK_WITH_HANDS;
-
-/**
- * Self Check test case — Marshal stack-size change after capture exposes it.
- *
- * White turn. (5,9) = stack [P,P,M] size 3, top = White Marshal.
- * (5,8) = Black Pawn [p] size 1.
- * (5,7) = Black General [g] size 1.
- *
- * Marshal captures (5,8) → Marshal becomes size 1 at (5,8).
- * General at (5,7) has range forward and can now attack (5,8) since
- * source size 1 >= target size 1 → Self Check.
- */
-// SELF_CHECK_POS — imported from fixtures barrel
-
-/* ------------------------------------------------------------------ */
 /*  validateMove                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -124,20 +82,20 @@ describe('validateMove', () => {
 
   describe('BR-MOVE-002 — origin must contain own piece', () => {
     it('rejects move from an empty square', () => {
-      const r = validateMove(gsfenState(MARSHAL_ALONE), move(5, 6, 5, 5));
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 6, 5, 5));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-002');
     });
 
     it('rejects move from a square whose top piece belongs to opponent', () => {
-      const r = validateMove(gsfenState(BATTLE_W), move(5, 1, 5, 2));
+      const r = validateMove(gsfenState(BATTLE_MID_VARIANT), move(5, 1, 5, 2));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-002');
     });
 
     it('accepts move from a square whose top piece belongs to active player', () => {
       // White Marshal at (5,9) — move left to (4,9) which is empty
-      const r = validateMove(gsfenState(MARSHAL_ALONE), move(5, 9, 4, 9));
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
       expect(r.ok).toBe(true);
     });
   });
@@ -145,13 +103,13 @@ describe('validateMove', () => {
   describe('BR-MOVE-003 — reachable destination', () => {
     it('accepts a move to a reachable square', () => {
       // Marshal at (5,9) step left to (4,9)
-      const r = validateMove(gsfenState(MARSHAL_ALONE), move(5, 9, 4, 9));
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
       expect(r.ok).toBe(true);
     });
 
     it('rejects a move to a square the piece cannot reach', () => {
       // Marshal at (5,9) — step only, cannot reach (5,6) which is 3 away
-      const r = validateMove(gsfenState(MARSHAL_ALONE), move(5, 9, 5, 6));
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 5, 6));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
     });
@@ -159,7 +117,7 @@ describe('validateMove', () => {
 
   describe('outcome validation', () => {
     it('requires outcome=null when landing on empty square', () => {
-      const state = gsfenState(MARSHAL_ALONE);
+      const state = gsfenState(MARSHAL_ALONE_BATTLE);
       expect(validateMove(state, move(5, 9, 4, 9, null)).ok).toBe(true);
       const r = validateMove(state, move(5, 9, 4, 9, 'stack'));
       expect(r.ok).toBe(false);
@@ -203,14 +161,14 @@ describe('validateMove', () => {
   describe('BR-MOVE-005 — stack size landing restriction', () => {
     it('rejects move when source size < target size', () => {
       // Marshal size 1 at (5,9), friendly AFG size 3 at (5,7) — blocked
-      const state = gsfenState(SIZE_MISMATCH);
+      const state = gsfenState(SIZE_MISMATCH_AFG);
       const r = validateMove(state, move(5, 9, 5, 7));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
     });
 
     it('accepts move to empty square (trivially passes)', () => {
-      const r = validateMove(gsfenState(MARSHAL_ALONE), move(5, 9, 4, 9));
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
       expect(r.ok).toBe(true);
     });
   });
@@ -219,7 +177,7 @@ describe('validateMove', () => {
     it('accepts move onto a friendly-topped stack with outcome=null (automatic stacking)', () => {
       // White Marshal at (5,9) moves to (5,8) where White Pawn is.
       // Target size 1 <= source size 1, friendly-topped → automatic stacking.
-      const state = gsfenState(FRIENDLY_STACK);
+      const state = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       const r = validateMove(state, move(5, 9, 5, 8, null));
       expect(r.ok).toBe(true);
     });
@@ -227,7 +185,7 @@ describe('validateMove', () => {
     it('rejects outcome specification when stacking on a friendly stack', () => {
       // Same position as above, but specifying outcome='stack' is invalid
       // because outcome must be null for friendly-topped stacks (automatic stacking).
-      const state = gsfenState(FRIENDLY_STACK);
+      const state = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       const r = validateMove(state, move(5, 9, 5, 8, 'stack'));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-004');
@@ -271,14 +229,14 @@ describe('validateMove', () => {
     });
 
     it('accepts a move that does not leave own Marshal in check', () => {
-      const r = validateMove(gsfenState(BLACK_TURN), move(5, 1, 4, 1));
+      const r = validateMove(gsfenState(BLACK_TURN_MARSHAL_ONLY), move(5, 1, 4, 1));
       expect(r.ok).toBe(true);
     });
   });
 
   describe('BR-STACK-006 — Turncoat explicit rejection', () => {
     it('rejects a move with non-empty turncoat (not yet implemented)', () => {
-      const r = validateMove(gsfenState(MARSHAL_ALONE), move(5, 9, 4, 9, null, [1]));
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9, null, [1]));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
     });
@@ -299,7 +257,7 @@ describe('validateArata', () => {
   });
 
   it('rejects arata with piece not in hand (BR-ARATA-002)', () => {
-    const r = validateArata(gsfenState(BATTLE_W), arata('G', 5, 7));
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('G', 5, 7));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-002');
   });
@@ -307,29 +265,29 @@ describe('validateArata', () => {
   it('rejects arata of Marshal (BR-ARATA-002 fires first — not in hand)', () => {
     // Marshal is never in hand during battle phase (BR-DEPLOY-011).
     // The first check (BR-ARATA-002: piece in hand) rejects it.
-    const r = validateArata(gsfenState(BATTLE_W), arata('M', 5, 7));
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('M', 5, 7));
     expect(r.ok).toBe(false);
     // The first check to fire is "piece not in hand" — BR-ARATA-002 beats BR-ARATA-007.
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-002');
   });
 
   it('accepts arata with piece in hand to valid square', () => {
-    // BATTLE_W: White most advanced piece is Archer at row 4.
+    // BATTLE_MID_VARIANT: White most advanced piece is Archer at row 4.
     // Arata zone: rows 4-9. (5,7) is row 7 — in zone.
-    const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 7));
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
     expect(r.ok).toBe(true);
   });
 
   it('rejects arata beyond most advanced piece (BR-ARATA-003)', () => {
     // Row 3 is forward of row 4 (most advanced White piece) — outside zone
-    const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 3));
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 3));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-003');
   });
 
   it('accepts arata at the most advanced piece row', () => {
     // Row 4 is the most advanced White piece row — should be in zone
-    const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 4));
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 4));
     expect(r.ok).toBe(true);
   });
 
@@ -356,14 +314,14 @@ describe('validateArata', () => {
   });
 
   it('rejects arata onto a Marshal (BR-ARATA-007)', () => {
-    const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 9));
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 9));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-007');
   });
 
   describe('BR-STACK-006 — Turncoat explicit rejection', () => {
     it('rejects an arata with non-empty turncoat (not yet implemented)', () => {
-      const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 7, [1]));
+      const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7, [1]));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
     });
@@ -373,13 +331,13 @@ describe('validateArata', () => {
     it('accepts arata that does not leave own Marshal in check', () => {
       // Arata places a Pawn at (5,7) — adjacent to Marshal at (5,9) but doesn't block anything.
       // The Self Check code path is exercised but doesn't trigger (Marshal is safe).
-      const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 7));
+      const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
       expect(r.ok).toBe(true);
     });
 
     it('includes afterState with correct piece placement on success', () => {
       // Arata places a Pawn at (5,7) — verify the afterState reflects the placement.
-      const r = validateArata(gsfenState(BATTLE_W), arata('P', 5, 7));
+      const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
       if (r.ok) {
         expect(r.afterState).toBeDefined();
         const stack = getStack(r.afterState.position, { col: 5, row: 7 });
@@ -387,7 +345,7 @@ describe('validateArata', () => {
         expect(topPiece(stack!).type).toBe('P');
         expect(topPiece(stack!).owner).toBe('white');
         // Hand should have one fewer Pawn
-        expect(r.afterState.hands.white.P).toBe(2); // was 3 in BATTLE_W
+        expect(r.afterState.hands.white.P).toBe(2); // was 3 in BATTLE_MID_VARIANT
       }
     });
   });
@@ -399,24 +357,24 @@ describe('validateArata', () => {
 
 describe('validatePlay', () => {
   it('dispatches move actions to validateMove', () => {
-    const r = validatePlay(gsfenState(MARSHAL_ALONE), move(5, 9, 4, 9));
+    const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
     expect(r.ok).toBe(true);
   });
 
   it('dispatches arata actions to validateArata', () => {
-    const r = validatePlay(gsfenState(BATTLE_W), arata('P', 5, 7));
+    const r = validatePlay(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
     expect(r.ok).toBe(true);
   });
 
   it('rejects a placement action during battle phase', () => {
-    const r = validatePlay(gsfenState(BATTLE_W), placement('P', 5, 8));
+    const r = validatePlay(gsfenState(BATTLE_MID_VARIANT), placement('P', 5, 8));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-001');
   });
 
   it('includes pre-computed afterState with correct board changes on success', () => {
     // Move Marshal from (5,9) left to (4,9) — empty square
-    const r = validatePlay(gsfenState(MARSHAL_ALONE), move(5, 9, 4, 9));
+    const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
     if (r.ok) {
       expect(r.afterState).toBeDefined();
 
@@ -437,7 +395,7 @@ describe('validatePlay', () => {
   });
 
   it('returns error for unknown action kind', () => {
-    const r = validatePlay(gsfenState(MARSHAL_ALONE), { kind: 'unknown' } as never);
+    const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), { kind: 'unknown' } as never);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ACTION-001');
   });

@@ -10,21 +10,15 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { EMPTY_HAND, START_GSFEN } from '../../src/constants.js';
 import type { GameState, Hand, Position, Stack } from '../../src/types.js';
-import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, WHITE_DONE_MULTI_COUNT_HAND, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
+import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, FIXTURES, WHITE_DONE_MULTI_COUNT_HAND, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Read a .gsfen fixture file by name (without extension). */
-function readFixture(name: string): string {
-  return readFileSync(`fixtures/valid/${name}.gsfen`, 'utf-8').trim();
-}
 
 /** Assert a parse is successful and return the state. */
 function assertOk(result: ParseResult): GameState {
@@ -63,7 +57,7 @@ const FIXTURE_NAMES = [
 describe('GSFEN round-trip — all fixture files', () => {
   for (const name of FIXTURE_NAMES) {
     it(`${name}: parse(serialize(state)) structural round-trip`, () => {
-      const raw = readFixture(name);
+      const raw = FIXTURES[name];
       const state = assertOk(parseGSFEN(raw));
       const serialized = serializeGSFEN(state);
       const reparsed = assertOk(parseGSFEN(serialized));
@@ -73,7 +67,7 @@ describe('GSFEN round-trip — all fixture files', () => {
 
   for (const name of FIXTURE_NAMES) {
     it(`${name}: serialize(parse(x)) text identity (canonical input)`, () => {
-      const raw = readFixture(name);
+      const raw = FIXTURES[name];
       const state = assertOk(parseGSFEN(raw));
       const serialized = serializeGSFEN(state);
       // The input fixture IS canonical, so the round-trip should produce
@@ -94,7 +88,7 @@ describe('GSFEN round-trip — startpos keyword', () => {
   });
 
   it('startpos.gsfen fixture: round-trip expands keyword to canonical string', () => {
-    const raw = readFixture('startpos');
+    const raw = FIXTURES['startpos'];
     expect(raw).toBe('startpos');
     const state = assertOk(parseGSFEN(raw));
     const serialized = serializeGSFEN(state);
@@ -277,7 +271,7 @@ describe('serializeGSFEN — canonical output guarantees', () => {
 
   it('mixed-ownership stacks preserve case (ownership encoding)', () => {
     // Battle-midgame has a PyT mixed stack — verify it serializes correctly
-    const raw = readFixture('battle-midgame');
+    const raw = FIXTURES['battle-midgame'];
     const state = assertOk(parseGSFEN(raw));
     const serialized = serializeGSFEN(state);
     expect(serialized).toBe(raw);

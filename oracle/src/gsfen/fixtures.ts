@@ -3,10 +3,10 @@
  * constant. All fixture names are the file stem (without extension) converted
  * to SCREAMING_SNAKE_CASE.
  *
- * Fixtures live in two subdirectories under `oracle/fixtures/`:
- *   `valid/`   — states that pass parseGSFEN + validateState
- *   `invalid/` — states that parse correctly but fail semantic validation,
- *                or that test specific parsing error paths
+ * Fixtures live in three subdirectories under `oracle/fixtures/`:
+ *   `valid/`        — states that pass parseGSFEN + validateState
+ *   `invalid/`      — states that parse correctly but fail semantic validation
+ *   `invalid/parse/`— states that fail parse-level validation (C1-C7 errors)
  *
  * Usage:
  *   import { STARTPOS_EXPANDED, BATTLE_START } from './gsfen/fixtures.js';
@@ -27,6 +27,11 @@ function readValid(name: string): string {
 /** Read a .gsfen fixture file from the `invalid/` subdirectory. */
 function readInvalid(name: string): string {
   return readFileSync(resolve(FIXTURE_DIR, 'invalid', `${name}.gsfen`), 'utf-8').trim();
+}
+
+/** Read a .gsfen fixture file from the `invalid/parse/` subdirectory. */
+function readInvalidParse(name: string): string {
+  return readFileSync(resolve(FIXTURE_DIR, 'invalid', 'parse', `${name}.gsfen`), 'utf-8').trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -71,26 +76,94 @@ export const WHITE_MARSHAL_AT_5_9 = readValid('white-marshal-at-5-9');
 // Invalid fixtures — parse correctly but fail semantic validation
 // ---------------------------------------------------------------------------
 
-export const C2_UNKNOWN_PIECE = readInvalid('c2-unknown-piece');
-export const C3_ADJACENT_EMPTY_RUNS = readInvalid('c3-adjacent-empty-runs');
-export const C5_DUPLICATE_LETTER = readInvalid('c5-duplicate-letter');
-export const C5_NON_ALPHABETICAL = readInvalid('c5-non-alphabetical');
-export const C6_LEADING_ZERO_COUNTER_FULL = readInvalid('c6-leading-zero-counter-full');
-export const C6_LEADING_ZERO_COUNTER = readInvalid('c6-leading-zero-counter');
-export const CHOICE_POS = readInvalid('choice-pos');
+export const CHOICE_POS = readValid('choice-pos');
 export const DEPLOY_ENEMY_TOP = readInvalid('deploy-enemy-top');
-export const DEPLOY_FULL_STACK_PPP = readInvalid('deploy-full-stack-ppp');
-export const ENEMY_MARSHAL_STACK_TEST = readInvalid('enemy-marshal-stack-test');
-export const FORCED_CAPTURE = readInvalid('forced-capture');
-export const FRIENDLY_STACK_TEST = readInvalid('friendly-stack-test');
-export const FRIENDLY_STACK_WITH_HANDS = readInvalid('friendly-stack-with-hands');
+export const DEPLOY_FULL_STACK_PPP = readValid('deploy-full-stack-ppp');
+export const ENEMY_MARSHAL_STACK_TEST = readValid('enemy-marshal-stack-test');
+export const FORCED_CAPTURE = readValid('forced-capture');
+export const FRIENDLY_STACK_TEST = readValid('friendly-stack-test');
+export const FRIENDLY_STACK_WITH_HANDS = readValid('friendly-stack-with-hands');
 export const GAN_BATTLE_STATE = readInvalid('gan-battle-state');
-export const MARSHAL_ALONE_BATTLE = readInvalid('marshal-alone-battle');
+export const MARSHAL_ALONE_BATTLE = readValid('marshal-alone-battle');
 export const MP_STACK_DEPLOY_CTR2 = readInvalid('mp-stack-deploy-ctr2');
-export const MP_STACK_DEPLOY_CTR3 = readInvalid('mp-stack-deploy-ctr3');
-export const ROW_NOT_9 = readInvalid('row-not-9');
-export const ROW_WITH_P_AND_T = readInvalid('row-with-P-and-T');
-export const SELF_CHECK_POS = readInvalid('self-check-pos');
-export const SIZE_MISMATCH_AFG = readInvalid('size-mismatch-afg');
-export const STACK_OF_FOUR = readInvalid('stack-of-four');
+export const MP_STACK_DEPLOY_CTR3 = readValid('mp-stack-deploy-ctr3');
+export const ROW_WITH_P_AND_T = readValid('row-with-P-and-T');
+export const SELF_CHECK_POS = readValid('self-check-pos');
+export const SIZE_MISMATCH_AFG = readValid('size-mismatch-afg');
 export const V3_BLACK_MARSHAL_WRONG_ZONE = readInvalid('v3-black-marshal-wrong-zone');
+
+// ---------------------------------------------------------------------------
+// Parse-invalid fixtures — fail parse-level validation (C1-C7 errors)
+// ---------------------------------------------------------------------------
+
+export const C2_UNKNOWN_PIECE = readInvalidParse('c2-unknown-piece');
+export const C3_ADJACENT_EMPTY_RUNS = readInvalidParse('c3-adjacent-empty-runs');
+export const C5_DUPLICATE_LETTER = readInvalidParse('c5-duplicate-letter');
+export const C5_NON_ALPHABETICAL = readInvalidParse('c5-non-alphabetical');
+export const C6_LEADING_ZERO_COUNTER_FULL = readInvalidParse('c6-leading-zero-counter-full');
+export const C6_LEADING_ZERO_COUNTER = readInvalidParse('c6-leading-zero-counter');
+export const ROW_NOT_9 = readInvalidParse('row-not-9');
+export const STACK_OF_FOUR = readInvalidParse('stack-of-four');
+
+// ---------------------------------------------------------------------------
+// Lookup record: name → content for dynamic fixture access in tests
+// ---------------------------------------------------------------------------
+
+export const FIXTURES: Record<string, string> = {
+  'all-on-board': ALL_ON_BOARD,
+  'arata-zone-test': ARATA_ZONE_TEST,
+  'battle-mid-variant': BATTLE_MID_VARIANT,
+  'battle-midgame': BATTLE_MIDGAME,
+  'battle-start': BATTLE_START,
+  'black-done-declared': BLACK_DONE_DECLARED,
+  'black-turn-marshal-only': BLACK_TURN_MARSHAL_ONLY,
+  'both-marshals-battle-nohands': BOTH_MARSHALS_BATTLE_NOHANDS,
+  'both-marshals-deploy-ctr2': BOTH_MARSHALS_DEPLOY_CTR2,
+  'both-marshals-placed': BOTH_MARSHALS_PLACED,
+  'capture-aftermath': CAPTURE_AFTERMATH,
+  'deep-capture-exchange': DEEP_CAPTURE_EXCHANGE,
+  'dense-engagement': DENSE_ENGAGEMENT,
+  'deploy-black-ctr2-g': DEPLOY_BLACK_CTR2_G,
+  'deploy-near-end': DEPLOY_NEAR_END,
+  'deploy-phase-ctr1': DEPLOY_PHASE_CTR1,
+  'deploy-phase-ctr3': DEPLOY_PHASE_CTR3,
+  'deploy-stacks-in-zones': DEPLOY_STACKS_IN_ZONES,
+  'empty-hands-endgame': EMPTY_HANDS_ENDGAME,
+  'example4-mixed-stack': EXAMPLE4_MIXED_STACK,
+  'lowercase-hand': LOWERCASE_HAND,
+  'one-side-fully-deployed': ONE_SIDE_FULLY_DEPLOYED,
+  'piece-at-col1': PIECE_AT_COL1,
+  'piece-at-col9': PIECE_AT_COL9,
+  'some-captured': SOME_CAPTURED,
+  'sparse-board': SPARSE_BOARD,
+  'startpos': STARTPOS,
+  'startpos-expanded': STARTPOS_EXPANDED,
+  'three-deep-stacks': THREE_DEEP_STACKS,
+  'triple-stack-battlefield': TRIPLE_STACK_BATTLEFIELD,
+  'white-done-declared': WHITE_DONE_DECLARED,
+  'white-done-multi-count-hand': WHITE_DONE_MULTI_COUNT_HAND,
+  'white-marshal-at-5-9': WHITE_MARSHAL_AT_5_9,
+  'c2-unknown-piece': C2_UNKNOWN_PIECE,
+  'c3-adjacent-empty-runs': C3_ADJACENT_EMPTY_RUNS,
+  'c5-duplicate-letter': C5_DUPLICATE_LETTER,
+  'c5-non-alphabetical': C5_NON_ALPHABETICAL,
+  'c6-leading-zero-counter-full': C6_LEADING_ZERO_COUNTER_FULL,
+  'c6-leading-zero-counter': C6_LEADING_ZERO_COUNTER,
+  'choice-pos': CHOICE_POS,
+  'deploy-enemy-top': DEPLOY_ENEMY_TOP,
+  'deploy-full-stack-ppp': DEPLOY_FULL_STACK_PPP,
+  'enemy-marshal-stack-test': ENEMY_MARSHAL_STACK_TEST,
+  'forced-capture': FORCED_CAPTURE,
+  'friendly-stack-test': FRIENDLY_STACK_TEST,
+  'friendly-stack-with-hands': FRIENDLY_STACK_WITH_HANDS,
+  'gan-battle-state': GAN_BATTLE_STATE,
+  'marshal-alone-battle': MARSHAL_ALONE_BATTLE,
+  'mp-stack-deploy-ctr2': MP_STACK_DEPLOY_CTR2,
+  'mp-stack-deploy-ctr3': MP_STACK_DEPLOY_CTR3,
+  'row-not-9': ROW_NOT_9,
+  'row-with-P-and-T': ROW_WITH_P_AND_T,
+  'self-check-pos': SELF_CHECK_POS,
+  'size-mismatch-afg': SIZE_MISMATCH_AFG,
+  'stack-of-four': STACK_OF_FOUR,
+  'v3-black-marshal-wrong-zone': V3_BLACK_MARSHAL_WRONG_ZONE,
+};

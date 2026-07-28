@@ -80,6 +80,11 @@ describe('validatePlacement', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-004');
   });
 
+  // Problematic test case. Marked for removal
+  // Cause: Impossible to have this situation happening.
+  // The state is invalid by itself
+  // Verify if is worth keeping the DEPLOY_ENEMY_TOP fixture
+  // Maybe move it to the parse semantic validation?
   it('rejects placement on enemy-topped square', () => {
     // Black Pawn at (5,8) — White cannot place there
     const state = gsfenState(DEPLOY_ENEMY_TOP);
@@ -94,7 +99,7 @@ describe('validatePlacement', () => {
   });
 
   it('accepts placement on friendly stack under size 3 (BR-DEPLOY-005)', () => {
-    // White MP (Marshal+Pawn) at (5,9) size 2 → stack General on top
+    // White PM (Pawn+Marshal) at (5,9) size 2 → stack General on top
     const state = gsfenState(MP_STACK_DEPLOY_CTR3);
     const r = validatePlacement(state, placement('G', 5, 9));
     expect(r.ok).toBe(true);

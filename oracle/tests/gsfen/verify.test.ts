@@ -3,11 +3,28 @@ import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { INITIAL_COUNTS, EMPTY_HAND } from '../../src/constants.js';
 import type { Hand } from '../../src/types.js';
-import { readFileSync } from 'node:fs';
-
-function readFixture(name: string): string {
-  return readFileSync(`fixtures/valid/${name}.gsfen`, 'utf-8').trim();
-}
+import {
+  ALL_ON_BOARD,
+  BATTLE_MIDGAME,
+  BATTLE_START,
+  BLACK_DONE_DECLARED,
+  BOTH_MARSHALS_PLACED,
+  CAPTURE_AFTERMATH,
+  DEEP_CAPTURE_EXCHANGE,
+  DENSE_ENGAGEMENT,
+  DEPLOY_NEAR_END,
+  DEPLOY_STACKS_IN_ZONES,
+  EMPTY_HANDS_ENDGAME,
+  ONE_SIDE_FULLY_DEPLOYED,
+  SOME_CAPTURED,
+  SPARSE_BOARD,
+  STARTPOS,
+  THREE_DEEP_STACKS,
+  TRIPLE_STACK_BATTLEFIELD,
+  WHITE_DONE_DECLARED,
+  WHITE_DONE_MULTI_COUNT_HAND,
+  WHITE_MARSHAL_AT_5_9,
+} from '../../src/gsfen/fixtures.js';
 
 function parseOk(gsfen: string) {
   const result = parseGSFEN(gsfen);
@@ -22,7 +39,7 @@ function H(overrides?: Partial<Hand>): Hand {
 
 describe('board-to-test verification', () => {
   it('both-marshals-placed', () => {
-    const state = parseOk(readFixture('both-marshals-placed'));
+    const state = parseOk(BOTH_MARSHALS_PLACED);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[8][4]).toEqual([{ type: 'M', owner: 'white' }]);
     expect(state.hands.white).toEqual(H({ M: 0 }));
@@ -37,7 +54,7 @@ describe('board-to-test verification', () => {
   });
 
   it('all-on-board', () => {
-    const state = parseOk(readFixture('all-on-board'));
+    const state = parseOk(ALL_ON_BOARD);
     expect(state.position[0][8]).toEqual([
       { type: 'A', owner: 'black' },
       { type: 'C', owner: 'black' },
@@ -120,7 +137,7 @@ describe('board-to-test verification', () => {
   });
 
   it('battle-midgame', () => {
-    const state = parseOk(readFixture('battle-midgame'));
+    const state = parseOk(BATTLE_MIDGAME);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[2][4]).toEqual([{ type: 'S', owner: 'black' }]);
@@ -147,7 +164,7 @@ describe('board-to-test verification', () => {
   });
 
   it('battle-start', () => {
-    const state = parseOk(readFixture('battle-start'));
+    const state = parseOk(BATTLE_START);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[2][3]).toEqual([{ type: 'N', owner: 'black' }]);
@@ -166,7 +183,7 @@ describe('board-to-test verification', () => {
   });
 
   it('black-done-declared', () => {
-    const state = parseOk(readFixture('black-done-declared'));
+    const state = parseOk(BLACK_DONE_DECLARED);
     expect(state.position[0][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[7][4]).toEqual([{ type: 'G', owner: 'white' }]);
@@ -183,7 +200,7 @@ describe('board-to-test verification', () => {
   });
 
   it('capture-aftermath', () => {
-    const state = parseOk(readFixture('capture-aftermath'));
+    const state = parseOk(CAPTURE_AFTERMATH);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'A', owner: 'black' }]);
     expect(state.position[4][4]).toEqual([{ type: 'N', owner: 'white' }]);
@@ -208,7 +225,7 @@ describe('board-to-test verification', () => {
   });
 
   it('dense-engagement', () => {
-    const state = parseOk(readFixture('dense-engagement'));
+    const state = parseOk(DENSE_ENGAGEMENT);
     expect(state.position[0][6]).toEqual([{ type: 'P', owner: 'black' }]);
     expect(state.position[0][2]).toEqual([{ type: 'E', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([
@@ -255,7 +272,7 @@ describe('board-to-test verification', () => {
   });
 
   it('deploy-near-end', () => {
-    const state = parseOk(readFixture('deploy-near-end'));
+    const state = parseOk(DEPLOY_NEAR_END);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[2][3]).toEqual([
@@ -280,7 +297,7 @@ describe('board-to-test verification', () => {
   });
 
   it('deploy-stacks-in-zones', () => {
-    const state = parseOk(readFixture('deploy-stacks-in-zones'));
+    const state = parseOk(DEPLOY_STACKS_IN_ZONES);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([
       { type: 'G', owner: 'black' },
@@ -305,7 +322,7 @@ describe('board-to-test verification', () => {
   });
 
   it('some-captured', () => {
-    const state = parseOk(readFixture('some-captured'));
+    const state = parseOk(SOME_CAPTURED);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[2][3]).toEqual([{ type: 'N', owner: 'black' }]);
@@ -330,7 +347,7 @@ describe('board-to-test verification', () => {
   });
 
   it('sparse-board', () => {
-    const state = parseOk(readFixture('sparse-board'));
+    const state = parseOk(SPARSE_BOARD);
     expect(state.position[0][3]).toEqual([
       { type: 'E', owner: 'black' },
       { type: 'M', owner: 'black' },
@@ -348,7 +365,7 @@ describe('board-to-test verification', () => {
   });
 
   it('startpos', () => {
-    const state = parseOk(readFixture('startpos'));
+    const state = parseOk(STARTPOS);
     expect(state.hands.white).toEqual(H());
     expect(state.hands.black).toEqual(H());
     expect(state.turn).toMatchObject({
@@ -361,7 +378,7 @@ describe('board-to-test verification', () => {
   });
 
   it('three-deep-stacks', () => {
-    const state = parseOk(readFixture('three-deep-stacks'));
+    const state = parseOk(THREE_DEEP_STACKS);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([
       { type: 'G', owner: 'black' },
@@ -391,7 +408,7 @@ describe('board-to-test verification', () => {
   });
 
   it('white-done-declared', () => {
-    const state = parseOk(readFixture('white-done-declared'));
+    const state = parseOk(WHITE_DONE_DECLARED);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[2][3]).toEqual([{ type: 'N', owner: 'black' }]);
@@ -410,7 +427,7 @@ describe('board-to-test verification', () => {
   });
 
   it('white-marshal-at-5-9', () => {
-    const state = parseOk(readFixture('white-marshal-at-5-9'));
+    const state = parseOk(WHITE_MARSHAL_AT_5_9);
     expect(state.position[8][4]).toEqual([{ type: 'M', owner: 'white' }]);
     expect(state.hands.white).toEqual(H({ M: 0 }));
     expect(state.hands.black).toEqual(H());
@@ -424,7 +441,7 @@ describe('board-to-test verification', () => {
   });
 
   it('triple-stack-battlefield', () => {
-    const state = parseOk(readFixture('triple-stack-battlefield'));
+    const state = parseOk(TRIPLE_STACK_BATTLEFIELD);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([
       { type: 'G', owner: 'black' },
@@ -463,7 +480,7 @@ describe('board-to-test verification', () => {
   });
 
   it('deep-capture-exchange', () => {
-    const state = parseOk(readFixture('deep-capture-exchange'));
+    const state = parseOk(DEEP_CAPTURE_EXCHANGE);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[1][4]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[3][4]).toEqual([{ type: 'N', owner: 'black' }]);
@@ -482,7 +499,7 @@ describe('board-to-test verification', () => {
   });
 
   it('one-side-fully-deployed', () => {
-    const state = parseOk(readFixture('one-side-fully-deployed'));
+    const state = parseOk(ONE_SIDE_FULLY_DEPLOYED);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[7][8]).toEqual([
       { type: 'N', owner: 'white' },
@@ -537,7 +554,7 @@ describe('board-to-test verification', () => {
   });
 
   it('empty-hands-endgame', () => {
-    const state = parseOk(readFixture('empty-hands-endgame'));
+    const state = parseOk(EMPTY_HANDS_ENDGAME);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[0][3]).toEqual([
       { type: 'A', owner: 'black' },
@@ -606,7 +623,7 @@ describe('board-to-test verification', () => {
   });
 
   it('white-done-multi-count-hand', () => {
-    const state = parseOk(readFixture('white-done-multi-count-hand'));
+    const state = parseOk(WHITE_DONE_MULTI_COUNT_HAND);
     expect(state.position[0][4]).toEqual([{ type: 'M', owner: 'black' }]);
     expect(state.position[0][3]).toEqual([{ type: 'G', owner: 'black' }]);
     expect(state.position[0][2]).toEqual([{ type: 'E', owner: 'black' }]);
