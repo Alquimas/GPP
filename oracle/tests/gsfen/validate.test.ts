@@ -123,7 +123,7 @@ describe('validateState — valid states', () => {
   });
 });
 
-describe('validateState — V2 stack size', () => {
+describe('validateState — BR-GSFEN-VALID-002 stack size', () => {
   it('rejects a stack of 4 pieces', () => {
     const state = emptyBattleState();
     // Put a 4-piece stack on the board
@@ -133,17 +133,17 @@ describe('validateState — V2 stack size', () => {
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
     ] as unknown as Stack;
-    assertInvalid(state, 'V2');
+    assertInvalid(state, 'BR-GSFEN-VALID-002');
   });
 
   it('rejects a stack of 0 pieces', () => {
     const state = emptyBattleState();
     state.position[4][4] = [] as unknown as Stack;
-    assertInvalid(state, 'V2');
+    assertInvalid(state, 'BR-GSFEN-VALID-002');
   });
 });
 
-describe('validateState — V3 Marshal integrity', () => {
+describe('validateState — BR-GSFEN-VALID-003 Marshal integrity', () => {
   it('rejects Marshal not at top of stack', () => {
     const state = emptyBattleState();
     // Stack with Marshal at bottom, Pawn on top
@@ -151,13 +151,13 @@ describe('validateState — V3 Marshal integrity', () => {
       { type: 'M', owner: 'white' },
       { type: 'P', owner: 'white' },
     ] as Stack;
-    assertInvalid(state, 'V3');
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 
   it('rejects missing Marshal in battle phase', () => {
     const state = emptyBattleState();
     // No Marshal on board for either player, and none in hand
-    assertInvalid(state, 'V3');
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 
   it('rejects Marshal in hand during battle', () => {
@@ -166,7 +166,7 @@ describe('validateState — V3 Marshal integrity', () => {
     state.position[4][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.position[4][3] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.white.M = 1;
-    assertInvalid(state, 'V3');
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 
   it('rejects two Marshals on board for same player in battle', () => {
@@ -174,7 +174,7 @@ describe('validateState — V3 Marshal integrity', () => {
     state.position[4][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.position[4][5] = [{ type: 'M', owner: 'white' }] as Stack;
     state.position[4][3] = [{ type: 'M', owner: 'black' }] as Stack;
-    assertInvalid(state, 'V3');
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 
   it('accepts valid deploys — Marshal in hand with no pieces on board', () => {
@@ -193,20 +193,20 @@ describe('validateState — V3 Marshal integrity', () => {
     const state = emptyDeployState();
     state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     // Marshal still in hand (start state has it)
-    assertInvalid(state, 'V3');
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 
   it('rejects deploy with Marshal in hand but other pieces on board', () => {
     const state = emptyDeployState();
     // Place a Pawn on board but keep Marshal in hand
     state.position[8][4] = [{ type: 'P', owner: 'white' }] as Stack;
-    assertInvalid(state, 'V3');
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 });
 
-describe('validateState — V4 inventory conservation', () => {
+describe('validateState — BR-GSFEN-VALID-004 inventory conservation', () => {
   /** All piece types except M (Marshal over-count can't be tested in battle
-   *  because V3 Marshal checks fire first — see V4 + deploy M test below). */
+   *  because BR-GSFEN-VALID-003 Marshal checks fire first — see BR-GSFEN-VALID-004 + deploy M test below). */
   const NON_M_TYPES = ['A', 'C', 'E', 'F', 'G', 'J', 'L', 'N', 'P', 'S', 'T', 'U', 'Y'] as const;
 
   /** Place N pieces of a type across separate cells in row 5. */
@@ -225,12 +225,12 @@ describe('validateState — V4 inventory conservation', () => {
     for (const type of NON_M_TYPES) {
       it(`${type} (initial ${INITIAL_COUNTS[type]})`, () => {
         const state = emptyBattleState();
-        // Place both Marshals to satisfy V3
+        // Place both Marshals to satisfy BR-GSFEN-VALID-003
         state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
         state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
         // Place initial + 1 pieces
         placePieces(state, type, 'white', INITIAL_COUNTS[type] + 1);
-        assertInvalid(state, 'V4');
+        assertInvalid(state, 'BR-GSFEN-VALID-004');
       });
     }
   });
@@ -239,17 +239,17 @@ describe('validateState — V4 inventory conservation', () => {
     for (const type of NON_M_TYPES) {
       it(`${type} (initial ${INITIAL_COUNTS[type]})`, () => {
         const state = emptyBattleState();
-        // Place both Marshals to satisfy V3
+        // Place both Marshals to satisfy BR-GSFEN-VALID-003
         state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
         state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
         // Place initial + 1 pieces
         placePieces(state, type, 'black', INITIAL_COUNTS[type] + 1);
-        assertInvalid(state, 'V4');
+        assertInvalid(state, 'BR-GSFEN-VALID-004');
       });
     }
   });
 
-  describe('white over-count M (deploy — only phase where V4 can fire for M)', () => {
+  describe('white over-count M (deploy — only phase where BR-GSFEN-VALID-004 can fire for M)', () => {
     it('M (initial 1)', () => {
       const state = emptyDeployState();
       // Place 2 white Marshals on board, none in hand
@@ -259,9 +259,9 @@ describe('validateState — V4 inventory conservation', () => {
       // Place black Marshal to make it a valid deploy
       state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
       state.hands.black.M = 0;
-      // V3 deploy checks pass (M on board only, not in hand, other M at top)
-      // V4 catches M: 2 on board > initial 1
-      assertInvalid(state, 'V4');
+      // BR-GSFEN-VALID-003 deploy checks pass (M on board only, not in hand, other M at top)
+      // BR-GSFEN-VALID-004 catches M: 2 on board > initial 1
+      assertInvalid(state, 'BR-GSFEN-VALID-004');
     });
   });
 
@@ -273,16 +273,16 @@ describe('validateState — V4 inventory conservation', () => {
       state.hands.black.M = 0;
       state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
       state.hands.white.M = 0;
-      assertInvalid(state, 'V4');
+      assertInvalid(state, 'BR-GSFEN-VALID-004');
     });
   });
 });
 
-describe('validateState — V5 Done flags', () => {
+describe('validateState — BR-GSFEN-VALID-005 Done flags', () => {
   it('rejects done flag on the active player', () => {
     const state = emptyDeployState();
     state.turn.done = 'white'; // white is active, can't have done
-    assertInvalid(state, 'V5');
+    assertInvalid(state, 'BR-GSFEN-VALID-005');
   });
 
   it('rejects done flag when done player has no Marshal on board', () => {
@@ -290,7 +290,7 @@ describe('validateState — V5 Done flags', () => {
     state.turn.done = 'black';
     state.turn.activePlayer = 'white';
     // Black has no Marshal on board
-    assertInvalid(state, 'V5');
+    assertInvalid(state, 'BR-GSFEN-VALID-005');
   });
 
   it('accepts done flag when done player has Marshal on board', () => {
@@ -303,7 +303,7 @@ describe('validateState — V5 Done flags', () => {
   });
 });
 
-describe('validateState — V6 deploy-phase constraints', () => {
+describe('validateState — BR-GSFEN-VALID-006 deploy-phase constraints', () => {
   /** Helper: set up a minimal valid deploy state with both Marshals on board at correct zones. */
   function minimalDeployState(): GameState {
     const emptyRow: (Stack | null)[] = [null, null, null, null, null, null, null, null, null];
@@ -331,7 +331,7 @@ describe('validateState — V6 deploy-phase constraints', () => {
     state.hands.white.P = 3; // 1 board + 3 hand = 4 = initial
     state.hands.white.M = 0;
     state.hands.black.M = 0;
-    assertInvalid(state, 'V6');
+    assertInvalid(state, 'BR-GSFEN-VALID-006');
   });
 
   it('rejects black piece in white zone (row 7-9) during deploy', () => {
@@ -343,7 +343,7 @@ describe('validateState — V6 deploy-phase constraints', () => {
     state.hands.black.P = 3;
     state.hands.white.M = 0;
     state.hands.black.M = 0;
-    assertInvalid(state, 'V6');
+    assertInvalid(state, 'BR-GSFEN-VALID-006');
   });
 
   it('rejects mixed-ownership stack during deploy', () => {
@@ -352,14 +352,14 @@ describe('validateState — V6 deploy-phase constraints', () => {
     state.position[8][4] = [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'black' },
-      { type: 'M', owner: 'white' }, // top = Marshal, passes V3
+      { type: 'M', owner: 'white' }, // top = Marshal, passes BR-GSFEN-VALID-003
     ] as Stack;
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.white.P = 3;
     state.hands.black.P = 3;
     state.hands.white.M = 0;
     state.hands.black.M = 0;
-    assertInvalid(state, 'V6');
+    assertInvalid(state, 'BR-GSFEN-VALID-006');
   });
 
   it('accepts deploy state with pieces in correct zones', () => {
@@ -378,17 +378,17 @@ describe('validateState — V6 deploy-phase constraints', () => {
   });
 });
 
-describe('validateState — V7 counter bounds', () => {
+describe('validateState — BR-GSFEN-VALID-007 counter bounds', () => {
   it('rejects counter 0', () => {
     const state = parseOk('startpos');
     state.turn.counter = 0;
-    assertInvalid(state, 'V7');
+    assertInvalid(state, 'BR-GSFEN-VALID-007');
   });
 
   it('rejects deploy counter > 50', () => {
     const state = parseOk('startpos');
     state.turn.counter = 51;
-    assertInvalid(state, 'V7');
+    assertInvalid(state, 'BR-GSFEN-VALID-007');
   });
 
   it('accepts deploy counter = 50', () => {
@@ -408,22 +408,22 @@ describe('validateState — V7 counter bounds', () => {
 });
 
 describe('validateState — multi-rule violations (first-rule ordering)', () => {
-  it('V2 fires before V3: bad stack + missing Marshal', () => {
+  it('BR-GSFEN-VALID-002 fires before BR-GSFEN-VALID-003: bad stack + missing Marshal', () => {
     const state = emptyBattleState();
-    // V2: stack of 4 pieces
+    // BR-GSFEN-VALID-002: stack of 4 pieces
     state.position[4][4] = [
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
     ] as unknown as Stack;
-    // No Marshals at all (would be V3)
-    assertInvalid(state, 'V2');
+    // No Marshals at all (would be BR-GSFEN-VALID-003)
+    assertInvalid(state, 'BR-GSFEN-VALID-002');
   });
 
-  it('V3 fires before V4: Marshal not at top + piece over-count', () => {
+  it('BR-GSFEN-VALID-003 fires before BR-GSFEN-VALID-004: Marshal not at top + piece over-count', () => {
     const state = emptyBattleState();
-    // V3: Marshal buried under Pawn
+    // BR-GSFEN-VALID-003: Marshal buried under Pawn
     state.position[4][4] = [
       { type: 'M', owner: 'white' },
       { type: 'P', owner: 'white' },
@@ -433,30 +433,30 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
     state.position[4][5] = [{ type: 'A', owner: 'white' }] as Stack;
     state.position[4][6] = [{ type: 'A', owner: 'white' }] as Stack;
     state.position[4][7] = [{ type: 'A', owner: 'white' }] as Stack;
-    // V3 fires first (Marshal not at top) before V4 would be checked
-    assertInvalid(state, 'V3');
+    // BR-GSFEN-VALID-003 fires first (Marshal not at top) before BR-GSFEN-VALID-004 would be checked
+    assertInvalid(state, 'BR-GSFEN-VALID-003');
   });
 
-  it('V4 fires before V5: over-count + bad done flag', () => {
+  it('BR-GSFEN-VALID-004 fires before BR-GSFEN-VALID-005: over-count + bad done flag', () => {
     const state = emptyBattleState();
-    // Place both Marshals to pass V3
+    // Place both Marshals to pass BR-GSFEN-VALID-003
     state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
-    // V4: over-count Archer (3 on board, initial 2)
+    // BR-GSFEN-VALID-004: over-count Archer (3 on board, initial 2)
     state.position[4][4] = [{ type: 'A', owner: 'white' }] as Stack;
     state.position[4][5] = [{ type: 'A', owner: 'white' }] as Stack;
     state.position[4][6] = [{ type: 'A', owner: 'white' }] as Stack;
-    // V5 would also fail: done flag on active player
+    // BR-GSFEN-VALID-005 would also fail: done flag on active player
     state.turn.done = 'white';
-    // V4 is checked before V5, so V4 fires first
-    assertInvalid(state, 'V4');
+    // BR-GSFEN-VALID-004 is checked before BR-GSFEN-VALID-005, so BR-GSFEN-VALID-004 fires first
+    assertInvalid(state, 'BR-GSFEN-VALID-004');
   });
 
-  it('V5 fires before V6: bad done flag + white piece in black zone (deploy)', () => {
+  it('BR-GSFEN-VALID-005 fires before BR-GSFEN-VALID-006: bad done flag + white piece in black zone (deploy)', () => {
     const state = emptyDeployState();
-    // V5: done flag on active player
+    // BR-GSFEN-VALID-005: done flag on active player
     state.turn.done = 'white'; // white is active
-    // V6: white piece in black zone (row 1)
+    // BR-GSFEN-VALID-006: white piece in black zone (row 1)
     state.position[0][0] = [{ type: 'P', owner: 'white' }] as Stack;
     state.hands.white.P = 3;
     // Both Marshals on board in proper zones
@@ -464,27 +464,27 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
     state.hands.white.M = 0;
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0;
-    // V5 fires before V6
-    assertInvalid(state, 'V5');
+    // BR-GSFEN-VALID-005 fires before BR-GSFEN-VALID-006
+    assertInvalid(state, 'BR-GSFEN-VALID-005');
   });
 
-  it('V6 fires before V7: deploy zone violation + bad counter', () => {
+  it('BR-GSFEN-VALID-006 fires before BR-GSFEN-VALID-007: deploy zone violation + bad counter', () => {
     const state = emptyDeployState();
-    // Place both Marshals in correct zones to pass V3
+    // Place both Marshals in correct zones to pass BR-GSFEN-VALID-003
     state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
     state.hands.white.M = 0;
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0;
-    // V6: black piece in white zone (row 9)
+    // BR-GSFEN-VALID-006: black piece in white zone (row 9)
     state.position[8][0] = [{ type: 'P', owner: 'black' }] as Stack;
     state.hands.black.P = 4; // 1 board + 4 in FULL_HAND = 5 exceeds initial 4? No...
     // Use EMPTY_HAND-based state. Actually emptyDeployState uses FULL_HAND.
-    // Black P initial is 4, FULL_HAND has P:4. Adding 1 board = 5 > 4, that's V4.
+    // Black P initial is 4, FULL_HAND has P:4. Adding 1 board = 5 > 4, that's BR-GSFEN-VALID-004.
     // Let me adjust: reduce hand P to 3 so board 1 + hand 3 = 4 = initial.
     state.hands.black.P = 3;
-    // V7 would also fail: counter 0
+    // BR-GSFEN-VALID-007 would also fail: counter 0
     state.turn.counter = 0;
-    // V6 fires before V7
-    assertInvalid(state, 'V6');
+    // BR-GSFEN-VALID-006 fires before BR-GSFEN-VALID-007
+    assertInvalid(state, 'BR-GSFEN-VALID-006');
   });
 });

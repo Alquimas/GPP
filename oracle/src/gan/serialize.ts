@@ -6,13 +6,13 @@
  * - Move      (Battle Phase) : `<square>><square>[outcome][turncoat]`
  * - Arata     (Battle Phase) : `<piece>*<square>[turncoat]`
  *
- * The serializer enforces canonicity rules A1–A6 from the GAN specification:
- * - A1: outcome token only when choice exists (omitted for forced outcomes)
- * - A2: turncoat levels only when elected (omitted when declined)
- * - A3: levels ascending, no duplicates (inputs must already satisfy this)
- * - A4: `!` only as placement suffix
- * - A5: no whitespace within a single action
- * - A6: no annotation tokens beyond the grammar
+ * The serializer enforces canonicity rules BR-GAN-CANON-001–006 from the GAN specification:
+ * - BR-GAN-CANON-001: outcome token only when choice exists (omitted for forced outcomes)
+ * - BR-GAN-CANON-002: turncoat levels only when elected (omitted when declined)
+ * - BR-GAN-CANON-003: levels ascending, no duplicates (inputs must already satisfy this)
+ * - BR-GAN-CANON-004: `!` only as placement suffix
+ * - BR-GAN-CANON-005: no whitespace within a single action
+ * - BR-GAN-CANON-006: no annotation tokens beyond the grammar
  *
  * @module
  */
@@ -82,15 +82,15 @@ export function serializeOutcome(outcome: 'stack' | 'capture' | null): string {
  *
  * Format: `<piece><square>[!]`
  *
- * A1: Outcome token is not applicable to placements.
- * A4: `!` suffix only when `action.done === true`.
- * A5: No whitespace (guaranteed by construction).
+ * BR-GAN-CANON-001: Outcome token is not applicable to placements.
+ * BR-GAN-CANON-004: `!` suffix only when `action.done === true`.
+ * BR-GAN-CANON-005: No whitespace (guaranteed by construction).
  *
  * @param action - The placement action.
  * @returns The canonical GAN string.
  */
 export function serializePlacement(action: Action & { kind: 'placement' }): string {
-  // A4: Done suffix
+  // BR-GAN-CANON-004: Done suffix
   const doneToken = action.done ? '!' : '';
   return `${action.piece}${serializeSquare(action.dest)}${doneToken}`;
 }
@@ -100,9 +100,9 @@ export function serializePlacement(action: Action & { kind: 'placement' }): stri
  *
  * Format: `<origin>><dest>[outcome][turncoat]`
  *
- * A1: Outcome token only included when the action has a non-null outcome.
- * A2/A3: Turncoat token only included when swaps are elected.
- * A5: No whitespace (guaranteed by construction).
+ * BR-GAN-CANON-001: Outcome token only included when the action has a non-null outcome.
+ * BR-GAN-CANON-002/003: Turncoat token only included when swaps are elected.
+ * BR-GAN-CANON-005: No whitespace (guaranteed by construction).
  *
  * @param action - The move action.
  * @returns The canonical GAN string.
@@ -120,8 +120,8 @@ export function serializeMove(action: Action & { kind: 'move' }): string {
  *
  * Format: `<piece>*<square>[turncoat]`
  *
- * A2/A3: Turncoat token only included when swaps are elected.
- * A5: No whitespace (guaranteed by construction).
+ * BR-GAN-CANON-002/003: Turncoat token only included when swaps are elected.
+ * BR-GAN-CANON-005: No whitespace (guaranteed by construction).
  *
  * @param action - The arata action.
  * @returns The canonical GAN string.

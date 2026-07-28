@@ -233,7 +233,7 @@ describe('serializeGSFEN — edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('serializeGSFEN — canonical output guarantees', () => {
-  it('never produces adjacent empty-run digits (C3 guarantee)', () => {
+  it('never produces adjacent empty-run digits (BR-GSFEN-CANON-003 guarantee)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     // Add some pieces to create a non-trivial row
     state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
@@ -259,7 +259,7 @@ describe('serializeGSFEN — canonical output guarantees', () => {
     }
   });
 
-  it('counter has no leading zeros (C6 guarantee)', () => {
+  it('counter has no leading zeros (BR-GSFEN-CANON-006 guarantee)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     // Change counter to a value that could have leading zeros
     state.turn.counter = 42;

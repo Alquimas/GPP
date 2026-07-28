@@ -1,6 +1,6 @@
 /**
  * GSFEN parser — parses Gungi Stacking Forsyth-Edwards Notation strings
- * into GameState objects, validating canonical form (C1–C7).
+ * into GameState objects, validating canonical form (BR-GSFEN-CANON-001–007).
  *
  * @module
  */
@@ -74,18 +74,18 @@ function isCountDigit(ch: string): boolean {
  * Diagram).  Our internal Position uses position[row][col-1] where col 1
  * = rightmost, so we reverse the mapping.
  *
- * @throws {GameError} with rule 'C1' if row count != 9, 'C2' if row doesn't sum to 9, 'C3' if empty runs not merged
+ * @throws {GameError} with rule 'BR-GSFEN-CANON-001' if row count != 9, 'BR-GSFEN-CANON-002' if row doesn't sum to 9, 'BR-GSFEN-CANON-003' if empty runs not merged
  */
 function parsePosition(posStr: string): FieldResult<Position> {
   const rows = posStr.split('/');
 
-  // C1: exactly 9 rows
+  // BR-GSFEN-CANON-001: exactly 9 rows
   if (rows.length !== 9) {
     return {
       ok: false,
       error: new GameError(
         `Position field must have exactly 9 rows (slashes), got ${rows.length}`,
-        'C1',
+        'BR-GSFEN-CANON-001',
       ),
     };
   }
@@ -97,7 +97,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
     if (rowStr === '') {
       return {
         ok: false,
-        error: new GameError(`Row ${r + 1} is empty`, 'C2'),
+        error: new GameError(`Row ${r + 1} is empty`, 'BR-GSFEN-CANON-002'),
       };
     }
 
@@ -111,19 +111,19 @@ function parsePosition(posStr: string): FieldResult<Position> {
       if (item === '') {
         return {
           ok: false,
-          error: new GameError(`Empty item in row ${r + 1}`, 'C2'),
+          error: new GameError(`Empty item in row ${r + 1}`, 'BR-GSFEN-CANON-002'),
         };
       }
 
       // --- Empty run: a single digit 1-9 ---
       if (/^[1-9]$/.test(item)) {
-        // C3: No adjacent empty runs
+        // BR-GSFEN-CANON-003: No adjacent empty runs
         if (prevWasDigit) {
           return {
             ok: false,
         error: new GameError(
-          `Row ${r + 1}: adjacent empty-run items must be merged (C3) — write 5, not 4,1`,
-          'C3',
+          `Row ${r + 1}: adjacent empty-run items must be merged (BR-GSFEN-CANON-003) — write 5, not 4,1`,
+          'BR-GSFEN-CANON-003',
         ),
           };
         }
@@ -132,7 +132,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
           if (pos < 0) {
             return {
               ok: false,
-              error: new GameError(`Row ${r + 1} exceeds 9 squares`, 'C2'),
+              error: new GameError(`Row ${r + 1} exceeds 9 squares`, 'BR-GSFEN-CANON-002'),
             };
           }
           row[pos] = null;
@@ -148,7 +148,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
       if (item.length < 1 || item.length > 3) {
         return {
           ok: false,
-          error: new GameError(`Stack must have 1-3 pieces in row ${r + 1}, got "${item}"`, 'C2'),
+          error: new GameError(`Stack must have 1-3 pieces in row ${r + 1}, got "${item}"`, 'BR-GSFEN-CANON-002'),
         };
       }
 
@@ -158,37 +158,37 @@ function parsePosition(posStr: string): FieldResult<Position> {
         if (!isPieceType(upper)) {
           return {
             ok: false,
-            error: new GameError(`Unknown piece letter "${ch}" in row ${r + 1}`, 'C2'),
+            error: new GameError(`Unknown piece letter "${ch}" in row ${r + 1}`, 'BR-GSFEN-CANON-002'),
           };
         }
         const owner: Player = ch === upper ? 'white' : 'black';
         pieces.push({ type: upper, owner });
       }
-      // SAFETY: the cast is safe because `item.length` was validated to be
-      // in 1..3 at the top of this branch (see the `item.length < 1 || item.length > 3`
-      // guard above).  Each character produces exactly one Piece, so
-      // `pieces.length === item.length ∈ {1,2,3}`, satisfying the Stack
-      // tuple type.  `validateState` (V2) re-checks this invariant after
-      // parsing as a defence-in-depth measure.
+  // SAFETY: the cast is safe because `item.length` was validated to be
+  // in 1..3 at the top of this branch (see the `item.length < 1 || item.length > 3`
+  // guard above).  Each character produces exactly one Piece, so
+  // `pieces.length === item.length ∈ {1,2,3}`, satisfying the Stack
+  // tuple type.  `validateState` (BR-GSFEN-VALID-002) re-checks this invariant after
+  // parsing as a defence-in-depth measure.
       const stack = pieces as Stack;
 
       if (pos < 0) {
         return {
           ok: false,
-          error: new GameError(`Row ${r + 1} exceeds 9 squares`, 'C2'),
+          error: new GameError(`Row ${r + 1} exceeds 9 squares`, 'BR-GSFEN-CANON-002'),
         };
       }
       row[pos] = stack;
       pos--;
     }
 
-    // C2: verify exactly 9 squares
+    // BR-GSFEN-CANON-002: verify exactly 9 squares
     if (pos !== -1) {
       return {
         ok: false,
         error: new GameError(
           `Row ${r + 1} has fewer than 9 squares (row total does not sum to 9)`,
-          'C2',
+          'BR-GSFEN-CANON-002',
         ),
       };
     }
@@ -211,7 +211,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
  * | dwB   | deploy     | white  | black  |
  * | dbW   | deploy     | black  | white  |
  *
- * @throws {GameError} with rule 'C1' if token is invalid
+ * @throws {GameError} with rule 'BR-GSFEN-CANON-001' if token is invalid
  */
 function parseTurn(turnStr: string): FieldResult<TurnState> {
   let phase: Phase;
@@ -252,7 +252,7 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
     default:
       return {
         ok: false,
-        error: new GameError(`Invalid turn token "${turnStr}"`, 'C1'),
+        error: new GameError(`Invalid turn token "${turnStr}"`, 'BR-GSFEN-CANON-001'),
       };
   }
 
@@ -269,10 +269,10 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
  * Format: `-` when both empty, otherwise White (uppercase, alphabetical,
  * with optional count 2-4) followed by Black (lowercase, alphabetical).
  *
- * @throws {GameError} with rule 'C5' if hands are malformed
+ * @throws {GameError} with rule 'BR-GSFEN-CANON-005' if hands are malformed
  */
 function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }> {
-  // C5 / V8: `-` when both empty
+  // BR-GSFEN-CANON-005 / BR-GSFEN-VALID-008: `-` when both empty
   if (handsStr === '-') {
     return { ok: true, value: { white: EMPTY_HAND, black: EMPTY_HAND } };
   }
@@ -281,7 +281,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
   if (handsStr === '') {
     return {
       ok: false,
-      error: new GameError('Hands field is empty; use "-" for both empty hands', 'C5'),
+      error: new GameError('Hands field is empty; use "-" for both empty hands', 'BR-GSFEN-CANON-005'),
     };
   }
 
@@ -301,15 +301,15 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
         return {
           ok: false,
         error: new GameError(
-          `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}") (C5) — alphabetical order is A C E F G J L M N P S T U Y`,
-          'C5',
+          `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}") (BR-GSFEN-CANON-005) — alphabetical order is A C E F G J L M N P S T U Y`,
+          'BR-GSFEN-CANON-005',
         ),
         };
       }
       if (white[ch] > 0) {
         return {
           ok: false,
-          error: new GameError(`Hands: duplicate white piece letter "${ch}" (C5) — each letter appears at most once`, 'C5'),
+          error: new GameError(`Hands: duplicate white piece letter "${ch}" (BR-GSFEN-CANON-005) — each letter appears at most once`, 'BR-GSFEN-CANON-005'),
         };
       }
       white[ch] = 1;
@@ -320,7 +320,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
       if (i + 1 >= len) {
         return {
           ok: false,
-          error: new GameError('Hands: expected piece letter after count at end of string', 'C5'),
+          error: new GameError('Hands: expected piece letter after count at end of string', 'BR-GSFEN-CANON-005'),
         };
       }
       const next = handsStr[i + 1];
@@ -331,14 +331,14 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
             ok: false,
             error: new GameError(
               `Hands: white pieces not in alphabetical order ("${next}" after "${lastWhiteLetter}")`,
-              'C5',
+              'BR-GSFEN-CANON-005',
             ),
           };
         }
         if (white[next] > 0) {
           return {
             ok: false,
-            error: new GameError(`Hands: duplicate white piece letter "${next}"`, 'C5'),
+            error: new GameError(`Hands: duplicate white piece letter "${next}"`, 'BR-GSFEN-CANON-005'),
           };
         }
         white[next] = count;
@@ -364,8 +364,8 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
         return {
           ok: false,
         error: new GameError(
-          `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}") (C5) — alphabetical order is a c e f g j l m n p s t u y`,
-          'C5',
+          `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}") (BR-GSFEN-CANON-005) — alphabetical order is a c e f g j l m n p s t u y`,
+          'BR-GSFEN-CANON-005',
         ),
         };
       }
@@ -373,7 +373,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
       if (black[upper] > 0) {
         return {
           ok: false,
-          error: new GameError(`Hands: black duplicate piece letter "${ch}" (C5) — each letter appears at most once`, 'C5'),
+          error: new GameError(`Hands: black duplicate piece letter "${ch}" (BR-GSFEN-CANON-005) — each letter appears at most once`, 'BR-GSFEN-CANON-005'),
         };
       }
       black[upper] = 1;
@@ -383,7 +383,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
       if (i + 1 >= len) {
         return {
           ok: false,
-          error: new GameError('Hands: expected piece letter after count at end of string', 'C5'),
+          error: new GameError('Hands: expected piece letter after count at end of string', 'BR-GSFEN-CANON-005'),
         };
       }
       const next = handsStr[i + 1];
@@ -394,7 +394,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
             ok: false,
             error: new GameError(
               `Hands: black pieces not in alphabetical order ("${next}" after "${lastBlackLetter}")`,
-              'C5',
+              'BR-GSFEN-CANON-005',
             ),
           };
         }
@@ -402,7 +402,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
         if (black[upper] > 0) {
           return {
             ok: false,
-            error: new GameError(`Hands: duplicate black piece letter "${next}"`, 'C5'),
+            error: new GameError(`Hands: duplicate black piece letter "${next}"`, 'BR-GSFEN-CANON-005'),
           };
         }
         black[upper] = count;
@@ -413,14 +413,14 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
           ok: false,
           error: new GameError(
             `Hands: expected lowercase piece letter after count, got "${next}"`,
-            'C5',
+            'BR-GSFEN-CANON-005',
           ),
         };
       }
     } else {
       return {
         ok: false,
-        error: new GameError(`Hands: unexpected character "${ch}" at position ${i}`, 'C5'),
+        error: new GameError(`Hands: unexpected character "${ch}" at position ${i}`, 'BR-GSFEN-CANON-005'),
       };
     }
   }
@@ -430,17 +430,17 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
 
 /**
  * Parse the counter field.
- * Must be a positive integer with no leading zeros (C6).
+ * Must be a positive integer with no leading zeros (BR-GSFEN-CANON-006).
  *
- * @throws {GameError} with rule 'C6' if counter has leading zeros or is < 1
+ * @throws {GameError} with rule 'BR-GSFEN-CANON-006' if counter has leading zeros or is < 1
  */
 function parseCounter(counterStr: string): FieldResult<number> {
   if (!/^[1-9]\d*$/.test(counterStr)) {
     return {
       ok: false,
         error: new GameError(
-          `Counter must be a positive integer (no leading zeros), got "${counterStr}" (C6) — e.g. 1 not 01`,
-          'C6',
+          `Counter must be a positive integer (no leading zeros), got "${counterStr}" (BR-GSFEN-CANON-006) — e.g. 1 not 01`,
+          'BR-GSFEN-CANON-006',
         ),
     };
   }
@@ -449,7 +449,7 @@ function parseCounter(counterStr: string): FieldResult<number> {
   if (n < 1) {
     return {
       ok: false,
-      error: new GameError(`Counter must be >= 1`, 'C6'),
+      error: new GameError(`Counter must be >= 1`, 'BR-GSFEN-CANON-006'),
     };
   }
 
@@ -465,27 +465,27 @@ function parseCounter(counterStr: string): FieldResult<number> {
  *
  * Accepts the `startpos` keyword (expanded to START_GSFEN) and full 4-field
  * GSFEN strings.  Returns a ParseResult — on success the GameState is
- * well-formed (C1–C7) but not necessarily semantically valid (see
+ * well-formed (BR-GSFEN-CANON-001–007) but not necessarily semantically valid (see
  * `validateState`).
  *
  * @param input - Raw GSFEN string to parse.
- * @throws {GameError} with rule 'C1' if fields are wrong, 'C7' if startpos keyword is malformed
+ * @throws {GameError} with rule 'BR-GSFEN-CANON-001' if fields are wrong, 'BR-GSFEN-CANON-007' if startpos keyword is malformed
  */
 export function parseGSFEN(input: string): ParseResult {
-  // C7: startpos keyword (lowercase, exact, no whitespace allowed per C1)
+  // BR-GSFEN-CANON-007: startpos keyword (lowercase, exact, no whitespace allowed per BR-GSFEN-CANON-001)
   if (input === 'startpos') {
     return parseGSFEN(START_GSFEN);
   }
 
-  // C1: No leading or trailing whitespace
+  // BR-GSFEN-CANON-001: No leading or trailing whitespace
   if (input !== input.trim()) {
     return {
       ok: false,
-        error: new GameError('GSFEN must not have leading or trailing whitespace (C1) — trim the string', 'C1'),
+        error: new GameError('GSFEN must not have leading or trailing whitespace (BR-GSFEN-CANON-001) — trim the string', 'BR-GSFEN-CANON-001'),
     };
   }
 
-  // C1: Fields separated by exactly one space (U+0020).
+  // BR-GSFEN-CANON-001: Fields separated by exactly one space (U+0020).
   // Using split on single space — multi-space segments produce empty strings,
   // which makes the resulting array longer than 4.
   const parts = input.split(' ');
@@ -493,18 +493,18 @@ export function parseGSFEN(input: string): ParseResult {
     return {
       ok: false,
         error: new GameError(
-          `GSFEN must have exactly 4 single-space-separated fields (C1), got ${parts.length} segments — format: <position> <turn> <hands> <counter>`,
-          'C1',
+          `GSFEN must have exactly 4 single-space-separated fields (BR-GSFEN-CANON-001), got ${parts.length} segments — format: <position> <turn> <hands> <counter>`,
+          'BR-GSFEN-CANON-001',
         ),
     };
   }
 
-  // C1: No non-space whitespace characters (tabs, etc.) embedded in any field
+  // BR-GSFEN-CANON-001: No non-space whitespace characters (tabs, etc.) embedded in any field
   for (const p of parts) {
     if (/\s/.test(p)) {
       return {
         ok: false,
-        error: new GameError('GSFEN fields must not contain tabs or other whitespace (C1) — use single spaces only', 'C1'),
+        error: new GameError('GSFEN fields must not contain tabs or other whitespace (BR-GSFEN-CANON-001) — use single spaces only', 'BR-GSFEN-CANON-001'),
       };
     }
   }

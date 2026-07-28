@@ -169,21 +169,21 @@ counter     = %x31-39 *DIGIT            ; >= 1, no leading zeros
 A conforming string MUST satisfy all of the following. Parsers MUST
 reject strings that violate any rule.
 
-- **C1 — Separators.** Fields are separated by exactly one space
-  (U+0020). No other whitespace appears anywhere in the string.
-- **C2 — Nine squares per row.** In every row, the sum of its digits
-  plus the number of its stack items equals 9.
-- **C3 — Maximal compression.** Two empty-run items are never adjacent
-  within a row (they MUST be merged into a single digit).
-- **C4 — Stack spelling.** Stack letters are in bottom→top (Level
-  ascending) order. A lone Piece is a single bare letter — no padding
-  or markers.
-- **C5 — Hands spelling.** White's section precedes Black's. Letters
-  are alphabetical within each section, each appearing at most once.
-  Counts are omitted when 1 and are never written with leading zeros.
-  `-` appears if and only if both Hands are empty.
-- **C6 — Counter.** No leading zeros.
-- **C7 — Keyword.** `startpos` is lowercase and exact.
+- **BR-GSFEN-CANON-001 — Separators.** Fields are separated by exactly
+  one space (U+0020). No other whitespace appears anywhere in the string.
+- **BR-GSFEN-CANON-002 — Nine squares per row.** In every row, the sum
+  of its digits plus the number of its stack items equals 9.
+- **BR-GSFEN-CANON-003 — Maximal compression.** Two empty-run items are
+  never adjacent within a row (they MUST be merged into a single digit).
+- **BR-GSFEN-CANON-004 — Stack spelling.** Stack letters are in
+  bottom→top (Level ascending) order. A lone Piece is a single bare
+  letter — no padding or markers.
+- **BR-GSFEN-CANON-005 — Hands spelling.** White's section precedes
+  Black's. Letters are alphabetical within each section, each appearing
+  at most once. Counts are omitted when 1 and are never written with
+  leading zeros. `-` appears if and only if both Hands are empty.
+- **BR-GSFEN-CANON-006 — Counter.** No leading zeros.
+- **BR-GSFEN-CANON-007 — Keyword.** `startpos` is lowercase and exact.
 
 ## Semantic Validity
 
@@ -193,11 +193,12 @@ legality of the *arrangement*, not game progression (a string may
 denote a terminal Game State — e.g. [Checkmate](BUSINESS_RULES.md#checkmate)
 — and still be valid).
 
-- **V1 — Grammar and canonicalization.** The string satisfies the ABNF
-  grammar and C1–C7.
-- **V2 — Stack size.** Every stack contains 1–3 pieces (BR-STACK-001).
-- **V3 — Marshal integrity.** A Marshal on the board is always the last
-  (top) letter of its stack group (BR-STACK-004). In
+- **BR-GSFEN-VALID-001 — Grammar and canonicalization.** The string
+  satisfies the ABNF grammar and BR-GSFEN-CANON-001–007.
+- **BR-GSFEN-VALID-002 — Stack size.** Every stack contains 1–3 pieces
+  (BR-STACK-001).
+- **BR-GSFEN-VALID-003 — Marshal integrity.** A Marshal on the board is
+  always the last (top) letter of its stack group (BR-STACK-004). In
 [Battle Phase](BUSINESS_RULES.md#battle-phase) states
   (`w`/`b`), each player's Marshal appears exactly once on the board and
   never in a Hand (BR-DEPLOY-003, BR-DEPLOY-011). In deploy states, each
@@ -205,22 +206,23 @@ denote a terminal Game State — e.g. [Checkmate](BUSINESS_RULES.md#checkmate)
   letter, or appears in that player's Hand section — in which case that
   player has no pieces on the board at all (Marshal must be deployed
   first, BR-DEPLOY-003).
-- **V4 — Inventory conservation.** For each player and each Piece Type,
-  (occurrences on the board) + (occurrences in the Hand) ≤ that type's
-  initial count (captured pieces make the sum strictly smaller; pieces
-  never enter or leave the game otherwise, BR-CAPTURE-004).
-- **V5 — Done flags.** At most one player has a Done flag, and the
-  placing player never carries it. A Done player has at least their
-  Marshal on the board (Done is declared after a placement,
+- **BR-GSFEN-VALID-004 — Inventory conservation.** For each player and
+  each Piece Type, (occurrences on the board) + (occurrences in the
+  Hand) ≤ that type's initial count (captured pieces make the sum
+  strictly smaller; pieces never enter or leave the game otherwise,
+  BR-CAPTURE-004).
+- **BR-GSFEN-VALID-005 — Done flags.** At most one player has a Done
+  flag, and the placing player never carries it. A Done player has at
+  least their Marshal on the board (Done is declared after a placement,
   BR-DEPLOY-007).
-- **V6 — Deploy-phase constraints.** In deploy states (`dw`/`db`/
-  `dwB`/`dbW`): White's pieces appear only on Rows 7–9 and Black's only
-  on Rows 1–3 (BR-DEPLOY-004), and every stack is single-owner
-  (BR-DEPLOY-005).
-- **V7 — Counter bounds.** The counter is ≥ 1, and ≤ 50 in deploy
-  states (at most 25 placements per player, BR-DEPLOY-002).
-- **V8 — Empty hands marker.** `-` appears if and only if both Hands
-  are empty.
+- **BR-GSFEN-VALID-006 — Deploy-phase constraints.** In deploy states
+  (`dw`/`db`/`dwB`/`dbW`): White's pieces appear only on Rows 7–9 and
+  Black's only on Rows 1–3 (BR-DEPLOY-004), and every stack is
+  single-owner (BR-DEPLOY-005).
+- **BR-GSFEN-VALID-007 — Counter bounds.** The counter is ≥ 1, and ≤ 50
+  in deploy states (at most 25 placements per player, BR-DEPLOY-002).
+- **BR-GSFEN-VALID-008 — Empty hands marker.** `-` appears if and only
+  if both Hands are empty.
 
 ### Repetition and string equality
 
@@ -275,10 +277,10 @@ White Captain on top.
 ### Invalid spellings (all rejected by a conforming parser)
 
 ```
-9/9/9/9/9/9/9/9/4,1,M,3 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2   ; C3: empty runs not merged (4,1 -> 5)
-9/9/9/9/9/9/9/9/M,8 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 02     ; C6: leading zero
-9/9/9/9/9/9/9/9/4,m,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2    ; case is ownership: reads as Black's Marshal on Row 9 -> V6 (and White's Marshal is then missing -> V3)
-9/9/9/9/9/9/9/9/4,MP,4 dw 2AC3E2FG2JL2N3P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2   ; V3: Marshal not at top of its stack
+9/9/9/9/9/9/9/9/4,1,M,3 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2   ; BR-GSFEN-CANON-003: empty runs not merged (4,1 -> 5)
+9/9/9/9/9/9/9/9/M,8 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 02     ; BR-GSFEN-CANON-006: leading zero
+9/9/9/9/9/9/9/9/4,m,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2    ; case is ownership: reads as Black's Marshal on Row 9 -> BR-GSFEN-VALID-006 (and White's Marshal is then missing -> BR-GSFEN-VALID-003)
+9/9/9/9/9/9/9/9/4,MP,4 dw 2AC3E2FG2JL2N3P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2   ; BR-GSFEN-VALID-003: Marshal not at top of its stack
 ```
 
 ## Design notes

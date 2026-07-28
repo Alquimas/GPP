@@ -224,23 +224,26 @@ Battle) further disambiguates which grammar is even legal to attempt.
 
 A conforming string MUST satisfy all of the following:
 
-- **A1 --- No optional token without optionality.** `outcome` appears only
-  when [BR-STACK-002](BUSINESS_RULES.md#br-stack-002---stacking-on-enemy-squares)'s
+- **BR-GAN-CANON-001 --- No optional token without optionality.**
+  `outcome` appears only when
+  [BR-STACK-002](BUSINESS_RULES.md#br-stack-002---stacking-on-enemy-squares)'s
   conditions make both Stack and Capture legal; otherwise it is omitted
   even though the Action still results in a capture or a stack.
-- **A2 --- Turncoat lists only real, elected swaps.** No level appears
-  unless it is eligible (opposing Piece present, Hand has a match) *and*
-  the Player is choosing to swap it. Absence of the token means "decline
-  all eligible swaps," which is always legal and always has exactly this
-  one spelling.
-- **A3 --- Levels ascending, no duplicates.** `12`, never `21` or `112`.
-- **A4 --- Done only as a Placement suffix.** `!` never appears standalone
-  and never appears on a Move or Arata.
-- **A5 --- No whitespace within a single Action.** An `actionlist` separates
-  Actions with exactly one space (U+0020); no other whitespace appears
-  anywhere.
-- **A6 --- No annotation tokens.** No characters beyond the grammar above ---
-  no check/mate marks, move numbers, or comments live inside a GAN token.
+- **BR-GAN-CANON-002 --- Turncoat lists only real, elected swaps.** No
+  level appears unless it is eligible (opposing Piece present, Hand has a
+  match) *and* the Player is choosing to swap it. Absence of the token
+  means "decline all eligible swaps," which is always legal and always has
+  exactly this one spelling.
+- **BR-GAN-CANON-003 --- Levels ascending, no duplicates.** `12`, never
+  `21` or `112`.
+- **BR-GAN-CANON-004 --- Done only as a Placement suffix.** `!` never
+  appears standalone and never appears on a Move or Arata.
+- **BR-GAN-CANON-005 --- No whitespace within a single Action.** An
+  `actionlist` separates Actions with exactly one space (U+0020); no other
+  whitespace appears anywhere.
+- **BR-GAN-CANON-006 --- No annotation tokens.** No characters beyond the
+  grammar above --- no check/mate marks, move numbers, or comments live
+  inside a GAN token.
 
 Because canonicity here describes *decisions*, not *states*, "one spelling
 per action" should be read as: for a fixed preceding Game State, every
@@ -255,17 +258,19 @@ given Game State only if all applicable checks below hold. Unlike GSFEN's
 checklist, these are evaluated *relative to* a preceding Game State, not
 against the string alone.
 
-- **S1 --- Phase match.** `placement` is only valid against a Deploy Phase
-  Game State; `move` and `arata` only against a Battle Phase one
+- **BR-GAN-VALID-001 --- Phase match.** `placement` is only valid against
+  a Deploy Phase Game State; `move` and `arata` only against a Battle
+  Phase one
   ([BR-PLAY](BUSINESS_RULES.md#br-play---play-rules)).
-- **S2 --- Placement legality.** `piece` is in the placing Player's Hand;
-  if it is that Player's Marshal, this must be their first Placement
+- **BR-GAN-VALID-002 --- Placement legality.** `piece` is in the placing
+  Player's Hand; if it is that Player's Marshal, this must be their first
+  Placement
   ([BR-DEPLOY-003](BUSINESS_RULES.md#br-deploy-003---marshal-first));
   `square` is within that Player's deploy zone
   ([BR-DEPLOY-004](BUSINESS_RULES.md#br-deploy-004---deploy-zone)) and is
   either empty or a friendly non-Marshal-topped Stack under size 3.
-- **S3 --- Move legality.** `origin` holds a Stack whose top Piece belongs
-  to the Active Player
+- **BR-GAN-VALID-003 --- Move legality.** `origin` holds a Stack whose top
+  Piece belongs to the Active Player
   ([BR-MOVE-002](BUSINESS_RULES.md#br-move-002---origin-must-contain-own-piece));
   `dest` is reachable by that Piece's
   [Movement](BUSINESS_RULES.md#movement) rules, scaled for
@@ -273,23 +278,24 @@ against the string alone.
   ([BR-MOVEMENT](BUSINESS_RULES.md#br-movement---piece-movement-rules));
   the landing satisfies
   [BR-MOVE-005](BUSINESS_RULES.md#br-move-005---stack-size-landing-restriction);
-  `outcome` is present exactly when A1 requires it; the resulting position
-  does not leave the mover's own Marshal in Check
+  `outcome` is present exactly when BR-GAN-CANON-001 requires it; the
+  resulting position does not leave the mover's own Marshal in Check
   ([BR-ACTION-002](BUSINESS_RULES.md#br-action-002---self-check)).
-- **S4 --- Arata legality.** `piece` is in the Active Player's Hand and is
-  never `M`; `dest` lies within that Player's Arata placement zone
+- **BR-GAN-VALID-004 --- Arata legality.** `piece` is in the Active
+  Player's Hand and is never `M`; `dest` lies within that Player's Arata
+  placement zone
   ([BR-ARATA-003](BUSINESS_RULES.md#br-arata-003---arata-placement-zone))
   and is empty or friendly-topped under size 3
   ([BR-ARATA-004](BUSINESS_RULES.md#br-arata-004---arata-on-empty-squares) /
   [BR-ARATA-005](BUSINESS_RULES.md#br-arata-005---arata-stacking-on-friendly-pieces));
-  Self Check applies as in S3.
-- **S5 --- Turncoat legality.** Present only if the acting/placed Piece is
-  a Captain and the Action's outcome is a Stacking; each listed level held
-  an opposing Piece immediately beforehand; the Hand held a matching
-  replacement Piece Type at the moment of that swap
+  Self Check applies as in BR-GAN-VALID-003.
+- **BR-GAN-VALID-005 --- Turncoat legality.** Present only if the
+  acting/placed Piece is a Captain and the Action's outcome is a Stacking;
+  each listed level held an opposing Piece immediately beforehand; the Hand
+  held a matching replacement Piece Type at the moment of that swap
   ([BR-STACK-006](BUSINESS_RULES.md#br-stack-006---captain-turncoat)).
-- **S6 --- Done legality.** `!` is present only immediately following a
-  Placement, per
+- **BR-GAN-VALID-006 --- Done legality.** `!` is present only immediately
+  following a Placement, per
   [BR-DEPLOY-007](BUSINESS_RULES.md#br-deploy-007---done-declaration).
 
 If any check fails, the Action is Illegal and the Game State is unchanged

@@ -1,13 +1,13 @@
 /**
  * GSFEN serializer — converts a GameState into a canonical GSFEN string.
  *
- * The output is always canonical (C1–C7 compliant):
- * - C2: exactly 9 squares per row
- * - C3: empty runs maximally merged (no adjacent digit items)
- * - C4: stack letters bottom→top, case encodes ownership
- * - C5: hands alphabetical within each section, counts omitted when 1
- * - C6: no leading zeros on counter
- * - C7: `startpos` keyword is never emitted (always expanded)
+ * The output is always canonical (BR-GSFEN-CANON-001–007 compliant):
+ * - BR-GSFEN-CANON-002: exactly 9 squares per row
+ * - BR-GSFEN-CANON-003: empty runs maximally merged (no adjacent digit items)
+ * - BR-GSFEN-CANON-004: stack letters bottom→top, case encodes ownership
+ * - BR-GSFEN-CANON-005: hands alphabetical within each section, counts omitted when 1
+ * - BR-GSFEN-CANON-006: no leading zeros on counter
+ * - BR-GSFEN-CANON-007: `startpos` keyword is never emitted (always expanded)
  *
  * @module
  */
@@ -101,7 +101,7 @@ function serializeTurn(turn: TurnState): string {
 /**
  * Serialize the Hands field.
  *
- * C5: White's section precedes Black's. Letters alphabetical within each
+ * BR-GSFEN-CANON-005: White's section precedes Black's. Letters alphabetical within each
  * section, each at most once. Counts omitted when 1 (count ≥ 2 prefixed).
  * `-` when both Hands are empty.
  */

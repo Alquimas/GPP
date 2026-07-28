@@ -41,14 +41,14 @@ function isValidPiece(ch: string): ch is PieceType {
  * Both col and row must be single digits 1-9.
  *
  * @param s - The square string (e.g. "5-9").
- * @throws {GameError} with rule 'A1' if the square is invalid.
+ * @throws {GameError} with rule 'BR-GAN-CANON-001' if the square is invalid.
  */
 export function parseSquare(s: string): Square {
   // Must match exactly `{digit 1-9}-{digit 1-9}`
   if (!/^[1-9]-[1-9]$/.test(s)) {
     throw new GameError(
       `Invalid square notation "${s}"; expected format "{col}-{row}" with digits 1-9`,
-      'A1',
+      'BR-GAN-CANON-001',
     );
   }
 
@@ -62,7 +62,7 @@ export function parseSquare(s: string): Square {
   const sq = trySquare(col, row);
   if (!sq) {
     // Defensive: regex should prevent this path from ever executing.
-    throw new GameError(`Invalid square "${s}" (internal — regex should have rejected)`, 'A1');
+    throw new GameError(`Invalid square "${s}" (internal — regex should have rejected)`, 'BR-GAN-CANON-001');
   }
   return sq;
 }
@@ -80,21 +80,21 @@ export function parseSquare(s: string): Square {
  * - `+12` → [1, 2]
  *
  * @param s - The turncoat string including the leading `+`.
- * @throws {GameError} with rule 'A3' if levels are not valid.
+ * @throws {GameError} with rule 'BR-GAN-CANON-003' if levels are not valid.
  */
 export function parseTurncoat(s: string): TurncoatLevels {
   if (!s.startsWith('+')) {
-    throw new GameError(`Turncoat must start with "+", got "${s}"`, 'A3');
+    throw new GameError(`Turncoat must start with "+", got "${s}"`, 'BR-GAN-CANON-003');
   }
 
   const levels = s.slice(1); // Strip the '+'
 
-  // A3: Levels must be one of "1", "2", "12"
+  // BR-GAN-CANON-003: Levels must be one of "1", "2", "12"
   if (levels === '1') return [1];
   if (levels === '2') return [2];
   if (levels === '12') return [1, 2];
 
-  throw new GameError(`Invalid turncoat levels "${s}"; expected "+1", "+2", or "+12"`, 'A3');
+  throw new GameError(`Invalid turncoat levels "${s}"; expected "+1", "+2", or "+12"`, 'BR-GAN-CANON-003');
 }
 
 // ---------------------------------------------------------------------------
@@ -107,37 +107,37 @@ export function parseTurncoat(s: string): TurncoatLevels {
  * Examples: `M5-9`, `P3-8!`
  *
  * @param gan - The full GAN string.
- * @throws {GameError} with rule 'A1' on invalid format.
+ * @throws {GameError} with rule 'BR-GAN-CANON-001' on invalid format.
  */
 export function parsePlacement(gan: string): Action {
   // Must have at least: piece (1) + square (3 chars like "5-9") = 4 chars
   if (gan.length < 4) {
-    throw new GameError(`Placement string too short: "${gan}"`, 'A1');
+    throw new GameError(`Placement string too short: "${gan}"`, 'BR-GAN-CANON-001');
   }
 
   const pieceChar = gan[0];
 
-  // Validate piece letter (A1)
+  // Validate piece letter (BR-GAN-CANON-001)
   if (!isValidPiece(pieceChar)) {
     throw new GameError(
       `Invalid piece letter "${gan[0]}" in placement; must be one of A, C, E, F, G, J, L, M, N, P, S, T, U, Y`,
-      'A1',
+      'BR-GAN-CANON-001',
     );
   }
 
   const piece = pieceChar;
 
-  // A4: Check for extra '!' — only one allowed, at end only
+  // BR-GAN-CANON-004: Check for extra '!' — only one allowed, at end only
   const bangCount = (gan.match(/!/g) ?? []).length;
   if (bangCount > 1) {
-    throw new GameError(`Placement "${gan}" has multiple "!" markers (A4)`, 'A4');
+    throw new GameError(`Placement "${gan}" has multiple "!" markers (BR-GAN-CANON-004)`, 'BR-GAN-CANON-004');
   }
 
   const hasDone = bangCount === 1;
 
-  // A5: No internal whitespace
+  // BR-GAN-CANON-005: No internal whitespace
   if (/\s/.test(gan)) {
-    throw new GameError(`Placement "${gan}" contains whitespace (A5)`, 'A5');
+    throw new GameError(`Placement "${gan}" contains whitespace (BR-GAN-CANON-005)`, 'BR-GAN-CANON-005');
   }
 
   // The square is the part between piece letter and optional '!'
@@ -149,14 +149,14 @@ export function parsePlacement(gan: string): Action {
     squareStr = gan.slice(1);
   }
 
-  // A4: '!' must be at the very end if present
+  // BR-GAN-CANON-004: '!' must be at the very end if present
   if (hasDone && gan[gan.length - 1] !== '!') {
-    throw new GameError(`Placement "${gan}" has "!" not at the end (A4)`, 'A4');
+    throw new GameError(`Placement "${gan}" has "!" not at the end (BR-GAN-CANON-004)`, 'BR-GAN-CANON-004');
   }
 
-  // A6: No extra characters
+  // BR-GAN-CANON-006: No extra characters
   if (hasDone && squareStr.length + 2 !== gan.length) {
-    throw new GameError(`Placement "${gan}" has trailing characters after "!" (A6)`, 'A6');
+    throw new GameError(`Placement "${gan}" has trailing characters after "!" (BR-GAN-CANON-006)`, 'BR-GAN-CANON-006');
   }
 
   const dest = parseSquare(squareStr);
@@ -179,33 +179,33 @@ export function parsePlacement(gan: string): Action {
  *   `5-6>5-5=+2`    — chosen Stack + turncoat level 2
  *
  * @param gan - The full GAN string.
- * @throws {GameError} with rule 'A1' on invalid format.
+ * @throws {GameError} with rule 'BR-GAN-CANON-001' on invalid format.
  */
 export function parseMove(gan: string): Action {
-  // A5: No internal whitespace
+  // BR-GAN-CANON-005: No internal whitespace
   if (/\s/.test(gan)) {
-    throw new GameError(`Move "${gan}" contains whitespace (A5)`, 'A5');
+    throw new GameError(`Move "${gan}" contains whitespace (BR-GAN-CANON-005)`, 'BR-GAN-CANON-005');
   }
 
-  // A6: No unexpected characters — only allow digits, '-', '>', '=', 'x', '+'
+  // BR-GAN-CANON-006: No unexpected characters — only allow digits, '-', '>', '=', 'x', '+'
   if (!/^[\d>=\-x+]+$/.test(gan)) {
-    throw new GameError(`Move "${gan}" contains invalid characters (A6)`, 'A6');
+    throw new GameError(`Move "${gan}" contains invalid characters (BR-GAN-CANON-006)`, 'BR-GAN-CANON-006');
   }
 
-  // A1: The separator between squares must be '>', not '-'
+  // BR-GAN-CANON-001: The separator between squares must be '>', not '-'
   // We find the '>' to split origin and destination
   const sepIndex = gan.indexOf('>');
   if (sepIndex === -1) {
     throw new GameError(
       `Move "${gan}" must use ">" separator between squares, not "-" or other`,
-      'A1',
+      'BR-GAN-CANON-001',
     );
   }
 
   // There must be exactly one '>'
   const sepCount = (gan.match(/>/g) ?? []).length;
   if (sepCount !== 1) {
-    throw new GameError(`Move "${gan}" has multiple ">" separators`, 'A1');
+    throw new GameError(`Move "${gan}" has multiple ">" separators`, 'BR-GAN-CANON-001');
   }
 
   const originStr = gan.slice(0, sepIndex);
@@ -220,7 +220,7 @@ export function parseMove(gan: string): Action {
 
   // Destination is the first 3 characters
   if (remainder.length < 3) {
-    throw new GameError(`Move "${gan}" missing destination square`, 'A1');
+    throw new GameError(`Move "${gan}" missing destination square`, 'BR-GAN-CANON-001');
   }
 
   const destStr = remainder.slice(0, 3);
@@ -245,11 +245,11 @@ export function parseMove(gan: string): Action {
     remainder = remainder.slice(remainder.startsWith('+12') ? 3 : 2);
   }
 
-  // A6: No trailing characters after parsing
+  // BR-GAN-CANON-006: No trailing characters after parsing
   if (remainder.length > 0) {
     throw new GameError(
-      `Move "${gan}" has unexpected trailing characters "${remainder}" (A6)`,
-      'A6',
+      `Move "${gan}" has unexpected trailing characters "${remainder}" (BR-GAN-CANON-006)`,
+      'BR-GAN-CANON-006',
     );
   }
 
@@ -270,17 +270,17 @@ export function parseMove(gan: string): Action {
  *   `T*5-6+1`    — drop Captain at 5-6 with turncoat level 1
  *
  * @param gan - The full GAN string.
- * @throws {GameError} with rule 'A1' on invalid format.
+ * @throws {GameError} with rule 'BR-GAN-CANON-001' on invalid format.
  */
 export function parseArata(gan: string): Action {
   // Must have at least: piece (1) + '*' (1) + square (3) = 5 chars
   if (gan.length < 5) {
-    throw new GameError(`Arata string too short: "${gan}"`, 'A1');
+    throw new GameError(`Arata string too short: "${gan}"`, 'BR-GAN-CANON-001');
   }
 
-  // A5: No internal whitespace
+  // BR-GAN-CANON-005: No internal whitespace
   if (/\s/.test(gan)) {
-    throw new GameError(`Arata "${gan}" contains whitespace (A5)`, 'A5');
+    throw new GameError(`Arata "${gan}" contains whitespace (BR-GAN-CANON-005)`, 'BR-GAN-CANON-005');
   }
 
   const pieceChar = gan[0];
@@ -289,28 +289,28 @@ export function parseArata(gan: string): Action {
   if (!isValidPiece(pieceChar)) {
     throw new GameError(
       `Invalid piece letter "${gan[0]}" in arata; must be one of A, C, E, F, G, J, L, M, N, P, S, T, U, Y`,
-      'A1',
+      'BR-GAN-CANON-001',
     );
   }
 
   const piece = pieceChar;
 
-  // A1: Must have '*' separator
+  // BR-GAN-CANON-001: Must have '*' separator
   if (gan[1] !== '*') {
-    throw new GameError(`Arata "${gan}" must use "*" separator between piece and square`, 'A1');
+    throw new GameError(`Arata "${gan}" must use "*" separator between piece and square`, 'BR-GAN-CANON-001');
   }
 
   // There must be exactly one '*'
   const starCount = (gan.match(/\*/g) ?? []).length;
   if (starCount !== 1) {
-    throw new GameError(`Arata "${gan}" has multiple "*" separators`, 'A1');
+    throw new GameError(`Arata "${gan}" has multiple "*" separators`, 'BR-GAN-CANON-001');
   }
 
   let remainder = gan.slice(2); // Everything after piece and '*'
 
   // Parse destination square (first 3 chars)
   if (remainder.length < 3) {
-    throw new GameError(`Arata "${gan}" missing destination square`, 'A1');
+    throw new GameError(`Arata "${gan}" missing destination square`, 'BR-GAN-CANON-001');
   }
 
   const destStr = remainder.slice(0, 3);
@@ -325,11 +325,11 @@ export function parseArata(gan: string): Action {
     remainder = remainder.slice(remainder.startsWith('+12') ? 3 : 2);
   }
 
-  // A6: No trailing characters
+  // BR-GAN-CANON-006: No trailing characters
   if (remainder.length > 0) {
     throw new GameError(
-      `Arata "${gan}" has unexpected trailing characters "${remainder}" (A6)`,
-      'A6',
+      `Arata "${gan}" has unexpected trailing characters "${remainder}" (BR-GAN-CANON-006)`,
+      'BR-GAN-CANON-006',
     );
   }
 
@@ -361,15 +361,15 @@ export function parseGAN(gan: string): ParseResult {
     if (gan === '' || gan.trim() === '') {
       return {
         ok: false,
-        error: new GameError('GAN string must not be empty', 'A1'),
+        error: new GameError('GAN string must not be empty', 'BR-GAN-CANON-001'),
       };
     }
 
-    // A5: No leading/trailing whitespace
+    // BR-GAN-CANON-005: No leading/trailing whitespace
     if (gan !== gan.trim()) {
       return {
         ok: false,
-        error: new GameError('GAN string must not have leading or trailing whitespace (A5)', 'A5'),
+        error: new GameError('GAN string must not have leading or trailing whitespace (BR-GAN-CANON-005)', 'BR-GAN-CANON-005'),
       };
     }
 
@@ -382,7 +382,7 @@ export function parseGAN(gan: string): ParseResult {
         // Arata: piece followed by '*'
         return { ok: true, action: parseArata(gan) };
       }
-      // A1: If second char is a digit or '!', it's a placement
+      // BR-GAN-CANON-001: If second char is a digit or '!', it's a placement
       // If second char is something else, it's still a placement attempt
       return { ok: true, action: parsePlacement(gan) };
     } else if (first >= '1' && first <= '9') {
@@ -394,7 +394,7 @@ export function parseGAN(gan: string): ParseResult {
       ok: false,
       error: new GameError(
         `GAN string must start with a piece letter (A-Z) for placement/arata or a digit (1-9) for move, got "${first}"`,
-        'A1',
+        'BR-GAN-CANON-001',
       ),
     };
   } catch (e) {
@@ -403,7 +403,7 @@ export function parseGAN(gan: string): ParseResult {
     }
     return {
       ok: false,
-      error: new GameError(`Unexpected parse error: ${(e as Error).message}`, 'A1'),
+      error: new GameError(`Unexpected parse error: ${(e as Error).message}`, 'BR-GAN-CANON-001'),
     };
   }
 }

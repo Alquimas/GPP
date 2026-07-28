@@ -50,7 +50,7 @@ export type Stack = [Piece] | [Piece, Piece] | [Piece, Piece, Piece];
  * `validatePosition()` before use, or use `emptyPosition()` as the seed.
  *
  * Parsers (GSFEN, GAN) may produce malformed data — the semantic
- * validators (`validateState`, V2) catch stack-shape violations, but
+ * validators (`validateState`, BR-GSFEN-VALID-002) catch stack-shape violations, but
  * `validatePosition()` is the cheaper, earlier guard for the 9×9 shape.
  */
 export type Position = (Stack | null)[][];
@@ -120,7 +120,7 @@ export type GameResult =
 
 /**
  * Turncoat swap levels for Captain moves/aratas.
- * Constrained by GAN spec rule A3: levels ascending, no duplicates, only 1 or 2.
+ * Constrained by GAN spec rule BR-GAN-CANON-003: levels ascending, no duplicates, only 1 or 2.
  * Valid combinations: [] (no swaps), [1], [2], [1, 2].
  */
 export type TurncoatLevels = [] | [1] | [2] | [1, 2];

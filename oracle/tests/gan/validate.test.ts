@@ -31,10 +31,10 @@ function battleState(): GameState {
 }
 
 // ---------------------------------------------------------------------------
-// S1 — Phase match
+// BR-GAN-VALID-001 — Phase match
 // ---------------------------------------------------------------------------
 
-describe('S1 — Phase match', () => {
+describe('BR-GAN-VALID-001 — Phase match', () => {
   it('accepts placement in deploy phase', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState();
@@ -48,7 +48,7 @@ describe('S1 — Phase match', () => {
     const result = validateAction('M5-9', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S1');
+    expect(result.error.rule).toBe('BR-GAN-VALID-001');
   });
 
   it('accepts move in battle phase', () => {
@@ -76,7 +76,7 @@ describe('S1 — Phase match', () => {
     const result = validateAction('2-7>2-6', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S1');
+    expect(result.error.rule).toBe('BR-GAN-VALID-001');
   });
 
   it('accepts arata in battle phase', () => {
@@ -92,15 +92,15 @@ describe('S1 — Phase match', () => {
     const result = validateAction('T*5-6', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S1');
+    expect(result.error.rule).toBe('BR-GAN-VALID-001');
   });
 });
 
 // ---------------------------------------------------------------------------
-// S2 — Placement legality
+// BR-GAN-VALID-002 — Placement legality
 // ---------------------------------------------------------------------------
 
-describe('S2 — Placement legality', () => {
+describe('BR-GAN-VALID-002 — Placement legality', () => {
   it('accepts a valid Marshal placement in deploy zone', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState('white');
@@ -116,7 +116,7 @@ describe('S2 — Placement legality', () => {
     const result = validateAction('M5-9', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S2');
+    expect(result.error.rule).toBe('BR-GAN-VALID-002');
   });
 
   it('rejects placement outside deploy zone', () => {
@@ -125,15 +125,15 @@ describe('S2 — Placement legality', () => {
     const result = validateAction('M5-5', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S2');
+    expect(result.error.rule).toBe('BR-GAN-VALID-002');
   });
 });
 
 // ---------------------------------------------------------------------------
-// S5 — Turncoat legality
+// BR-GAN-VALID-005 — Turncoat legality
 // ---------------------------------------------------------------------------
 
-describe('S5 — Turncoat legality', () => {
+describe('BR-GAN-VALID-005 — Turncoat legality', () => {
   it('accepts arata with Captain and turncoat', () => {
     const action: Action = { kind: 'arata', piece: 'T', dest: { col: 5, row: 6 }, turncoat: [1] };
     const state = battleState();
@@ -147,7 +147,7 @@ describe('S5 — Turncoat legality', () => {
     const result = validateAction('P*5-6+1', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S5');
+    expect(result.error.rule).toBe('BR-GAN-VALID-005');
   });
 
   it('accepts move with stack outcome and turncoat', () => {
@@ -178,15 +178,15 @@ describe('S5 — Turncoat legality', () => {
     const result = validateAction('5-6>5-5x+1', action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error.rule).toBe('S5');
+    expect(result.error.rule).toBe('BR-GAN-VALID-005');
   });
 });
 
 // ---------------------------------------------------------------------------
-// S6 — Done legality (enforced at parse level)
+// BR-GAN-VALID-006 — Done legality (enforced at parse level)
 // ---------------------------------------------------------------------------
 
-describe('S6 — Done legality', () => {
+describe('BR-GAN-VALID-006 — Done legality', () => {
   it('accepts placement with done=true', () => {
     // State: Black to place, Black's Marshal already placed (count = 0 in hand)
     const state = deployState('black');
