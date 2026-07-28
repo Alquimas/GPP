@@ -3,7 +3,7 @@ import { validateAction } from '../../src/gan/validate.js';
 import { parseGAN } from '../../src/gan/parse.js';
 import type { Action, GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
-import { GAN_BATTLE_STATE } from '../../src/gsfen/fixtures.js';
+import { BATTLE_MINIMAL } from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,7 +25,7 @@ function deployState(activePlayer: 'white' | 'black' = 'white'): GameState {
 /** Create a minimal battle-phase GameState for testing. */
 function battleState(): GameState {
   // Parse battle-start for a clean battle state
-  const result = parseGSFEN(GAN_BATTLE_STATE);
+  const result = parseGSFEN(BATTLE_MINIMAL);
   if (!result.ok) throw new Error('Failed to parse battle state');
   return result.state;
 }

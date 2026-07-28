@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import type { Action, GameState, PieceType, Square } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validatePlacement } from '../../src/game/deploy.js';
-import { BOTH_MARSHALS_BATTLE_NOHANDS, DEPLOY_BLACK_CTR2_G, DEPLOY_ENEMY_TOP, DEPLOY_FULL_STACK_PPP, DEPLOY_PHASE_CTR3, MP_STACK_DEPLOY_CTR3, STARTPOS_EXPANDED } from '../../src/gsfen/fixtures.js';
+import { BOTH_MARSHALS_BATTLE_NOHANDS, DEPLOY_BLACK_CTR2, DEPLOY_FULL_STACK_PAWNS, DEPLOY_PHASE_CTR3, MP_STACK_DEPLOY_CTR3, STARTPOS_EXPANDED } from '../../src/gsfen/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -80,19 +80,6 @@ describe('validatePlacement', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-004');
   });
 
-  // Problematic test case. Marked for removal
-  // Cause: Impossible to have this situation happening.
-  // The state is invalid by itself
-  // Verify if is worth keeping the DEPLOY_ENEMY_TOP fixture
-  // Maybe move it to the parse semantic validation?
-  it('rejects placement on enemy-topped square', () => {
-    // Black Pawn at (5,8) — White cannot place there
-    const state = gsfenState(DEPLOY_ENEMY_TOP);
-    const r = validatePlacement(state, placement('P', 5, 8));
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-005');
-  });
-
   it('accepts placement on empty square in deploy zone', () => {
     const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 9));
     expect(r.ok).toBe(true);
@@ -108,7 +95,7 @@ describe('validatePlacement', () => {
   it('rejects placement on full stack (size 3) — BR-DEPLOY-005', () => {
     // Marshal already placed at (5,8) (hand.M=0 so BR-DEPLOY-003 passes).
     // Stack PPP at (5,9) is size 3 — placing G on top must be rejected.
-    const state = gsfenState(DEPLOY_FULL_STACK_PPP);
+    const state = gsfenState(DEPLOY_FULL_STACK_PAWNS);
     const r = validatePlacement(state, placement('G', 5, 9));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-005');
@@ -135,7 +122,7 @@ describe('validatePlacement', () => {
   });
 
   describe('Black player deploy zone (BR-DEPLOY-004 symmetry)', () => {
-    const BLACK_DEPLOY_START = DEPLOY_BLACK_CTR2_G;
+    const BLACK_DEPLOY_START = DEPLOY_BLACK_CTR2;
 
     it('accepts Black placement in Black deploy zone (rows 1-3)', () => {
       // Black's turn (after White placed Marshal). Black places Marshal at (5,1).

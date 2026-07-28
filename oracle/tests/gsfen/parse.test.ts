@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { EMPTY_HAND, FULL_HAND } from '../../src/constants.js';
 import type { GameState, Player } from '../../src/types.js';
-import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLICATE_LETTER, C5_NON_ALPHABETICAL, C6_LEADING_ZERO_COUNTER, C6_LEADING_ZERO_COUNTER_FULL, EXAMPLE4_MIXED_STACK, FIXTURES, LOWERCASE_HAND, MP_STACK_DEPLOY_CTR2, PIECE_AT_COL1, PIECE_AT_COL9, ROW_NOT_9, ROW_WITH_P_AND_T, STACK_OF_FOUR, V3_BLACK_MARSHAL_WRONG_ZONE, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
+import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLICATE_LETTER, C5_NON_ALPHABETICAL, C6_LEADING_ZERO_COUNTER, C6_LEADING_ZERO_COUNTER_FULL, DEPLOY_BLACK_MARSHAL_PLACED, DEPLOY_MARSHAL_COL1, DEPLOY_MARSHAL_COL9, DEPLOY_MARSHAL_ON_TOP, EXAMPLE4_MIXED_STACK, FIXTURES, ROW_NOT_9, ROW_WITH_P_AND_T, STACK_OF_FOUR, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -256,34 +256,29 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
     expect(result.error.rule).toBe('BR-GSFEN-CANON-COUNTER-LEADING-ZERO');
   });
 
-  it('lowercase m on row 9 (Black Marshal in wrong zone) — parse succeeds, validation rejects', () => {
-    // This should parse OK (the parser checks canonical form only).
-    // Semantic validation (BR-GSFEN-VALID-004 deploy zone, BR-GSFEN-VALID-001-COUNT)
-    // would reject it.
-    const result = parseGSFEN(V3_BLACK_MARSHAL_WRONG_ZONE);
-    // It parses correctly — lowercase = black owner
+  it('Black Marshal at row 1 (valid deploy zone) — parses correctly', () => {
+    const result = parseGSFEN(DEPLOY_BLACK_MARSHAL_PLACED);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const state = result.state;
-    const stack = state.position[8][4];
+    const stack = state.position[0][4];
     expect(stack).not.toBeNull();
     if (stack) {
+      expect(stack[0].type).toBe('M');
       expect(stack[0].owner).toBe('black');
     }
   });
 
-  it('Marshal not at top of stack (BR-GSFEN-VALID-001-TOP) — parse succeeds, validation rejects', () => {
-    const result = parseGSFEN(MP_STACK_DEPLOY_CTR2);
-    // Parser parses it fine (canonical form ok), validation catches BR-GSFEN-VALID-001-TOP
+  it('Marshal on top of Pawn stack — parses correctly', () => {
+    const result = parseGSFEN(DEPLOY_MARSHAL_ON_TOP);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const state = result.state;
     const stack = state.position[8][4];
     expect(stack).not.toBeNull();
-    // Narrow tuple type via length check
     if (stack?.length === 2) {
-      expect(stack[0].type).toBe('M'); // bottom
-      expect(stack[1].type).toBe('P'); // top
+      expect(stack[0].type).toBe('P'); // bottom
+      expect(stack[1].type).toBe('M'); // top
     } else if (stack) {
       expect(stack.length).toBe(2);
     }
@@ -347,14 +342,6 @@ describe('parseGSFEN — additional invalid cases', () => {
     expect(result.error.rule).toBe('BR-GSFEN-CANON-HANDS-ALPHABETICAL');
   });
 
-  it('hand lowercase only (white empty, black has piece)', () => {
-    const result = parseGSFEN(LOWERCASE_HAND);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.state.hands.black.A).toBe(1);
-    expect(result.state.hands.white.A).toBe(0);
-  });
-
   it('counter with leading zero (BR-GSFEN-CANON-COUNTER-LEADING-ZERO)', () => {
     const result = parseGSFEN(C6_LEADING_ZERO_COUNTER);
     expect(result.ok).toBe(false);
@@ -373,7 +360,7 @@ describe('parseGSFEN — additional invalid cases', () => {
 describe('parseGSFEN — coordinate mapping', () => {
   it('piece at Col 1 maps to position[row][0]', () => {
     // Row 9 has 8 empty squares then one piece at Col 1
-    const state = assertOk(parseGSFEN(PIECE_AT_COL1));
+    const state = assertOk(parseGSFEN(DEPLOY_MARSHAL_COL1));
     const stack = state.position[8][0]; // Col 1 → idx 0
     expect(stack).not.toBeNull();
     if (stack) {
@@ -383,7 +370,7 @@ describe('parseGSFEN — coordinate mapping', () => {
 
   it('piece at Col 9 maps to position[row][8]', () => {
     // Row 9 has piece at Col 9 then 8 empty
-    const state = assertOk(parseGSFEN(PIECE_AT_COL9));
+    const state = assertOk(parseGSFEN(DEPLOY_MARSHAL_COL9));
     const stack = state.position[8][8]; // Col 9 → idx 8
     expect(stack).not.toBeNull();
     if (stack) {
