@@ -51,7 +51,7 @@ These documents, in the project root, collectively define the Gungi specificatio
 |---|---|
 | `BUSINESS_RULES.md` | Normative business rules (BR-xxx), glossary, board geometry |
 | `GSFEN.md` | GSFEN state serialization format — grammar, canonical-form rules (BR-GSFEN-CANON-*), semantic validity rules (BR-GSFEN-VALID-*) |
-| `GAN.md` | GAN action notation — S1-S6 validation rules |
+| `GAN.md` | GAN action notation — grammar (BR-GAN-GRAMMAR-*), canonical form (BR-GAN-CANON-*), and semantic validity (BR-GAN-VALID-*) |
 | `TEST.md` | Testing strategy and conventions |
 | `REFINING.md` | Active refinement queue (problems found in code review) |
 | `ORACLE.md` | Build plan for the TypeScript reference implementation |
@@ -72,7 +72,7 @@ These documents, in the project root, collectively define the Gungi specificatio
 2. **No inline GSFEN strings in source or test code.** Every GSFEN string must live in a `.gsfen` fixture file under `oracle/fixtures/valid/` or `oracle/fixtures/invalid/` and be imported via the constants barrel (`oracle/src/gsfen/fixtures.ts`). Exceptions require a documented rationale in the commit message. A CI check (via `gsfen-find.sh`) enforces this after Phase 0 of the tooling plan (see `oracle/TOOLING.md`).
 3. **Prefer an existing fixture over writing a new GSFEN string.** The `oracle/fixtures/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to an existing fixture state.
 4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. Every fixture lives in a `.gsfen` file and is exported as a named constant from `oracle/src/gsfen/fixtures.ts`. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
-5. **Learn from rule codes.** A `BR-GSFEN-CANON-*` code is a canonical-form error — fix the string format. A `BR-GSFEN-VALID-*` code is a semantic error — fix the position/hands/turn arrangement. A `BR-xxx` code is a business rule violation.
+5. **Learn from rule codes.** A `BR-GSFEN-CANON-*` code is a canonical-form error — fix the string format. A `BR-GSFEN-VALID-*` code is a semantic error — fix the position/hands/turn arrangement. A `BR-GAN-GRAMMAR-*` code is a grammar error (string doesn't match ABNF). A `BR-GAN-CANON-*` code is a canonicity error (optional token misused). A `BR-GAN-VALID-*` code is a semantic validation error. A `BR-xxx` code is a business rule violation.
 6. **Honour step-awareness markers.** Code marked `@internal`, `@step N`, or guarded by `throwIfNotImplemented` is scaffolding — it works for its limited purpose but will be replaced. Do not build on top of it. Tests using `it.fails` document behaviour that is known to be incomplete.
 
 ## Fixture Library

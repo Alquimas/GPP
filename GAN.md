@@ -222,7 +222,44 @@ Battle) further disambiguates which grammar is even legal to attempt.
 
 ## Canonicalization
 
-A conforming string MUST satisfy all of the following:
+A conforming string MUST pass two layers of rules applied in order:
+first **Grammar** (the string must match the ABNF productions), then
+**Canonical Form** (optional tokens must be present only when the rules
+leave the Player a genuine choice).
+
+### Grammar rules (BR-GAN-GRAMMAR-xxx)
+
+These reject strings whose shape does not match the ABNF grammar.
+Violations are detectable from the string alone, with no Game State needed.
+
+- **BR-GAN-GRAMMAR-001 --- Empty input.** The string is empty or blank.
+- **BR-GAN-GRAMMAR-002 --- Invalid starting character.** Must be a digit
+  (Move) or an uppercase piece letter (Placement/Arata).
+- **BR-GAN-GRAMMAR-003 --- Invalid piece letter.** Must be one of the 14
+  valid piece types (`A C E F G J L M N P S T U Y`), always uppercase.
+- **BR-GAN-GRAMMAR-004 --- Malformed square notation.** Must match
+  `{digit 1-9}-{digit 1-9}`; e.g. `0-0`, `5-`, `abc` all fail.
+- **BR-GAN-GRAMMAR-005 --- Missing separator.** Move requires `>`
+  between squares; Arata requires `*` between piece and square.
+- **BR-GAN-GRAMMAR-006 --- Multiple separators.** Exactly one `>` (Move)
+  or one `*` (Arata) is allowed.
+- **BR-GAN-GRAMMAR-007 --- String too short.** The action type's minimum
+  length is not met (Placement < 4 chars, Arata < 5 chars, Move missing
+  destination).
+- **BR-GAN-GRAMMAR-008 --- Trailing or invalid characters.** After fully
+  parsing the grammar, unconsumed characters remain.
+- **BR-GAN-GRAMMAR-009 --- Whitespace inside a single Action.** No space
+  (U+0020) or other whitespace is allowed within a single action token.
+- **BR-GAN-GRAMMAR-010 --- Invalid turncoat format.** Turncoat must start
+  with `+` and list only `1`, `2`, or `12`.
+- **BR-GAN-GRAMMAR-011 --- Done placement error.** `!` appears in a
+  position where the grammar does not allow it: multiple `!`s, `!` before
+  the square, or `!` on a non-placement action.
+
+### Canonical-form rules (BR-GAN-CANON-xxx)
+
+These apply after the string passes the grammar. They require knowledge
+of the preceding Game State to evaluate.
 
 - **BR-GAN-CANON-001 --- No optional token without optionality.**
   `outcome` appears only when
@@ -234,16 +271,8 @@ A conforming string MUST satisfy all of the following:
   match) *and* the Player is choosing to swap it. Absence of the token
   means "decline all eligible swaps," which is always legal and always has
   exactly this one spelling.
-- **BR-GAN-CANON-003 --- Levels ascending, no duplicates.** `12`, never
-  `21` or `112`.
-- **BR-GAN-CANON-004 --- Done only as a Placement suffix.** `!` never
-  appears standalone and never appears on a Move or Arata.
-- **BR-GAN-CANON-005 --- No whitespace within a single Action.** An
-  `actionlist` separates Actions with exactly one space (U+0020); no other
-  whitespace appears anywhere.
-- **BR-GAN-CANON-006 --- No annotation tokens.** No characters beyond the
-  grammar above --- no check/mate marks, move numbers, or comments live
-  inside a GAN token.
+
+### Decision canonicity
 
 Because canonicity here describes *decisions*, not *states*, "one spelling
 per action" should be read as: for a fixed preceding Game State, every
@@ -397,12 +426,13 @@ whose Level-1 occupant is an enemy Piece; the Player elects to swap it now.
 ### Invalid strings (all rejected)
 
 ```
-5-8-5-7            ; not `move`: uses "-" instead of ">" between squares --- unparseable per the grammar
-3-3>3-2x            ; A1: `dest` Stack size is 3, so Capture is forced --- the `x` token is redundant and non-canonical
-5-6>5-5             ; S3/A1: choice existed (target size 2, top not Marshal) but `outcome` is missing --- ambiguous between Stack and Capture, so invalid
-T*5-6+21            ; A3: levels must be ascending with no duplicates ("12", not "21")
-M5-9!!              ; A4/grammar: at most one `!`, and only immediately after a Placement
-G5-1                ; S2: illegal if Black's Marshal has not yet been placed --- General cannot go first
+5-8-5-7            ; GRAMMAR-005: uses "-" instead of ">" between squares
+3-3>3-2x           ; CANON-001: Stack size 3 forces Capture; redundant `x` token is non-canonical
+5-6>5-5            ; CANON-001: choice existed (target size 2, top not Marshal) but `outcome` is missing
+T*5-6+21           ; GRAMMAR-010: turncoat levels must be ascending ("12", not "21")
+M5-9!!             ; GRAMMAR-011: at most one `!`, and only after the square
+5-6>5-5!           ; GRAMMAR-011: `!` is not a valid Move suffix
+G5-1               ; VALID-002: illegal if Black's Marshal has not yet been placed
 ```
 
 ## Design notes
