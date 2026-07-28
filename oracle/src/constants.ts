@@ -75,8 +75,10 @@ export const EMPTY_HAND: Hand = Object.freeze({
   Y: 0,
 });
 
-/** A Hand record with every count at its initial value — the canonical full hand. */
-export const FULL_HAND: Hand = { ...INITIAL_COUNTS };
+/** A Hand record with every count at its initial value — the canonical full hand.
+ * Frozen at runtime to prevent accidental mutation of the shared instance.
+ */
+export const FULL_HAND: Hand = Object.freeze({ ...INITIAL_COUNTS });
 
 /**
  * Declarative movement rules per piece type (White's perspective).
