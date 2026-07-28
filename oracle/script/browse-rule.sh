@@ -52,6 +52,12 @@ extract_rule_text() {
     return
   fi
 
+  # GAN codes are defined in GAN.md, not BUSINESS_RULES.md
+  if [[ "$code" == BR-GAN-* ]]; then
+    extract_gan_rule_text "$code"
+    return
+  fi
+
   local rule_file="$BUSINESS_RULES"
 
   # Find the heading line
@@ -114,6 +120,37 @@ extract_gsfen_rule_text() {
   ' "$rule_file"
 }
 
+# ── extract rule text from GAN.md ──────────────────────────────────
+
+extract_gan_rule_text() {
+  local code="$1"
+  local rule_file="$GAN_DOC"
+
+  local line_num
+  if $has_rg; then
+    line_num="$($has_rg && rg -nF "$code" "$rule_file" | head -1 | cut -d: -f1)"
+  else
+    line_num="$(grep -nF "$code" "$rule_file" | head -1 | cut -d: -f1)"
+  fi 2>/dev/null || true
+
+  if [[ -z "$line_num" ]]; then
+    echo "  (not found in GAN.md)"
+    return
+  fi
+
+  awk -v start="$line_num" '
+    NR >= start {
+      if (NR > start && (/^#{1,6} / || /^---$/ || /^- \*\*/ || /^$/)) exit
+      if (NR == start) {
+        sub(/^- \*\*[^*]+\*\* --- /, "")
+        print "  " $0
+        next
+      }
+      print "  " $0
+    }
+  ' "$rule_file"
+}
+
 # ── find related rules (same group + cross-references) ─────────────
 
 find_related_rules() {
@@ -122,6 +159,12 @@ find_related_rules() {
   # GSFEN codes use GSFEN.md for related rules
   if [[ "$code" == BR-GSFEN-* ]]; then
     find_gsfen_related_rules "$code"
+    return
+  fi
+
+  # GAN codes use GAN.md for related rules
+  if [[ "$code" == BR-GAN-* ]]; then
+    find_gan_related_rules "$code"
     return
   fi
 
@@ -219,6 +262,45 @@ find_gsfen_related_rules() {
     if [[ -n "$rule_code" && "$rule_code" != "$code" ]]; then
       local title
       title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 60)"
+      printf "    %-40s %s\n" "$rule_code" "$title"
+    fi
+  done
+}
+
+# ── find related GAN rules (same family in GAN.md) ─────────────────
+
+find_gan_related_rules() {
+  local code="$1"
+
+  # Determine the family prefix (BR-GAN-GRAMMAR, BR-GAN-CANON, or BR-GAN-VALID)
+  local family
+  family="$(echo "$code" | sed -n 's/^\(BR-GAN-GRAMMAR\|BR-GAN-CANON\|BR-GAN-VALID\).*/\1/p')"
+
+  if [[ -z "$family" ]]; then
+    echo "  (unknown GAN rule family)"
+    return
+  fi
+
+  echo "  ${bold}Same family (${family}-*):${reset}"
+
+  local results
+  if $has_rg; then
+    results="$($has_rg && rg -n "\*\*${family}" "$GAN_DOC")"
+  else
+    results="$(grep -n "\*\*${family}" "$GAN_DOC")"
+  fi 2>/dev/null || true
+
+  if [[ -z "$results" ]]; then
+    echo "    (none)"
+    return
+  fi
+
+  echo "$results" | while IFS=: read -r line rest; do
+    local rule_code
+    rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
+    if [[ -n "$rule_code" && "$rule_code" != "$code" ]]; then
+      local title
+      title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* --- //p' | head -c 60)"
       printf "    %-40s %s\n" "$rule_code" "$title"
     fi
   done
@@ -383,6 +465,41 @@ list_all_codes() {
   gsfen_total="$($has_rg && rg -c "\*\*BR-GSFEN-" "$GSFEN_DOC" || grep -c "\*\*BR-GSFEN-" "$GSFEN_DOC")" 2>/dev/null || gsfen_total=0
   echo ""
   echo "  ${bold}Total: ${gsfen_total} GSFEN codes${reset}"
+
+  # ────────── GAN codes ──────────
+  echo ""
+  echo "${bold}GAN codes in GAN.md:${reset}"
+
+  for family in "BR-GAN-GRAMMAR" "BR-GAN-CANON" "BR-GAN-VALID"; do
+    local family_display
+    if [[ "$family" == "BR-GAN-GRAMMAR" ]]; then
+      family_display="Grammar rules"
+    elif [[ "$family" == "BR-GAN-CANON" ]]; then
+      family_display="Canonical-form rules"
+    else
+      family_display="Semantic Validity"
+    fi
+    echo ""
+    echo "  ${bold}${family}-* ($family_display)${reset}"
+    if $has_rg; then
+      $has_rg && rg -n "\*\*${family}-" "$GAN_DOC"
+    else
+      grep -n "\*\*${family}-" "$GAN_DOC"
+    fi 2>/dev/null | while IFS=: read -r line rest; do
+      local rule_code
+      rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
+      local title
+      title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* --- //p' | head -c 70)"
+      if [[ -n "$rule_code" ]]; then
+        printf "    %-44s %s\n" "$rule_code" "$title"
+      fi
+    done
+  done
+
+  local gan_total
+  gan_total="$($has_rg && rg -c "\*\*BR-GAN-" "$GAN_DOC" || grep -c "\*\*BR-GAN-" "$GAN_DOC")" 2>/dev/null || gan_total=0
+  echo ""
+  echo "  ${bold}Total: ${gan_total} GAN codes${reset}"
 }
 
 # ── show one rule ──────────────────────────────────────────────────
@@ -397,14 +514,16 @@ show_rule() {
 
   # Validate format — accept any BR- with hyphen-separated uppercase/digit segments
   if ! echo "$code" | grep -qE '^BR-[A-Z][A-Z0-9]*(-[A-Z0-9]+)*$'; then
-    echo "Error: Invalid rule code format. Expected BR-XXX-NNN, BR-GSFEN-CANON-*, or BR-GSFEN-VALID-* (e.g. BR-MOVE-005)" >&2
+    echo "Error: Invalid rule code format. Expected BR-XXX-NNN, BR-GAN-xxx, BR-GSFEN-CANON-*, or BR-GSFEN-VALID-* (e.g. BR-MOVE-005)" >&2
     exit 1
   fi
 
-  # Check if code exists — search BUSINESS_RULES.md or GSFEN.md as appropriate
+  # Check if code exists — search BUSINESS_RULES.md, GAN.md, or GSFEN.md as appropriate
   local exists=0
   if [[ "$code" == BR-GSFEN-* ]]; then
     exists="$($has_rg && rg -qF "$code" "$GSFEN_DOC" && echo 1 || grep -qF "$code" "$GSFEN_DOC" 2>/dev/null && echo 1 || echo 0)" || true
+  elif [[ "$code" == BR-GAN-* ]]; then
+    exists="$($has_rg && rg -qF "$code" "$GAN_DOC" && echo 1 || grep -qF "$code" "$GAN_DOC" 2>/dev/null && echo 1 || echo 0)" || true
   else
     exists="$($has_rg && rg -q "^#### $code " "$BUSINESS_RULES" && echo 1 || echo 0)" || true
     if [[ "$exists" != 1 ]]; then
@@ -427,6 +546,15 @@ show_rule() {
       echo "  GSFEN.md → Canonicalization section"
     else
       echo "  GSFEN.md → Semantic Validity section"
+    fi
+  elif [[ "$code" == BR-GAN-* ]]; then
+    # GAN codes belong to sections in GAN.md
+    if echo "$code" | grep -q 'GRAMMAR'; then
+      echo "  GAN.md → Grammar rules section"
+    elif echo "$code" | grep -q 'CANON'; then
+      echo "  GAN.md → Canonical-form rules section"
+    else
+      echo "  GAN.md → Semantic Validity section"
     fi
   else
     local group_title
