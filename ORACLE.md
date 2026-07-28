@@ -19,7 +19,7 @@
 8. [Step 5 — GAN Serializer](#step-5--gan-serializer) ✅
 9. [Step 6 — Movement Rules Engine](#step-6--movement-rules-engine) ✅
 10. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection) ✅
-11. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata)
+11. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata) ✅
 12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic)
 13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase)
 14. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition)
@@ -704,7 +704,7 @@ whose stack size exceeds its own source stack size.
 - Passing test: `tests/attack/attack.test.ts` (95 tests)
 
 **Saved edge case for Step 8 (Self Check after capture changes stack size):**
-GSFEN: `9/9/9/3,AAm,FPP,4/9/9/9/9/4,G,4 w - 1`
+GSFEN: `8,M/9/9/3,AAm,FPP,4/9/9/9/9/4,G,4 w - 1`
 Marshal at (4,4) could capture Pawns at (5,4) — both size 3. After capture,
 Marshal at (5,4) becomes size 1, and General at (5,9) could attack it.
 Self Check (BR-ACTION-002) must reject this move. Tests that Self Check
@@ -716,7 +716,7 @@ stacking, and level indicators. One-command usage (open in browser).
 
 ---
 
-### Step 8 — Action Validation (Move, Arata)
+### Step 8 — Action Validation (Move, Arata) ✅
 
 **What to build in `src/game/`:**
 

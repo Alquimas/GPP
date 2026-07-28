@@ -73,6 +73,7 @@ export const MP_STACK_DEPLOY_CTR3 = readValid('mp-stack-deploy-ctr3');
 export const ONE_SIDE_FULLY_DEPLOYED = readValid('one-side-fully-deployed');
 export const ROW_WITH_P_AND_T = readValid('row-with-P-and-T');
 export const SELF_CHECK_POS = readValid('self-check-pos');
+export const SELF_CHECK_SIZE3_CAPTURE = readValid('self-check-size3-capture');
 export const SIZE_MISMATCH_AFG = readValid('size-mismatch-afg');
 export const SOME_CAPTURED = readValid('some-captured');
 export const SPARSE_BOARD = readValid('sparse-board');
@@ -139,6 +140,7 @@ export const FIXTURES: Record<string, string> = {
   'one-side-fully-deployed': ONE_SIDE_FULLY_DEPLOYED,
   'row-with-P-and-T': ROW_WITH_P_AND_T,
   'self-check-pos': SELF_CHECK_POS,
+  'self-check-size3-capture': SELF_CHECK_SIZE3_CAPTURE,
   'size-mismatch-afg': SIZE_MISMATCH_AFG,
   'some-captured': SOME_CAPTURED,
   'sparse-board': SPARSE_BOARD,

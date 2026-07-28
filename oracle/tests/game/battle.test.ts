@@ -29,6 +29,7 @@ import {
   FRIENDLY_STACK_WITH_HANDS,
   MARSHAL_ALONE_BATTLE,
   SELF_CHECK_POS,
+  SELF_CHECK_SIZE3_CAPTURE,
   SIZE_MISMATCH_AFG,
 } from '../../src/gsfen/fixtures.js';
 
@@ -264,6 +265,18 @@ describe('validateMove', () => {
     it('accepts a move that does not leave own Marshal in check', () => {
       const r = validateMove(gsfenState(BLACK_TURN_MARSHAL_ONLY), move(5, 1, 4, 1));
       expect(r.ok).toBe(true);
+    });
+
+    it('rejects a move where capturing a size-3 stack leaves own Marshal at size 1 and thus vulnerable (BR-ACTION-002)', () => {
+      // Black Marshal (top of [A,A,m] size 3) at (6,4) captures White [F,P,P] at (5,4) size 3.
+      // After capture, Marshal becomes size 1 at (5,4).
+      // White General at (5,9) can now attack (5,4) along the empty file.
+      // Self Check must be evaluated on post-move state with changed stack sizes.
+      // GSFEN: 8,M/9/9/3,AAm,FPP,4/9/9/9/9/4,G,4 b - 2
+      const state = gsfenState(SELF_CHECK_SIZE3_CAPTURE);
+      const r = validateMove(state, move(6, 4, 5, 4, null));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-ACTION-002');
     });
   });
 
