@@ -22,7 +22,8 @@
  * | `game/validation.js` | ValidationResult, PlayValidation shared types |
  * | `game/battle.js` | validateMove, validateArata, validatePlay |
  * | `game/deploy.js` | validatePlacement |
- * | `game/apply.js` | applyMove, applyArata (minimal — Step 8) |
+ * | `game/apply.js` | ApplyResult, applyPlacement (Step 9) |
+ * | `game/terminal.js` | evaluateExposure (BR-DEPLOY-012) |
  *
  * @module
  */
@@ -50,6 +51,11 @@ export {
 export type { ValidationResult, PlayValidation } from './game/validation.js';
 export { validateMove, validateArata, validatePlay } from './game/battle.js';
 export { validatePlacement } from './game/deploy.js';
+// Step 9 — Deploy Phase application
+export type { ApplyResult } from './game/apply.js';
+export { applyPlacement } from './game/apply.js';
+// Step 9 — Exposure evaluation
+export { evaluateExposure } from './game/terminal.js';
 // applyMove, applyArata deliberately NOT exported from the public barrel:
 // they are Step-8 scaffolding and will be replaced by full turn management in Step 10.
 // Consumers should use validatePlay to get the speculative afterState instead.

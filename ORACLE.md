@@ -20,7 +20,7 @@
 9. [Step 6 — Movement Rules Engine](#step-6--movement-rules-engine) ✅
 10. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection) ✅
 11. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata) ✅
-12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic)
+12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic) ✅
 13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase)
 14. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition)
 15. [Step 12 — Public API](#step-12--public-api)
@@ -800,7 +800,7 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
 
 ---
 
-### Step 9 — Deploy Phase Logic
+### Step 9 — Deploy Phase Logic ✅
 
 **What to build — `src/game/apply.ts` (deploy portion):**
 

@@ -1,24 +1,38 @@
 /**
- * Minimal action application for Self Check evaluation (BR-ACTION-002).
+ * Action application functions for the Gungi game engine.
  *
- * These functions temporarily apply a validated move or arata to compute
- * the post-action GameState, which is then checked to ensure the acting
- * player's Marshal is not under attack.
- *
- * ## Forward reference
- * These are minimal implementations sufficient for Step 8 (Action Validation).
- * Step 10 replaces them with the full game-engine apply functions that also
- * handle turn management, history recording, and terminal condition evaluation.
+ * Step 8 (Self Check scaffolding): applyMove, applyArata — minimal speculative
+ *   state computation.
+ * Step 9 (Deploy Phase): applyPlacement — full placement with turn management
+ *   and deploy→battle transition.
+ * Step 10 (Battle Phase): planned replacement of applyMove/applyArata with
+ *   full turn management.
  *
  * @module
  */
 
-import type { Action, GameState, Piece, Player } from '../types.js';
+import type { Action, GameResult, GameState, Hand, Piece, Player, PieceType } from '../types.js';
 import { createStack, getStack, setStack, topPiece } from '../board/board.js';
+import { ALL_PIECE_TYPES } from '../constants.js';
+import { evaluateExposure } from './terminal.js';
+
+/* ------------------------------------------------------------------ */
+/*  ApplyResult — return type for state-mutating apply functions       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The result of applying an action to a GameState.
+ * - `state`: the resulting GameState after the action.
+ * - `result`: the GameResult (ongoing, or terminal if the action ended the game).
+ */
+export type ApplyResult = { state: GameState; result: GameResult };
 
 /* ------------------------------------------------------------------ */
 /*  Type aliases (using Extract for clarity over intersection types)   */
 /* ------------------------------------------------------------------ */
+
+/** The Placement variant of the Action discriminated union. */
+type PlacementAction = Extract<Action, { kind: 'placement' }>;
 
 /** The Move variant of the Action discriminated union. */
 type MoveAction = Extract<Action, { kind: 'move' }>;
@@ -63,6 +77,104 @@ function removeEnemyPieces(
   const remaining = stack.filter((p) => p.owner === friendlyOwner);
   if (remaining.length === 0) return null;
   return createStack(remaining);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Internal helpers for turn management                               */
+/* ------------------------------------------------------------------ */
+
+/** Return the opponent of a player. */
+function opponent(player: Player): Player {
+  return player === 'white' ? 'black' : 'white';
+}
+
+/** Check if a player's hand is completely empty (all piece types at count 0). */
+function isHandEmpty(hand: Hand): boolean {
+  return ALL_PIECE_TYPES.every((pt: PieceType) => hand[pt] === 0);
+}
+
+/* ------------------------------------------------------------------ */
+/*  applyPlacement — full deploy-phase placement                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Apply a validated Placement action to the current GameState.
+ *
+ * Handles:
+ * 1. Deduct piece from the active player's hand
+ * 2. Place piece on the destination square (empty or friendly stack)
+ * 3. Advance turn counter
+ * 4. Handle Done declaration (BR-DEPLOY-007/008):
+ *    - If current player declares Done, set their done flag
+ *    - If both players Done → end Deploy Phase → evaluate Exposure (BR-DEPLOY-012)
+ *    - Otherwise, swap active player (BR-DEPLOY-002)
+ * 5. If a player's hand becomes empty after placement, they are automatically Done
+ *
+ * Marshal-first enforcement is handled by validatePlacement (Step 8) and
+ * is not re-checked here.
+ *
+ * @param state - The current GameState (must be Deploy Phase).
+ * @param action - A validated Placement action.
+ * @returns ApplyResult with the new state and game result.
+ */
+export function applyPlacement(state: GameState, action: PlacementAction): ApplyResult {
+  const newState: GameState = cloneState(state);
+  const { piece, dest, done: declaredDone } = action;
+  const player = newState.turn.activePlayer;
+  const pieceObj: Piece = { type: piece, owner: player };
+
+  // 1. Deduct piece from hand
+  newState.hands[player][piece]--;
+
+  // 2. Place piece on board
+  const targetStack = getStack(newState.position, dest);
+  if (targetStack === null) {
+    newState.position = setStack(newState.position, dest, createStack([pieceObj]));
+  } else {
+    // Friendly stack (already validated in Step 8), append to top
+    const pieces = [...targetStack, pieceObj];
+    newState.position = setStack(newState.position, dest, createStack(pieces));
+  }
+
+  // 3. Advance turn counter
+  newState.turn.counter++;
+
+  // 4. Handle Done declaration and turn management
+  const playerDone = declaredDone || isHandEmpty(newState.hands[player]);
+
+  if (playerDone) {
+    // Current player is done — check if opponent is already done
+    if (newState.turn.done !== null) {
+      // Opponent already done → both done → Deploy Phase ends
+      const result = evaluateExposure(newState.position);
+      if (result.kind === 'ongoing') {
+        // No exposure — transition to Battle Phase (BR-DEPLOY-010)
+        newState.turn = {
+          phase: 'battle',
+          activePlayer: 'white',
+          done: null,
+          counter: 1,
+        };
+      }
+      // If exposure triggered, state stays as deploy-final snapshot; result carries the terminal
+      return { state: newState, result };
+    }
+
+    // Opponent not done yet — mark current player done, give turn to opponent
+    newState.turn.done = player;
+    newState.turn.activePlayer = opponent(player);
+  } else {
+    // Player did NOT declare Done
+    if (newState.turn.done !== null) {
+      // Opponent already done → non-done player keeps the turn
+      // (activePlayer already is this player, so no change needed)
+    } else {
+      // No done yet — alternate (BR-DEPLOY-002)
+      newState.turn.activePlayer = opponent(player);
+    }
+  }
+
+  return { state: newState, result: { kind: 'ongoing' as const } };
 }
 
 /* ------------------------------------------------------------------ */

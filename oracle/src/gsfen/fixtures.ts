@@ -51,10 +51,14 @@ export const CAPTURE_AFTERMATH = readValid('capture-aftermath');
 export const CHOICE_POS = readValid('choice-pos');
 export const DEEP_CAPTURE_EXCHANGE = readValid('deep-capture-exchange');
 export const DENSE_ENGAGEMENT = readValid('dense-engagement');
+export const DEPLOY_AUTO_DONE = readValid('deploy-auto-done');
 export const DEPLOY_BLACK_CTR2 = readValid('deploy-black-ctr2');
+export const DEPLOY_LAST_PIECE = readValid('deploy-last-piece');
 export const DEPLOY_BLACK_MARSHAL_PLACED = readValid('deploy-black-marshal-placed');
 export const DEPLOY_BOTH_MARSHALS_PAWN = readValid('deploy-both-marshals-pawn');
+export const DEPLOY_EXPOSURE_DRAW = readValid('deploy-exposure-draw');
 export const DEPLOY_FULL_STACK_PAWNS = readValid('deploy-full-stack-pawns');
+export const DEPLOY_LT_EXPOSURE_DRAW = readValid('deploy-lt-exposure-draw');
 export const DEPLOY_MARSHAL_COL1 = readValid('deploy-marshal-col1');
 export const DEPLOY_MARSHAL_COL9 = readValid('deploy-marshal-col9');
 export const DEPLOY_MARSHAL_ON_TOP = readValid('deploy-marshal-on-top');
@@ -118,10 +122,14 @@ export const FIXTURES: Record<string, string> = {
   'choice-pos': CHOICE_POS,
   'deep-capture-exchange': DEEP_CAPTURE_EXCHANGE,
   'dense-engagement': DENSE_ENGAGEMENT,
+  'deploy-auto-done': DEPLOY_AUTO_DONE,
   'deploy-black-ctr2': DEPLOY_BLACK_CTR2,
+  'deploy-last-piece': DEPLOY_LAST_PIECE,
   'deploy-black-marshal-placed': DEPLOY_BLACK_MARSHAL_PLACED,
   'deploy-both-marshals-pawn': DEPLOY_BOTH_MARSHALS_PAWN,
+  'deploy-exposure-draw': DEPLOY_EXPOSURE_DRAW,
   'deploy-full-stack-pawns': DEPLOY_FULL_STACK_PAWNS,
+  'deploy-lt-exposure-draw': DEPLOY_LT_EXPOSURE_DRAW,
   'deploy-marshal-col1': DEPLOY_MARSHAL_COL1,
   'deploy-marshal-col9': DEPLOY_MARSHAL_COL9,
   'deploy-marshal-on-top': DEPLOY_MARSHAL_ON_TOP,
