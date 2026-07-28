@@ -18,7 +18,7 @@
 
 ## Tool suite
 
-### T1 — GSFEN fixture catalog (Phase 0)
+### T1 — GSFEN fixture catalog (Phase 0) (complete)
 
 Replace all inline GSFEN strings across the codebase with named constants
 from a central barrel, validated at module-init time.
@@ -56,9 +56,11 @@ oracle/fixtures/
 - The `invalid/` directory now contains only format-error fixtures in its
   `parse/` subdirectory. All intentionally fail at the parse stage (C-rule).
 
-**Remaining work:** The barrel at `oracle/src/gsfen/fixtures.ts` does not
-exist yet. It will export every fixture as a named constant and run
-`validateState()` on all `valid/` entries at module-init time.
+**Barrel:** `oracle/src/gsfen/fixtures.ts` exports all 56 fixtures as
+named constants (SCREAMING_SNAKE_CASE) and provides a `FIXTURES` lookup
+record. Module-init `validateState()` is not done in the barrel due to a
+circular dependency (parse → constants → fixtures); valid fixtures are
+confirmed at curation time via the GSFEN CLI and fixture report.
 
 **Policy:** No inline GSFEN strings anywhere in `src/` or `tests/` — every
 string lives in a `.gsfen` file. Enforced by CONTEXT.md and a CI check
@@ -68,7 +70,7 @@ string lives in a `.gsfen` file. Enforced by CONTEXT.md and a CI check
 incomplete features. Decide when the healing pass (Phase 1) reveals the
 actual shape.
 
-### T2 — Rule browser (Phase 3)
+### T2 — Rule browser (Phase 3) ✅
 
 A script that, given a BR-xxx code, returns:
 
@@ -76,12 +78,19 @@ A script that, given a BR-xxx code, returns:
 - Files that enforce it (source)
 - Tests that exercise it
 - ORACLE.md step reference
+- REFINING.md references
 - Related rules
+- Other document references (GAN.md, TEST.md)
 
 **Usage:**
 ```bash
-oracle/script/browse-rule.sh BR-MOVE-005
+oracle/script/browse-rule.sh BR-MOVE-005   # show one rule
+oracle/script/browse-rule.sh --all          # list all known BR-xxx codes
+oracle/script/browse-rule.sh --help         # full help
 ```
+
+See the script at `oracle/script/browse-rule.sh`. Uses ripgrep if available,
+falls back to grep with ERE.
 
 ### T3 — GSFEN string scan (existing)
 
@@ -133,7 +142,9 @@ Phase 1: Healing pass (REFINING.md)
 Phase 2: Step-awareness redesign
   │  throwIfNotImplemented, @step tags, test markers
   │
-  ├──▶ Phase 3: Rule browser (browse-rule.sh)
+  ▼
+Phase 3: Rule browser (browse-rule.sh) ✅
+  │  T2 complete — see oracle/script/browse-rule.sh
   │
   └──▶ Phase 4: GAN visualizer (thin)
          requires stable applyMove/applyArata from Phase 1-2

@@ -1,3 +1,32 @@
+/**
+ * Public API barrel for the Gungi Oracle.
+ *
+ * ## Usage
+ * ```typescript
+ * import { parseGSFEN, serializeGSFEN, validateMove, GameError } from './index.js';
+ * ```
+ *
+ * ## Exports
+ * | Module | Exports |
+ * |--------|---------|
+ * | `types.js` | Core domain types (Player, Piece, GameState, Action, GameResult, etc.) |
+ * | `constants.js` | Piece data, initial counts, movement patterns, START_GSFEN |
+ * | `errors.js` | GameError and IllegalActionError typed error hierarchy |
+ * | `gsfen/parse.js` | parseGSFEN — GSFEN string → GameState |
+ * | `gsfen/validate.js` | validateState, validateAction — semantic validity (V-codes) |
+ * | `gsfen/serialize.js` | serializeGSFEN — GameState → canonical GSFEN string |
+ * | `gsfen/fixtures.js` | (NOTE: re-exported via constants barrel route — import directly) |
+ * | `gan/parse.js` | parseGAN — GAN string → Action |
+ * | `gan/validate.js` | validateAction — GAN semantic validity (S-codes) |
+ * | `gan/serialize.js` | serializeGAN — Action → canonical GAN string |
+ * | `game/validation.js` | ValidationResult, PlayValidation shared types |
+ * | `game/battle.js` | validateMove, validateArata, validatePlay |
+ * | `game/deploy.js` | validatePlacement |
+ * | `game/apply.js` | applyMove, applyArata (minimal — Step 8) |
+ *
+ * @module
+ */
+
 export * from './types.js';
 export * from './constants.js';
 export * from './errors.js';

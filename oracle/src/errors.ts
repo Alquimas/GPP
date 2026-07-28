@@ -1,3 +1,19 @@
+/**
+ * Typed error hierarchy for the Gungi rule engine.
+ *
+ * Every game rule violation returns a typed error carrying the BR-xxx
+ * rule reference from BUSINESS_RULES.md, rather than throwing.
+ *
+ * ## Error classes
+ * - {@link GameError} — base class for all rule violations.
+ * - {@link IllegalActionError} — extends GameError with the illegal Action.
+ *
+ * {@link GameErrorKind} discriminates the error category for consumer
+ * routing: deploy, move, arata, self-check, terminal, or general.
+ *
+ * @module
+ */
+
 import type { Action } from './types.js';
 
 export type GameErrorKind = 'deploy' | 'move' | 'arata' | 'self-check' | 'terminal' | 'general';
