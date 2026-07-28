@@ -120,6 +120,37 @@ To use a fixture: read from `oracle/fixtures/<name>.gsfen`, parse, and mutate.
 
 `oracle/script/gsfen.ts` — validate and visualize GSFEN strings from the command line.
 
+## GSFEN Generator
+
+`oracle/script/gsfen-gen.ts` — generate GSFEN fixture files by loading an existing fixture and applying overlay mutations.
+
+```bash
+npm run gsfen:gen -- \
+  --from fixtures/valid/battle-midgame.gsfen \
+  --set 5-5 P,y,T \
+  --clear 5-3 \
+  --hands "+s -e" \
+  --turn w \
+  --counter 15 \
+  --write fixtures/valid/my-fixture.gsfen
+```
+
+| Flag | Repeats | Description |
+|---|---|---|
+| `--from <path>` | — | Source `.gsfen` fixture file (required, resolved relative to CWD) |
+| `--set <c>-<r> <stack>` | ✓ | Replace square at column `c`, row `r` with a comma-separated stack (bottom→top; e.g. `P,y,T`) |
+| `--clear <c>-<r>` | ✓ | Empty a square (error if already empty) |
+| `--hands "<tokens>"` | — | Diff-style hand mutations. Each token is `+` or `-` followed by a single piece letter (`+M` = add White Marshal, `-p` = remove Black Pawn). One piece per token; repeat to adjust counts. |
+| `--turn <token>` | — | Override turn token (`w`/`b`/`dw`/`db`/`dwB`/`dbW`) |
+| `--counter <n>` | — | Override turn counter |
+| `--write <path>` | — | Output path (must end in `.gsfen` and be under `oracle/fixtures/`) |
+
+The script validates the result via `parseGSFEN` + `validateState` before writing. If the resulting state is invalid, the error is printed and no file is written.
+
+### Requirements
+
+Run from the `oracle/` directory (the CWD that `npm run` sets).
+
 ## Rule Browser
 
 `oracle/script/browse-rule.sh` — browse rule definitions, source files,

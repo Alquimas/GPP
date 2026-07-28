@@ -9,6 +9,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
     "gsfen": "npx tsx script/gsfen.ts",
+    "gsfen:gen": "npx tsx script/gsfen-gen.ts",
     "lint": "eslint src tests",
     "test": "vitest run"
   },
