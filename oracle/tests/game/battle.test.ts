@@ -177,23 +177,23 @@ describe('validateMove', () => {
     });
   });
 
-  describe('stack size landing restriction — enforced at movement seam (BR-MOVE-005) — reachability consequence (BR-MOVE-003)', () => {
+  describe('BR-MOVE-005 — stack size landing restriction', () => {
     it('rejects move when source size < target size', () => {
       // Marshal size 1 at (5,9), friendly AFG size 3 at (5,7) — blocked
-      // BR-MOVE-005 (source stack size >= target stack size) is enforced inside
-      // getLegalDestinations, so validateMove sees it as unreachable (BR-MOVE-003).
+      // BR-MOVE-005 (source stack size >= target stack size) is now checked
+      // explicitly in validateMove before the reachability query.
       const state = gsfenState(SIZE_MISMATCH_AFG);
       const r = validateMove(state, move(5, 9, 5, 7));
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-005');
     });
   });
 
   describe('BR-CAPTURE-003 — source size < target enemy stack size', () => {
     it('rejects move when source size < target enemy stack size', () => {
       // Marshal size 1 at (5,9), change the size-3 stack at (5,7) to enemy-owned.
-      // BR-MOVE-005 (source >= target) is enforced inside getLegalDestinations,
-      // so validateMove sees it as unreachable (BR-MOVE-003).
+      // BR-MOVE-005 (source >= target) is now checked explicitly in validateMove,
+      // so the rejection carries the correct rule code.
       const base = gsfenState(SIZE_MISMATCH_AFG);
       const stack = getStack(base.position, { col: 5, row: 7 })!;
       const blackStack = createStack(
@@ -205,7 +205,7 @@ describe('validateMove', () => {
       };
       const r = validateMove(state, move(5, 9, 5, 7));
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-005');
     });
   });
 

@@ -52,18 +52,14 @@ describe('evaluateExposure', () => {
     const state = gsfenState(WHITE_MARSHAL_AT_5_9);
 
     // Black General at (5,1) can range along the file unobstructed → attacks (5,9)
-    // But first check: is (5,1) empty?
-    const existing = getStack(state.position, { col: 5, row: 1 });
-    if (existing === null) {
-      const pos = setStack(
-        state.position,
-        { col: 5, row: 1 },
-        createStack([{ type: 'G', owner: 'black' }]),
-      );
-      const r = evaluateExposure(pos);
-      expect(r.kind).toBe('exposure');
-      if (r.kind === 'exposure') expect(r.loser).toBe('white');
-    }
+    const pos = setStack(
+      state.position,
+      { col: 5, row: 1 },
+      createStack([{ type: 'G', owner: 'black' }]),
+    );
+    const r = evaluateExposure(pos);
+    expect(r.kind).toBe('exposure');
+    if (r.kind === 'exposure') expect(r.loser).toBe('white');
   });
 
   it('returns exposure with loser when Black Marshal is under attack', () => {
@@ -71,17 +67,14 @@ describe('evaluateExposure', () => {
     const state = gsfenState(DEPLOY_BLACK_MARSHAL_PLACED);
 
     // White General at (5,9) can range along the file unobstructed → attacks (5,1)
-    const existing = getStack(state.position, { col: 5, row: 9 });
-    if (existing === null) {
-      const pos = setStack(
-        state.position,
-        { col: 5, row: 9 },
-        createStack([{ type: 'G', owner: 'white' }]),
-      );
-      const r = evaluateExposure(pos);
-      expect(r.kind).toBe('exposure');
-      if (r.kind === 'exposure') expect(r.loser).toBe('black');
-    }
+    const pos = setStack(
+      state.position,
+      { col: 5, row: 9 },
+      createStack([{ type: 'G', owner: 'white' }]),
+    );
+    const r = evaluateExposure(pos);
+    expect(r.kind).toBe('exposure');
+    if (r.kind === 'exposure') expect(r.loser).toBe('black');
   });
 
   it('returns exposure-draw when both Marshals are under attack', () => {

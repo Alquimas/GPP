@@ -24,6 +24,7 @@ export type GameRule =
   | 'BR-MOVE-002'
   | 'BR-MOVE-003'
   | 'BR-MOVE-004'
+  | 'BR-MOVE-005'
   | 'BR-PLAY-002'
   | 'BR-STACK-002'
   | 'BR-STACK-004'

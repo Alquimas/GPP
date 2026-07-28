@@ -139,20 +139,17 @@ function getArataZone(
  * Checks performed here (in order):
  *   0. BR-PLAY-002: Phase must be 'battle'
  *   1. BR-MOVE-002: Origin contains player's own piece
- *   2. BR-MOVE-003: Destination is reachable (calls movement.ts)
- *   3. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
- *   4. BR-STACK-006: Turncoat (defensively rejected until Step 10)
- *   5. BR-STACK-004: No stacking on Marshal
- *   6. BR-ACTION-002: Self Check — own Marshal not under attack after move
+ *   2. BR-MOVE-005: Stack size landing restriction (source >= target)
+ *   3. BR-MOVE-003: Destination is reachable (calls movement.ts)
+ *   4. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
+ *   5. BR-STACK-006: Turncoat (defensively rejected until Step 10)
+ *   6. BR-STACK-004: No stacking on Marshal
+ *   7. BR-ACTION-002: Self Check — own Marshal not under attack after move
  *
  * Rules enforced upstream (not checked here):
  *   - BR-MOVE-001 (piece is top of its stack): enforced by
  *     `getLegalDestinations` in `board/movement.ts`. If the piece is not
  *     the top of its stack, no legal destination is returned.
- *   - BR-MOVE-005 (stack size landing restriction): enforced by
- *     `getLegalDestinations` in `board/movement.ts`, which filters out
- *     oversized targets via `canLandOnStack` before this validator
- *     sees them.
  *
  * @param state - Current GameState.
  * @param action - The Move action to validate.
@@ -196,7 +193,19 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     };
   }
 
-  // 2+3. BR-MOVE-003: Destination must be reachable
+  // 2. BR-MOVE-005: Stack size landing restriction (source >= target)
+  const targetStack = getStack(state.position, dest);
+  if (targetStack !== null && stackSize(targetStack) > originStack.length) {
+    return {
+      ok: false,
+      error: new GameError(
+        `Source stack size (${originStack.length}) is less than target stack size (${stackSize(targetStack)})`,
+        'BR-MOVE-005',
+      ),
+    };
+  }
+
+  // 3. BR-MOVE-003: Destination must be reachable
   const legalMoves = getLegalDestinations(state.position, origin, player);
   const matchingMove = legalMoves.find((m) => m.dest.col === dest.col && m.dest.row === dest.row);
   if (!matchingMove) {
@@ -211,7 +220,6 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
 
   // 5. Outcome validation — reuse the engine's classification (determineOutcome),
   //    no longer re-derives the reason (BR-STACK-002/004, BR-CAPTURE-001/002/003).
-  const targetStack = getStack(state.position, dest);
   const outcomeError = validateOutcome(matchingMove.outcome, targetStack, outcome);
   if (outcomeError) {
     return { ok: false, error: outcomeError };
