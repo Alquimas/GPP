@@ -10,7 +10,7 @@ import type { GameState, Player } from '../../src/types.js';
 
 /** Read a .gsfen fixture file by name (without extension). */
 function readFixture(name: string): string {
-  return readFileSync(`/gsfen/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`../gsfen/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Assert a parse is successful and return the state. */

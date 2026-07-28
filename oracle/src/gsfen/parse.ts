@@ -121,10 +121,10 @@ function parsePosition(posStr: string): FieldResult<Position> {
         if (prevWasDigit) {
           return {
             ok: false,
-            error: new GameError(
-              `Row ${r + 1}: adjacent empty-run items must be merged (C3)`,
-              'C3',
-            ),
+        error: new GameError(
+          `Row ${r + 1}: adjacent empty-run items must be merged (C3) — write 5, not 4,1`,
+          'C3',
+        ),
           };
         }
         const count = parseInt(item, 10);
@@ -300,16 +300,16 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
       if (lastWhiteLetter !== '' && ch <= lastWhiteLetter) {
         return {
           ok: false,
-          error: new GameError(
-            `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}")`,
-            'C5',
-          ),
+        error: new GameError(
+          `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}") (C5) — alphabetical order is A C E F G J L M N P S T U Y`,
+          'C5',
+        ),
         };
       }
       if (white[ch] > 0) {
         return {
           ok: false,
-          error: new GameError(`Hands: duplicate white piece letter "${ch}"`, 'C5'),
+          error: new GameError(`Hands: duplicate white piece letter "${ch}" (C5) — each letter appears at most once`, 'C5'),
         };
       }
       white[ch] = 1;
@@ -363,17 +363,17 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
       if (lastBlackLetter !== '' && ch <= lastBlackLetter) {
         return {
           ok: false,
-          error: new GameError(
-            `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}")`,
-            'C5',
-          ),
+        error: new GameError(
+          `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}") (C5) — alphabetical order is a c e f g j l m n p s t u y`,
+          'C5',
+        ),
         };
       }
       const upper = toUpperPieceType(ch);
       if (black[upper] > 0) {
         return {
           ok: false,
-          error: new GameError(`Hands: duplicate black piece letter "${ch}"`, 'C5'),
+          error: new GameError(`Hands: black duplicate piece letter "${ch}" (C5) — each letter appears at most once`, 'C5'),
         };
       }
       black[upper] = 1;
@@ -438,10 +438,10 @@ function parseCounter(counterStr: string): FieldResult<number> {
   if (!/^[1-9]\d*$/.test(counterStr)) {
     return {
       ok: false,
-      error: new GameError(
-        `Counter must be a positive integer (no leading zeros), got "${counterStr}"`,
-        'C6',
-      ),
+        error: new GameError(
+          `Counter must be a positive integer (no leading zeros), got "${counterStr}" (C6) — e.g. 1 not 01`,
+          'C6',
+        ),
     };
   }
 
@@ -481,7 +481,7 @@ export function parseGSFEN(input: string): ParseResult {
   if (input !== input.trim()) {
     return {
       ok: false,
-      error: new GameError('GSFEN must not have leading or trailing whitespace (C1)', 'C1'),
+        error: new GameError('GSFEN must not have leading or trailing whitespace (C1) — trim the string', 'C1'),
     };
   }
 
@@ -492,10 +492,10 @@ export function parseGSFEN(input: string): ParseResult {
   if (parts.length !== 4) {
     return {
       ok: false,
-      error: new GameError(
-        `GSFEN must have exactly 4 single-space-separated fields (C1), got ${parts.length} segments`,
-        'C1',
-      ),
+        error: new GameError(
+          `GSFEN must have exactly 4 single-space-separated fields (C1), got ${parts.length} segments — format: <position> <turn> <hands> <counter>`,
+          'C1',
+        ),
     };
   }
 
@@ -504,7 +504,7 @@ export function parseGSFEN(input: string): ParseResult {
     if (/\s/.test(p)) {
       return {
         ok: false,
-        error: new GameError('GSFEN fields must not contain tabs or other whitespace (C1)', 'C1'),
+        error: new GameError('GSFEN fields must not contain tabs or other whitespace (C1) — use single spaces only', 'C1'),
       };
     }
   }

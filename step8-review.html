@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step 8 Review — Action Validation (Move, Arata, Placement)</title>
+<style>
+  :root {
+    --ink: #1a2230;
+    --muted: #5b6675;
+    --line: #dde3ea;
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --high: #b3261e;
+    --high-bg: #fdecea;
+    --med: #9a6200;
+    --med-bg: #fff4e0;
+    --low: #1d5fa8;
+    --low-bg: #e9f2fc;
+    --info: #5a6472;
+    --info-bg: #eef1f5;
+    --good: #1e7b3c;
+    --good-bg: #e8f6ec;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 2rem 1rem;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink); background: var(--bg); line-height: 1.55;
+  }
+  main { max-width: 980px; margin: 0 auto; }
+  header.hero {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.75rem 2rem; margin-bottom: 1.5rem;
+  }
+  h1 { font-size: 1.45rem; margin: 0 0 .35rem; }
+  h2 {
+    font-size: 1.15rem; margin: 2.25rem 0 .75rem; padding-bottom: .4rem;
+    border-bottom: 2px solid var(--line);
+  }
+  h3 { font-size: 1rem; margin: 0 0 .5rem; }
+  p { margin: .4rem 0; }
+  code { font-family: var(--mono); font-size: .86em; background: #eef1f5; padding: .1em .35em; border-radius: 4px; }
+  pre {
+    font-family: var(--mono); font-size: .8rem; background: #101826; color: #d7e0ea;
+    padding: .85rem 1rem; border-radius: 8px; overflow-x: auto; margin: .6rem 0;
+  }
+  pre .ok { color: #7ee2a0; }
+  .sub { color: var(--muted); font-size: .92rem; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; margin: 1rem 0 0; }
+  .stat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: .9rem 1rem; text-align: center;
+  }
+  .stat .n { font-size: 1.6rem; font-weight: 700; }
+  .stat .l { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .stat.high .n { color: var(--high); }
+  .stat.med .n { color: var(--med); }
+  .stat.low .n { color: var(--low); }
+  .stat.info .n { color: var(--info); }
+  .stat.good .n { color: var(--good); }
+  .finding {
+    background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--info);
+    border-radius: 8px; padding: 1rem 1.25rem; margin: .85rem 0;
+  }
+  .finding.sev-high { border-left-color: var(--high); }
+  .finding.sev-med  { border-left-color: var(--med); }
+  .finding.sev-low  { border-left-color: var(--low); }
+  .finding.sev-info { border-left-color: var(--info); }
+  .badge {
+    display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; padding: .15em .6em; border-radius: 999px; margin-right: .5rem;
+    vertical-align: middle;
+  }
+  .badge.high { background: var(--high-bg); color: var(--high); }
+  .badge.med  { background: var(--med-bg);  color: var(--med); }
+  .badge.low  { background: var(--low-bg);  color: var(--low); }
+  .badge.info { background: var(--info-bg); color: var(--info); }
+  .badge.good { background: var(--good-bg); color: var(--good); }
+  .fid { font-family: var(--mono); font-weight: 700; margin-right: .5rem; }
+  .loc { font-family: var(--mono); font-size: .8rem; color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; margin: .75rem 0; font-size: .9rem; }
+  th, td { border: 1px solid var(--line); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+  th { background: #eef1f5; }
+  ul { margin: .4rem 0 .4rem 1.2rem; padding: 0; }
+  li { margin: .25rem 0; }
+  .verdict {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin: 1rem 0;
+  }
+  .axis-note { color: var(--muted); font-size: .92rem; font-style: italic; }
+  .evidence { font-size: .86rem; color: var(--muted); margin-top: .5rem; }
+  footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<main>
+
+<header class="hero">
+  <h1>Step 8 Code Review — Action Validation (Move, Arata, Placement)</h1>
+  <p class="sub">
+    Commit <code>1dfa9bc</code> &middot; Gungi Oracle (TypeScript) &middot; Reviewed against
+    <code>BUSINESS_RULES.md</code>, <code>GAN.md</code>, <code>ORACLE.md</code>, <code>TEST.md</code>, <code>CONTEXT.md</code>
+  </p>
+  <div class="cards">
+    <div class="stat good"><div class="n">727/727</div><div class="l">Tests pass</div></div>
+    <div class="stat good"><div class="n">0</div><div class="l">tsc errors</div></div>
+    <div class="stat high"><div class="n">5</div><div class="l">High</div></div>
+    <div class="stat med"><div class="n">9</div><div class="l">Medium</div></div>
+    <div class="stat low"><div class="n">5</div><div class="l">Low</div></div>
+    <div class="stat info"><div class="n">3</div><div class="l">Info</div></div>
+  </div>
+</header>
+
+<section class="verdict">
+  <h3>Overall verdict</h3>
+  <p>
+    Step 8 is <strong>functional, well-cited, and green</strong> — the validators work, errors carry BR
+    references, and the suite passes cleanly. But measured against the project's own standard
+    (<em>naive, absolutely explicit, behavior-tested oracle</em>) it falls short in three structural ways:
+  </p>
+  <ul>
+    <li><strong>One invented rule</strong> exists in code with no basis in the business rules or GAN spec
+      (&ldquo;Marshal must be placed on an empty square&rdquo;, <a href="#c1">C1</a>) — plus its duplicate in the older GAN validator.</li>
+    <li><strong>Two public validation stacks now coexist and provably disagree</strong> on the same
+      action+state (<a href="#c2">C2</a>) — the opposite of a single naive oracle.</li>
+    <li><strong>Two tests validate the current code instead of behavior</strong>: one fixture is an illegal
+      game state (<a href="#a1">A1</a>), one assertion locks in behavior that contradicts BR-TURN-002 (<a href="#a2">A2</a>).</li>
+  </ul>
+  <p>All findings below were confirmed empirically (see <a href="#verification">Verification</a>).</p>
+</section>
+
+<h2 id="verification">Method &amp; verification evidence</h2>
+<p>Scope: the 7 files of commit <code>1dfa9bc</code> (<code>game/apply.ts</code>, <code>game/battle.ts</code>,
+<code>game/deploy.ts</code>, <code>game/validation.ts</code>, <code>index.ts</code>,
+<code>tests/game/battle.test.ts</code>, <code>tests/game/deploy.test.ts</code>), plus every module the step
+interacts with (<code>types.ts</code>, <code>errors.ts</code>, <code>board/*</code>, <code>gan/validate.ts</code>,
+<code>gsfen/*</code>).</p>
+<pre>$ docker compose run --rm check
+<span class="ok">exit 0 — tsc --noEmit clean</span>
+
+$ docker compose run --rm test
+<span class="ok">Test Files 13 passed (13) — Tests 727 passed (727)</span></pre>
+<p>Six throwaway probe tests were written, executed, and then deleted. Each probe maps to a finding:</p>
+<table>
+  <tr><th>Probe</th><th>Result</th><th>Confirms</th></tr>
+  <tr><td>PROBE-1</td><td><code>validateState</code> rejects the <code>deploy.test.ts</code> &ldquo;MP&rdquo; fixture with rule <code>V3</code></td><td>A1</td></tr>
+  <tr><td>PROBE-2</td><td><code>validateAction</code> (S2) <strong>accepts</strong> stacking General on own Marshal; <code>validatePlacement</code> <strong>rejects</strong> (BR-STACK-004)</td><td>C2</td></tr>
+  <tr><td>PROBE-3</td><td><code>validateAction</code> <strong>accepts</strong> an unreachable move (S3 stub); <code>validateMove</code> rejects</td><td>C2</td></tr>
+  <tr><td>PROBE-4</td><td>Arata that fails to resolve an existing check <strong>is</strong> rejected (BR-ACTION-002) — code works, test missing</td><td>A5</td></tr>
+  <tr><td>PROBE-5</td><td>Marshal placement onto a friendly stack rejected with &ldquo;Marshal must be placed on an empty square&rdquo;</td><td>C1</td></tr>
+  <tr><td>PROBE-6</td><td>Move that fails to resolve an existing check <strong>is</strong> rejected (BR-ACTION-002) — untested path</td><td>A5</td></tr>
+</table>
+
+<h2>Axis 1 — Test quality: do the tests test behavior, or only validate the current code?</h2>
+<p class="axis-note">
+  Mostly behavior — fixtures are built through the real GSFEN parser and assertions target legality
+  outcomes with BR attribution. The Self-Check test saved from Step 7 is exemplary. But two tests
+  actively validate the code-as-written rather than the rules, and some behavioral coverage is missing.
+</p>
+
+<div class="finding sev-high" id="a1">
+  <h3><span class="fid">A1</span><span class="badge high">High</span> Illegal-state fixture makes an acceptance test validate the unreachable</h3>
+  <p class="loc">oracle/tests/game/deploy.test.ts:99–106 — &ldquo;accepts placement on friendly stack under size 3 (BR-DEPLOY-005)&rdquo;</p>
+  <p>The fixture encodes the stack <code>4,MP,4</code> — Marshal at the <em>bottom</em>, Pawn on top. GSFEN stacks
+  read bottom&rarr;top, so this position violates BR-STACK-004 (&ldquo;Marshal is always the topmost piece&rdquo;);
+  <code>validateState</code> rejects it with <code>V3</code> (PROBE-1). It slips through because
+  <code>parseGSFEN</code> deliberately skips semantic validation, and the test helper never calls
+  <code>validateState</code>.</p>
+  <p>The damage: with the <em>legal</em> encoding of a friendly size-2 stack containing a Marshal
+  (<code>PM</code> — Pawn bottom, Marshal top), the same placement must be <strong>rejected</strong> (cannot stack on a
+  Marshal). So the asserted acceptance only holds for an impossible position; if someone &ldquo;fixes&rdquo; the
+  fixture to a reachable state, the test fails. It validates what the code does, not what the rules say.</p>
+  <p><strong>Fix:</strong> use a non-Marshal stack (e.g. <code>SP</code>) for this test, and consider running
+  <code>validateState</code> inside the <code>gsfenState()</code> test helper so illegal fixtures fail loudly at setup.</p>
+</div>
+
+<div class="finding sev-high" id="a2">
+  <h3><span class="fid">A2</span><span class="badge high">High</span> A test locks in behavior that contradicts BR-TURN-002</h3>
+  <p class="loc">oracle/tests/game/battle.test.ts:439–440 — &ldquo;Active player should NOT be flipped (that's Step 10)&rdquo;</p>
+  <p>The test asserts <code>afterState.turn.activePlayer === 'white'</code> after a Play. BR-TURN-002 requires the
+  Active Player to pass to the Opponent after a Play. This codifies the incomplete Step-8
+  <code>applyMove</code> as expected behavior: when Step 10 implements the flip, this test must be rewritten, and
+  until then it would <em>fail the correct behavior</em>. It is the clearest instance in this commit of
+  &ldquo;test validates current code, not behavior.&rdquo;</p>
+  <p><strong>Fix:</strong> delete the assertion, or convert to <code>it.todo</code>/<code>it.fails</code> with a
+  BR-TURN-002 reference so the suite documents the gap instead of cementing it.</p>
+</div>
+
+<div class="finding sev-med" id="a3">
+  <h3><span class="fid">A3</span><span class="badge med">Medium</span> Mislabeled coverage: BR-MOVE-005 has no test at the validation seam</h3>
+  <p class="loc">oracle/tests/game/battle.test.ts:206–219</p>
+  <p>The block <code>describe('BR-MOVE-005 — stack size landing restriction')</code> asserts
+  <code>error.rule === 'BR-MOVE-003'</code>. The movement engine filters oversized targets before
+  <code>validateMove</code> ever sees them, so the validator attributes the failure to reachability. The suite
+  <em>appears</em> to cover BR-MOVE-005 at this seam but does not — and TEST.md Leg 1 requires every BR-xref to
+  have a matching test identifier. Either rename the block to reflect what it proves, or declare the movement
+  module the BR-MOVE-005 seam and drop the misleading describe.</p>
+</div>
+
+<div class="finding sev-med" id="a4">
+  <h3><span class="fid">A4</span><span class="badge med">Medium</span> Assertions coupled to check ordering, not just behavior</h3>
+  <p class="loc">oracle/tests/game/battle.test.ts:312–319 (pattern repeats across both files)</p>
+  <p>&ldquo;rejects arata of Marshal (BR-ARATA-002 fires first — not in hand)&rdquo; explicitly documents that the
+  assertion depends on <em>which</em> check runs first. The business rules define no error precedence — any
+  rejection of arata-ing a Marshal is correct. Reorder two legitimate checks and behavior stays correct while
+  tests break. Asserting the <code>error.rule</code> vocabulary itself is legitimate (the error domain is part of
+  the oracle contract); asserting <em>precedence between two valid rejections</em> tests the implementation, not
+  the rules.</p>
+</div>
+
+<div class="finding sev-med" id="a5">
+  <h3><span class="fid">A5</span><span class="badge med">Medium</span> Behavioral coverage gaps at the new seam</h3>
+  <ul>
+    <li><strong>No negative Self-Check test for Arata</strong> — Marshal already in check, Arata that does not
+      resolve it must be rejected. PROBE-4 confirms the code handles it correctly; only the test is missing.</li>
+    <li><strong>No test for a Move that fails to resolve an existing check</strong> (PROBE-6 confirms the code
+      handles it). The existing Self-Check test only covers post-move exposure.</li>
+    <li><strong>No BR-CAPTURE-003 test through validateMove with an enemy target</strong> (source &lt; target &rarr;
+      illegal). The only size-restriction test uses a friendly target and asserts BR-MOVE-003.</li>
+    <li><strong>Arata zone tested only for White</strong> — deploy zone received Black-symmetry tests
+      (5 cases); the Arata zone logic is a separate implementation and received none.</li>
+  </ul>
+</div>
+
+<div class="finding sev-low" id="a6">
+  <h3><span class="fid">A6</span><span class="badge low">Low</span> Duplicated / weak assertions</h3>
+  <p><code>battle.test.ts:215</code> &ldquo;accepts move to empty square (trivially passes)&rdquo; duplicates the same
+  fixture+action asserted twice earlier (lines 143, 151). A few other &ldquo;accepts&rdquo; cases repeat identical
+  inputs under different describes. Harmless, but inflates the count without adding signal.</p>
+</div>
+
+<div class="finding sev-info" id="a7">
+  <h3><span class="fid">A7</span><span class="badge info">Info</span> Turncoat rejection tests cite a rule the action doesn&rsquo;t violate</h3>
+  <p>Guard tests assert non-empty turncoat is rejected with rule <code>BR-STACK-006</code>. The action may be
+  perfectly legal per BR-STACK-006 — it is merely <em>unimplemented</em>. Citing a rule as violated when it
+  isn&rsquo;t misinforms consumers of the error domain. Prefer a dedicated marker (e.g. <code>kind: 'unimplemented'</code>)
+  or an honest rule value.</p>
+</div>
+
+<h2>Axis 2 — Type quality: do the types serve a naive, absolutely explicit, easy-to-test oracle?</h2>
+<p class="axis-note">
+  The core result types are good: discriminated unions make failure-with-payload unrepresentable, and the
+  <code>createStack()</code> hardening already caught a real bug. The main weaknesses are a misleading
+  <code>afterState</code>, a stringly-typed rule vocabulary, and duplicated result-type definitions.
+</p>
+
+<div class="finding sev-high" id="b1">
+  <h3><span class="fid">B1</span><span class="badge high">High</span> <code>PlayValidation.afterState</code> is typed as a real next state — but isn&rsquo;t one</h3>
+  <p class="loc">oracle/src/game/validation.ts:37–39, oracle/src/game/apply.ts:69–79, oracle/src/game/battle.ts:374–379</p>
+  <p>Step-8 <code>applyMove</code> does <strong>not</strong> flip the active player, increment the counter, or record
+  history — it is a speculative artifact for Self-Check evaluation. Yet <code>afterState: GameState</code> is
+  indistinguishable at the type level from a committed next state, and <code>validatePlay</code>&rsquo;s JSDoc tells the
+  future <code>Game.applyAction</code> it &ldquo;can use [it] directly.&rdquo; A consumer cannot tell that turn
+  management is missing; the type lies by omission (and A2 cements it in tests).</p>
+  <p><strong>Fix:</strong> brand it (e.g. <code>{ speculative: GameState }</code> or a nominal
+  <code>SpeculativeState</code>), state the gap in the type&rsquo;s JSDoc, or stop exposing it until Step 10.</p>
+</div>
+
+<div class="finding sev-med" id="b2">
+  <h3><span class="fid">B2</span><span class="badge med">Medium</span> <code>GameError.rule</code> is <code>string</code></h3>
+  <p class="loc">oracle/src/errors.ts:11</p>
+  <p>The error domain is the oracle&rsquo;s contract, but any string compiles. A closed literal union
+  (<code>'BR-MOVE-001' | … | 'S1' | 'V3' | 'C1'</code>) would make the vocabulary explicit, typo-proof, and would let
+  tests assert against a typed set — directly serving the &ldquo;absolutely explicit&rdquo; goal. The mis-citations
+  found in C4/A7 are exactly what this would surface.</p>
+</div>
+
+<div class="finding sev-med" id="b3">
+  <h3><span class="fid">B3</span><span class="badge med">Medium</span> Near-dead discriminator; fully dead error subclass</h3>
+  <p class="loc">oracle/src/errors.ts, oracle/src/game/*</p>
+  <p><code>GameErrorKind</code> is only ever set to <code>'self-check'</code> (twice); everything else defaults to
+  <code>'general'</code>. <code>IllegalActionError</code> is never thrown anywhere in Step 8. Dead type surface
+  misleads consumers about the shape of the error domain — populate it or remove it.</p>
+</div>
+
+<div class="finding sev-med" id="b4">
+  <h3><span class="fid">B4</span><span class="badge med">Medium</span> Three <code>ValidationResult</code> definitions coexist</h3>
+  <p class="loc">oracle/src/game/validation.ts:23 &middot; oracle/src/gan/validate.ts:23 &middot; oracle/src/gsfen/validate.ts:22</p>
+  <p>Step 8 created the shared module precisely to have &ldquo;a single canonical definition instead of
+  duplicates&rdquo; (its own header), but the two older local definitions were not migrated. The unification is
+  half-done.</p>
+</div>
+
+<div class="finding sev-low" id="b5">
+  <h3><span class="fid">B5</span><span class="badge low">Low</span> Validators re-check <code>kind</code> at runtime; the <code>Extract</code> variants go unused</h3>
+  <p class="loc">oracle/src/game/battle.ts:153–159, 266–272 vs oracle/src/game/apply.ts:24–27</p>
+  <p><code>validatePlay</code> already dispatches on <code>action.kind</code>, making the per-validator kind checks
+  redundant for internal flow. Meanwhile <code>apply.ts</code> defines <code>MoveAction</code>/<code>ArataAction</code>
+  via <code>Extract</code> — but the validators don&rsquo;t use them in their signatures. Either type the validators
+  with the variants (compile-time safety) or keep the runtime checks as a deliberate public-API defense; the
+  current mix gets neither benefit cleanly.</p>
+</div>
+
+<div class="finding sev-low" id="b6">
+  <h3><span class="fid">B6</span><span class="badge low">Low</span> Cast-policy inconsistency in <code>getArataZone</code></h3>
+  <p class="loc">oracle/src/game/battle.ts:100, 119</p>
+  <p>Two inline <code>(r + 1) as BoardCoord</code> casts. The codebase&rsquo;s stated policy confines
+  <code>as BoardCoord</code> casts to audited helpers (<code>squareFromIndex</code> exists for exactly this). Minor,
+  but the policy exists so reviewers can audit every cast in one place.</p>
+</div>
+
+<h2>Axis 3 — Naivety: does the code hide or suppose logic beyond the business rules?</h2>
+<p class="axis-note">
+  Most checks map one-to-one to BR-xxx references, in rule order, with citations — the naive ideal. The
+  violations are structural: one invented rule, a duplicated (and divergent) validation stack, and rule
+  semantics implemented twice in different modules.
+</p>
+
+<div class="finding sev-high" id="c1">
+  <h3><span class="fid">C1</span><span class="badge high">High</span> Invented rule: &ldquo;Marshal must be placed on an empty square&rdquo;</h3>
+  <p class="loc">oracle/src/game/deploy.ts:143–149 (duplicated at oracle/src/gan/validate.ts:173–183)</p>
+  <p><code>validatePlacement</code> rejects placing the Marshal on top of a friendly stack. No business rule
+  supports this: BR-DEPLOY-005 allows placing a piece on one&rsquo;s own pieces subject only to the size limit and
+  the &ldquo;never on top of a Marshal&rdquo; restriction; GAN.md S2 requires the target to be &ldquo;empty or a friendly
+  <em>non-Marshal-topped</em> stack under size 3&rdquo; — it constrains the <em>top of the target</em>, not the
+  <em>placed piece</em>. BR-STACK-004 explicitly contemplates the Marshal belonging to a stack (&ldquo;always the
+  topmost Piece in any Stack it belongs to&rdquo;), and the Step-7 saved test case uses stack <code>[A,A,m]</code>.</p>
+  <p>PROBE-5 confirms the rejection fires. This is precisely the failure mode the review asked about:
+  <strong>logic supposed beyond the business rules</strong>. Either a BR is missing (spec gap — record it) or the
+  check must be removed. This needs a human decision; the code and the spec cannot both be right.</p>
+</div>
+
+<div class="finding sev-high" id="c2">
+  <h3><span class="fid">C2</span><span class="badge high">High</span> Two public validation stacks exist — and provably diverge</h3>
+  <p class="loc">oracle/src/gan/validate.ts (Step 4, S1–S6) vs oracle/src/game/deploy.ts + battle.ts (Step 8)</p>
+  <p>ORACLE.md planned Step 8 to wire the GAN-level S3/S4 stubs to the engine (&ldquo;S3: Move legality — calls
+  movement/attack modules&rdquo;). Instead, parallel validators were built in <code>game/</code> and the stubs remain
+  live in the public API. Empirical divergences:</p>
+  <ul>
+    <li><code>validateAction</code> (S2) <strong>accepts</strong> stacking a piece onto a friendly Marshal;
+      <code>validatePlacement</code> rejects it (BR-STACK-004). GAN.md S2&rsquo;s &ldquo;non-Marshal-topped&rdquo; requirement
+      is missing from the Step-4 implementation — so the older validator is non-conformant with its own spec
+      (PROBE-2).</li>
+    <li><code>validateAction</code> <strong>accepts any illegal move or arata</strong> — S3/S4 are stubs returning
+      <code>ok</code> (PROBE-3).</li>
+    <li>Rule namespaces differ (<code>'S2'</code> vs <code>'BR-DEPLOY-004'</code>) for the same violation.</li>
+  </ul>
+  <p>A naive oracle needs <strong>one</strong> validation path per action. Recommended: make
+  <code>gan/validate.ts</code> delegate S2&rarr;<code>validatePlacement</code>, S3&rarr;<code>validateMove</code>,
+  S4&rarr;<code>validateArata</code> (keeping the S-codes as aliases if the GAN contract needs them), or formally
+  deprecate <code>validateAction</code>.</p>
+</div>
+
+<div class="finding sev-med" id="c3">
+  <h3><span class="fid">C3</span><span class="badge med">Medium</span> Outcome semantics implemented twice</h3>
+  <p class="loc">oracle/src/board/movement.ts:68–75 (<code>determineOutcome</code>) vs oracle/src/game/battle.ts:26–73 (<code>validateOutcome</code>)</p>
+  <p>The movement engine already computes forced/choice/null outcome for every destination
+  (<code>LegalMove.outcome</code>); <code>validateMove</code> finds the matching <code>LegalMove</code> and then ignores
+  that field, re-deriving the same logic — including the <em>derived</em> rule &ldquo;Marshal on top &rArr; capture
+  forced&rdquo; (itself an inference from BR-STACK-002 condition 3, cited as BR-CAPTURE-002). Two sources of truth
+  for BR-STACK-002/BR-CAPTURE-002: they agree today, drift would be silent. Also, <code>movement.ts</code>&rsquo;s
+  doc comment claims the validator rejects &ldquo;friendly Marshal&rdquo; targets — it rejects enemy-Marshal landings
+  too (battle.test.ts:250 proves it); the doc has drifted from the code.</p>
+</div>
+
+<div class="finding sev-med" id="c4">
+  <h3><span class="fid">C4</span><span class="badge med">Medium</span> Dead check with a mis-cited rule in <code>validateArata</code></h3>
+  <p class="loc">oracle/src/game/battle.ts:293–300</p>
+  <p>The <code>piece === 'M'</code> rejection is unreachable in legal play (the battle-phase Marshal is never in
+  hand per BR-DEPLOY-011, and the hand check fires first regardless) — and it cites
+  <strong>BR-ARATA-007</strong>, which governs placing <em>onto</em> a Marshal, not arata-ing the Marshal piece. The
+  correct citation is GAN S4 (&ldquo;is never <code>M</code>&rdquo;) / BR-DEPLOY-011. Defensive checks are acceptable in
+  an oracle, but they must be cited honestly and marked defensive; a wrong BR reference in the error domain is a
+  spec-level bug, not a nit.</p>
+</div>
+
+<div class="finding sev-med" id="c5">
+  <h3><span class="fid">C5</span><span class="badge med">Medium</span> <code>validateMove</code> JSDoc lists checks it does not perform</h3>
+  <p class="loc">oracle/src/game/battle.ts:136–152</p>
+  <p>The header lists &ldquo;2. BR-MOVE-001&rdquo; and &ldquo;4. BR-MOVE-005&rdquo; as steps, both &ldquo;implied by
+  getLegalDestinations.&rdquo; For an oracle whose stated principle is a one-to-one BR-to-code mapping, the doc
+  should distinguish <em>enforced here</em> from <em>enforced upstream at seam X</em> — otherwise a coverage audit
+  (or A3-style test) is misled into believing the validator owns those rules.</p>
+</div>
+
+<div class="finding sev-low" id="c6">
+  <h3><span class="fid">C6</span><span class="badge low">Low</span> Marshal-first inferred from hand contents — two strategies for one rule</h3>
+  <p class="loc">oracle/src/game/deploy.ts:91–99 vs oracle/src/gsfen/validate.ts (V3)</p>
+  <p><code>hand.M === 1</code> stands in for &ldquo;Marshal not yet placed&rdquo; — sound (initial count 1; only placement
+  removes it) but indirect, and GSFEN V3 implements the same rule by scanning the board instead. Two inference
+  strategies for one rule. The naive-explicit reading checks the direct fact (is my Marshal on the board?);
+  better still, share one helper.</p>
+</div>
+
+<div class="finding sev-low" id="c7">
+  <h3><span class="fid">C7</span><span class="badge low">Low</span> Noise in <code>apply.ts</code></h3>
+  <p class="loc">oracle/src/game/apply.ts:34–45</p>
+  <p><code>{ ...state.turn, done: state.turn.done }</code> re-copies a field the spread already copies;
+  <code>([...cell] as const) as typeof cell</code> is a double cast fighting the tuple type. Not hidden logic —
+  just noise a deliberately naive codebase shouldn&rsquo;t carry.</p>
+</div>
+
+<div class="finding sev-info" id="c8">
+  <h3><span class="fid">C8</span><span class="badge info">Info</span> Documented invention: Arata zone with no board pieces</h3>
+  <p class="loc">oracle/src/game/battle.ts:85–89</p>
+  <p>The collapse-to-own-edge behavior when a player has no pieces on the board is invented (BR-ARATA-003 is
+  silent) but documented and unreachable in legal play. Acceptable — and a good candidate for a one-line BR
+  clarification so the spec owns it.</p>
+</div>
+
+<div class="finding sev-info" id="c9">
+  <h3><span class="fid">C9</span><span class="badge info">Info</span> Explicitly-temporary functions made public API</h3>
+  <p class="loc">oracle/src/index.ts (new exports) + oracle/src/game/apply.ts:8–12</p>
+  <p><code>applyMove</code>/<code>applyArata</code> are documented as Step-8-only scaffolding (&ldquo;Step 10 replaces
+  them&rdquo;) yet are exported from the public barrel, alongside <code>afterState</code> (B1). Consumers can now
+  depend on a throwaway seam. Export from an internal path or mark <code>@internal</code> until Step 10 lands.</p>
+</div>
+
+<h2>What Step 8 got right</h2>
+<div class="finding" style="border-left-color: var(--good);">
+  <ul>
+    <li><strong>Green and type-clean</strong>: 727/727 tests, <code>tsc --noEmit</code> clean, via the Docker toolchain as specified.</li>
+    <li><strong>The saved Step-7 edge case is an excellent behavior test</strong> (SELF_CHECK_POS): it verifies Self-Check on the <em>post-move</em> state including stack-size change after capture — a test that catches a real bug class, not a mirror of the code.</li>
+    <li><strong>Outcome-canonicity tests match GAN.md A1/S3 exactly</strong>, including both forced-capture directions and the documented invalid examples.</li>
+    <li><strong>Result types are well-formed</strong>: <code>ValidationResult</code>/<code>PlayValidation</code> discriminated unions; exhaustive <code>never</code> checks in <code>validatePlay</code>; <code>TurncoatLevels</code> encodes GAN A3 at the type level.</li>
+    <li><strong>BR citations on every error path</strong>, with checks ordered to match the rule documents — the naive-oracle ideal, mostly upheld.</li>
+    <li><strong>The type hardening proved itself</strong>: <code>createStack()</code> runtime validation caught the forced-capture (<code>outcome=null</code>) bug during the step — evidence the explicit-types strategy pays off.</li>
+    <li><strong>Honest commit message</strong>: states what was built, what was deferred, and the bug caught.</li>
+  </ul>
+</div>
+
+<h2>Recommendations (prioritized)</h2>
+<table>
+  <tr><th>#</th><th>Action</th><th>Findings</th><th>Effort</th></tr>
+  <tr><td>1</td><td><strong>Decide the Marshal-placement question</strong>: either add a BR (and GAN S2 clause) forbidding Marshal placement onto friendly stacks, or remove the check from both validators. Spec and code cannot both be right.</td><td>C1</td><td>Decision + small edit</td></tr>
+  <tr><td>2</td><td><strong>Collapse the dual validators</strong>: delegate gan/validate.ts S2/S3/S4 to the Step-8 validators (or deprecate <code>validateAction</code>). Add a regression test asserting both paths agree.</td><td>C2, B4</td><td>Medium</td></tr>
+  <tr><td>3</td><td><strong>Fix the two code-mirroring tests</strong>: repair the <code>MP</code> fixture (use a legal stack; consider running <code>validateState</code> in the fixture helper) and drop/invert the <code>activePlayer</code> lock assertion.</td><td>A1, A2</td><td>Small</td></tr>
+  <tr><td>4</td><td><strong>Close the Self-Check coverage gaps</strong> using PROBE-4/PROBE-6 as ready-made tests; add the enemy-target BR-CAPTURE-003 case and Black-side Arata zone tests.</td><td>A5, A3</td><td>Small</td></tr>
+  <tr><td>5</td><td><strong>Single source for outcome semantics</strong>: consume <code>matchingMove.outcome</code> (or extract one shared predicate) instead of re-deriving in <code>validateOutcome</code>; fix the stale <code>movement.ts</code> doc.</td><td>C3, C5</td><td>Medium</td></tr>
+  <tr><td>6</td><td><strong>Tighten the error domain</strong>: literal-union type for <code>GameError.rule</code>; populate or remove <code>GameErrorKind</code> and <code>IllegalActionError</code>; fix the BR-ARATA-007 mis-citation and the BR-STACK-006 &ldquo;unimplemented&rdquo; attribution.</td><td>B2, B3, C4, A7</td><td>Medium</td></tr>
+  <tr><td>7</td><td><strong>Don&rsquo;t publish temporary seams</strong>: un-export the scaffolding <code>applyMove</code>/<code>applyArata</code> (or mark <code>@internal</code>); brand <code>afterState</code> as speculative until Step 10.</td><td>B1, C9</td><td>Small</td></tr>
+</table>
+
+<footer>
+  Generated 2026-07-27 &middot; Review of commit <code>1dfa9bc</code> (Step 8: Action Validation) &middot;
+  Verified via <code>docker compose run --rm check</code> (exit 0) and <code>docker compose run --rm test</code>
+  (727/727) &middot; Six empirical probes executed and removed after confirmation.
+</footer>
+
+</main>
+</body>
+</html>

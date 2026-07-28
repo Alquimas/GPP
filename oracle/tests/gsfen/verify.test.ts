@@ -6,7 +6,7 @@ import type { Hand } from '../../src/types.js';
 import { readFileSync } from 'node:fs';
 
 function readFixture(name: string): string {
-  return readFileSync(`/gsfen/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`../gsfen/${name}.gsfen`, 'utf-8').trim();
 }
 
 function parseOk(gsfen: string) {

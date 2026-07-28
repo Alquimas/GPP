@@ -8,6 +8,7 @@
     "check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
+    "gsfen": "npx tsx script/gsfen.ts",
     "lint": "eslint src tests",
     "test": "vitest run"
   },
