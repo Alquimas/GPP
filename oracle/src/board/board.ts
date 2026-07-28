@@ -174,6 +174,17 @@ export function countPieceOnBoard(position: Position, type: PieceType, owner: Pl
 }
 
 /**
+ * Returns true iff the given player's Marshal has already been placed on the board.
+ *
+ * Canonical implementation of BR-DEPLOY-003 (Marshal-first) and BR-DEPLOY-011.
+ * Both callers (deploy.ts and gsfen/validate.ts) should use this instead of
+ * inferring Marshal placement from hand contents or scanning independently.
+ */
+export function hasPlacedMarshal(position: Position, player: Player): boolean {
+  return countPieceOnBoard(position, 'M', player) >= 1;
+}
+
+/**
  * Location of a piece on the board.
  */
 export type PieceLocation = {

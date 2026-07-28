@@ -34,9 +34,9 @@ type ArataAction = Extract<Action, { kind: 'arata' }>;
 function cloneState(state: GameState): GameState {
   return {
     position: state.position.map((row) =>
-      row.map((cell) => (cell === null ? null : ([...cell] as const as typeof cell))),
+      row.map((cell) => (cell === null ? null : ([...cell] as typeof cell))),
     ),
-    turn: { ...state.turn, done: state.turn.done },
+    turn: { ...state.turn },
     hands: {
       white: { ...state.hands.white },
       black: { ...state.hands.black },
@@ -72,6 +72,8 @@ function removeEnemyPieces(
 /**
  * Apply a Move action to produce the resulting GameState.
  *
+ * @internal Step-8 scaffolding. Step 10 replaces this with full turn management.
+ *
  * Does NOT handle:
  * - Turn transition (active player flip)
  * - Turncoat (Captain swaps)
@@ -82,7 +84,9 @@ function removeEnemyPieces(
  *
  * @param state - The current GameState.
  * @param action - The validated Move action.
- * @returns The new GameState after applying the move.
+ * @returns The new GameState after applying the move.  WARNING: this is a
+ *   SPECULATIVE state — it is missing turn transition, turncoat, terminal
+ *   conditions, and history.  See `PlayValidation.speculativeState`.
  */
 export function applyMove(state: GameState, action: MoveAction): GameState {
   const newState = cloneState(state);
@@ -130,9 +134,13 @@ export function applyMove(state: GameState, action: MoveAction): GameState {
 /**
  * Apply an Arata action to produce the resulting GameState.
  *
+ * @internal Step-8 scaffolding. Step 10 replaces this with full turn management.
+ *
  * @param state - The current GameState.
  * @param action - The validated Arata action.
- * @returns The new GameState after applying the arata.
+ * @returns The new GameState after applying the arata.  WARNING: this is a
+ *   SPECULATIVE state — it is missing turn transition, turncoat, terminal
+ *   conditions, and history.  See `PlayValidation.speculativeState`.
  */
 export function applyArata(state: GameState, action: ArataAction): GameState {
   const newState = cloneState(state);

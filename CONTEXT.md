@@ -77,30 +77,30 @@ These documents, in the project root, collectively define the Gungi specificatio
 
 ## Fixture Library
 
-The **56 `.gsfen` files** across two directories cover the major state shapes:
+The **55 `.gsfen` files** across two directories cover the major state shapes:
 
-**`oracle/fixtures/valid/`** — 48 states that pass `validateState()`.
+**`oracle/fixtures/valid/`** — 47 states that pass `validateState()`.
 
 | Fixture | Description |
 |---|---|
 | `startpos` / `startpos-expanded` | Game start (empty board) — keyword and expanded forms |
 | `all-on-board` | All pieces deployed |
-| `battle-start` / `battle-midgame` / `battle-mid-variant` | Battle-phase states |
+| `battle-minimal` / `battle-start` / `battle-midgame` / `battle-mid-variant` | Battle-phase states |
 | `black-done-declared` / `white-done-declared` | Deploy with done flag |
-| `deploy-phase-ctr1` / `deploy-phase-ctr3` / `deploy-black-ctr2-g` | Deploy-phase with specified counters |
-| `deploy-near-end` / `deploy-stacks-in-zones` / `deploy-full-stack-ppp` | Deploy-phase shapes |
+| `deploy-phase-ctr1` / `deploy-phase-ctr3` / `deploy-black-ctr2` | Deploy-phase with specified counters |
+| `deploy-near-end` / `deploy-stacks-in-zones` / `deploy-full-stack-pawns` | Deploy-phase shapes |
 | `both-marshals-placed` / `both-marshals-deploy-ctr2` / `both-marshals-battle-nohands` | Marshal position states |
 | `white-marshal-at-5-9` / `marshal-alone-battle` / `black-turn-marshal-only` | Marshal-specific scenarios |
 | `capture-aftermath` / `deep-capture-exchange` / `some-captured` | Post-capture states |
 | `dense-engagement` / `sparse-board` | Board density extremes |
 | `three-deep-stacks` / `triple-stack-battlefield` | Stack size extremes |
 | `empty-hands-endgame` | Battle end with empty hands |
-| `one-side-fully-deployed` / `lowercase-hand` / `piece-at-col1` / `piece-at-col9` | Edge cases |
+| `one-side-fully-deployed` / `battle-minimal` / `deploy-marshal-col1` / `deploy-marshal-col9` / `deploy-marshal-on-top` | Edge cases |
 | `choice-pos` / `self-check-pos` / `size-mismatch-afg` / `row-with-P-and-T` | Attack/movement scenarios |
 | `enemy-marshal-stack-test` / `friendly-stack-test` / `friendly-stack-with-hands` | Stack interaction scenarios |
-| `forced-capture` / `arata-zone-test` / `gan-battle-state` | Arata/Move edge cases |
-| `mp-stack-deploy-ctr2` / `mp-stack-deploy-ctr3` | Marshal+Pawn stack in deploy |
-| `example4-mixed-stack` / `deploy-enemy-top` / `v3-black-marshal-wrong-zone` | Categorization (valid despite name) |
+| `forced-capture` / `arata-zone-test` | Arata/Move edge cases |
+| `mp-stack-deploy-ctr3` / `deploy-black-marshal-placed` / `deploy-both-marshals-pawn` | Deploy-phase scenarios |
+| `example4-mixed-stack` | Mixed-ownership stack in battle |
 | `white-done-multi-count-hand` | Hand with count ≥ 2 |
 
 **`oracle/fixtures/invalid/parse/`** — 8 states that fail parse-level validation (C1-C7 errors).

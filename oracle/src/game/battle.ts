@@ -22,46 +22,43 @@ export type { PlayValidation };
 /*  Internal helpers                                                   */
 /* ------------------------------------------------------------------ */
 
-/** Determine if the target outcome is valid for the given target stack. */
+/**
+ * Validate the action's declared outcome against the engine-computed outcome.
+ *
+ * The movement engine (determineOutcome) already classified the target:
+ *   - null     → empty or friendly (automatic stacking)
+ *   - 'stack'  → enemy, size < 3, not Marshal (player may choose)
+ *   - 'capture'→ enemy, size = 3 OR top is Marshal (forced capture)
+ *
+ * This function reuses the engine's classification instead of re-deriving
+ * the reason.  The targetStack parameter is used only for error-message
+ * specificity (empty vs. friendly), not for decision logic.
+ */
 function validateOutcome(
+  engineOutcome: 'stack' | 'capture' | null,
   targetStack: ReturnType<typeof getStack>,
-  player: Player,
   actionOutcome: 'stack' | 'capture' | null,
 ): GameError | null {
-  if (targetStack === null) {
-    // Empty square — must be null
+  if (engineOutcome === null) {
+    // Engine says no capture possible — empty or friendly target
     if (actionOutcome !== null) {
-      return new GameError('Cannot specify outcome when landing on an empty square', 'BR-MOVE-004');
+      if (targetStack === null) {
+        return new GameError('Cannot specify outcome when landing on an empty square', 'BR-MOVE-004');
+      }
+      return new GameError('Cannot specify outcome when stacking on a friendly piece', 'BR-MOVE-004');
     }
     return null;
   }
 
-  const targetTop = topPiece(targetStack);
-  const targetSize = stackSize(targetStack);
-
-  if (targetTop.owner === player) {
-    // Friendly stack — outcome must be null (automatic stacking)
-    if (actionOutcome !== null) {
-      return new GameError(
-        'Cannot specify outcome when stacking on a friendly piece',
-        'BR-MOVE-004',
-      );
-    }
-    return null;
-  }
-
-  // Enemy stack
-  const captureForced = targetSize === 3 || targetTop.type === 'M';
-
-  if (captureForced) {
-    // Capture is forced — outcome must be null
+  if (engineOutcome === 'capture') {
+    // Engine says capture is forced (size 3 or Marshal top) — outcome must be omitted
     if (actionOutcome !== null) {
       return new GameError('Capture is forced — cannot specify outcome token', 'BR-CAPTURE-002');
     }
     return null;
   }
 
-  // Choice exists — outcome must be present
+  // Engine says choice exists (stack or capture legal) — outcome must be present
   if (actionOutcome === null) {
     return new GameError(
       'Outcome must be specified (stack/capture) when both are legal',
@@ -82,10 +79,10 @@ function validateOutcome(
  *   - Black: from row 1 (own edge) up to the most advanced
  *            (largest-row) Black piece's row.
  *
- * If the player has no pieces on the board, the zone collapses to
- * their own edge row only (no Arata is possible until a piece is
- * on the board — though in practice this can't happen because the
- * first action must be a deploy placement).
+ * INVENTION: BR-ARATA-003 does not specify behavior when the player
+ * has no board pieces. The zone collapses to the player's own edge
+ * row only. This case is unreachable in legal play (the first action
+ * must be a deploy placement, which places the Marshal on the board).
  */
 function getArataZone(
   player: Player,
@@ -139,19 +136,27 @@ function getArataZone(
 /**
  * Validate a Move action against the current GameState.
  *
- * Checks (in order):
- * 0. Phase must be 'battle' (BR-PLAY-002 / BR-GAME-004)
- * 1. BR-MOVE-002: Origin contains player's own piece
- * 2. BR-MOVE-001: Piece is the top of its stack (implied by getLegalDestinations)
- * 3. BR-MOVE-003: Destination is reachable (calls movement.ts)
- * 4. BR-MOVE-005: Stack size landing restriction
- * 5. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
- * 6. BR-STACK-004: No stacking on Marshal
- * 7. BR-ACTION-002: Self Check — own Marshal not under attack after move
+ * Checks performed here (in order):
+ *   0. BR-PLAY-002: Phase must be 'battle'
+ *   1. BR-MOVE-002: Origin contains player's own piece
+ *   2. BR-MOVE-003: Destination is reachable (calls movement.ts)
+ *   3. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
+ *   4. BR-STACK-006: Turncoat (defensively rejected until Step 10)
+ *   5. BR-STACK-004: No stacking on Marshal
+ *   6. BR-ACTION-002: Self Check — own Marshal not under attack after move
+ *
+ * Rules enforced upstream (not checked here):
+ *   - BR-MOVE-001 (piece is top of its stack): enforced by
+ *     `getLegalDestinations` in `board/movement.ts`. If the piece is not
+ *     the top of its stack, no legal destination is returned.
+ *   - BR-MOVE-005 (stack size landing restriction): enforced by
+ *     `getLegalDestinations` in `board/movement.ts`, which filters out
+ *     oversized targets via `canLandOnStack` before this validator
+ *     sees them.
  *
  * @param state - Current GameState.
  * @param action - The Move action to validate.
- * @returns PlayValidation with afterState on success.
+ * @returns PlayValidation with speculativeState on success.
  */
 export function validateMove(state: GameState, action: Action): PlayValidation {
   if (action.kind !== 'move') {
@@ -204,9 +209,10 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     };
   }
 
-  // 5. Outcome validation
+  // 5. Outcome validation — reuse the engine's classification (determineOutcome),
+  //    no longer re-derives the reason (BR-STACK-002/004, BR-CAPTURE-001/002/003).
   const targetStack = getStack(state.position, dest);
-  const outcomeError = validateOutcome(targetStack, player, outcome);
+  const outcomeError = validateOutcome(matchingMove.outcome, targetStack, outcome);
   if (outcomeError) {
     return { ok: false, error: outcomeError };
   }
@@ -233,15 +239,15 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
   }
 
   // 7. BR-ACTION-002: Self Check — apply the move and check
-  const afterState = applyMove(state, action);
-  if (isInCheck(afterState.position, player)) {
+  const speculativeState = applyMove(state, action);
+  if (isInCheck(speculativeState.position, player)) {
     return {
       ok: false,
       error: new GameError('Move would leave own Marshal in check', 'BR-ACTION-002'),
     };
   }
 
-  return { ok: true, afterState };
+  return { ok: true, speculativeState };
 }
 
 /* ------------------------------------------------------------------ */
@@ -262,7 +268,7 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
  *
  * @param state - Current GameState.
  * @param action - The Arata action to validate.
- * @returns PlayValidation with afterState on success.
+ * @returns PlayValidation with speculativeState on success.
  */
 export function validateArata(state: GameState, action: Action): PlayValidation {
   if (action.kind !== 'arata') {
@@ -291,14 +297,9 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
     };
   }
 
-  // Marshal cannot be in hand during battle phase (BR-DEPLOY-011),
-  // but check explicitly per BR-ARATA-007
-  if (piece === 'M') {
-    return {
-      ok: false,
-      error: new GameError('Cannot arata a Marshal', 'BR-ARATA-007'),
-    };
-  }
+  // Marshal is never in hand during battle phase (BR-DEPLOY-011),
+  // so the BR-ARATA-002 hand check above already catches this case.
+  // No explicit Marshal check needed here.
 
   // 2. BR-ARATA-003: Arata placement zone
   const zone = getArataZone(player, state);
@@ -352,15 +353,15 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
   }
 
   // 6. BR-ACTION-002: Self Check
-  const afterState = applyArata(state, action);
-  if (isInCheck(afterState.position, player)) {
+  const speculativeState = applyArata(state, action);
+  if (isInCheck(speculativeState.position, player)) {
     return {
       ok: false,
       error: new GameError('Arata would leave own Marshal in check', 'BR-ACTION-002'),
     };
   }
 
-  return { ok: true, afterState };
+  return { ok: true, speculativeState };
 }
 
 /* ------------------------------------------------------------------ */
@@ -373,12 +374,12 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
  * Dispatches to validateMove or validateArata based on action.kind.
  * Rejects placement actions during battle phase.
  *
- * The returned PlayValidation always includes the pre-computed afterState
+ * The returned PlayValidation always includes the pre-computed speculativeState
  * on success, which the caller (Game.applyAction) can use directly.
  *
  * @param state - Current GameState.
  * @param action - The Play action to validate.
- * @returns PlayValidation with afterState on success.
+ * @returns PlayValidation with speculativeState on success.
  */
 export function validatePlay(state: GameState, action: Action): PlayValidation {
   if (action.kind === 'placement') {

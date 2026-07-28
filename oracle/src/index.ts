@@ -50,4 +50,6 @@ export {
 export type { ValidationResult, PlayValidation } from './game/validation.js';
 export { validateMove, validateArata, validatePlay } from './game/battle.js';
 export { validatePlacement } from './game/deploy.js';
-export { applyMove, applyArata } from './game/apply.js';
+// applyMove, applyArata deliberately NOT exported from the public barrel:
+// they are Step-8 scaffolding and will be replaced by full turn management in Step 10.
+// Consumers should use validatePlay to get the speculative afterState instead.

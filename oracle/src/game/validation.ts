@@ -27,11 +27,16 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
 /* ------------------------------------------------------------------ */
 
 /**
- * Play validation result — always includes pre-computed afterState
- * on success for Self Check evaluation.
+ * Play validation result — includes a SPECULATIVE post-action state on success.
  *
- * Used by battle-phase validators (validateMove, validateArata,
- * validatePlay) which apply the action speculatively to check that
- * the Active Player's Marshal is not left in Check (BR-ACTION-002).
+ * WARNING: `speculativeState` is NOT a committed next GameState.
+ * It lacks: turn transition (active player flip), turn counter increment,
+ * turncoat application, history recording, and terminal-condition evaluation.
+ * Step 10 will replace it with a real committed state.
+ *
+ * Consumers MUST NOT treat `speculativeState` as the "next game state" for
+ * any purpose other than Self-Check (BR-ACTION-002) evaluation.
  */
-export type PlayValidation = { ok: true; afterState: GameState } | { ok: false; error: GameError };
+export type PlayValidation =
+  | { ok: true; speculativeState: GameState }
+  | { ok: false; error: GameError };

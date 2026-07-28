@@ -9,7 +9,7 @@
 
 import type { Action, GameState, Player } from '../types.js';
 import { GameError } from '../errors.js';
-import { getStack, topPiece, stackSize } from '../board/board.js';
+import { getStack, topPiece, stackSize, hasPlacedMarshal } from '../board/board.js';
 import type { ValidationResult } from './validation.js';
 
 // Re-export ValidationResult so consumers can import from deploy.ts
@@ -88,10 +88,8 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
     // is enforced below: if ANY of the player's non-Marshal pieces have
     // been placed (count on board > 0), then Marshal should already be placed.
   } else {
-    // Non-Marshal piece: Marshal must already be placed
-    // Marshal is in hand if count === 1 (initial value)
-    // No Marshal in hand means it was already placed
-    if (hand.M === 1) {
+    // Non-Marshal piece: Marshal must already be placed on the board
+    if (!hasPlacedMarshal(state.position, player)) {
       return {
         ok: false,
         error: new GameError(`Must place Marshal before placing other pieces`, 'BR-DEPLOY-003'),

@@ -3,6 +3,7 @@ import { validateAction } from '../../src/gan/validate.js';
 import { parseGAN } from '../../src/gan/parse.js';
 import type { Action, GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
+import { setStack, createStack } from '../../src/board/board.js';
 import {
   ARATA_ZONE_TEST,
   BATTLE_MID_VARIANT,
@@ -235,9 +236,13 @@ describe('BR-GAN-VALID-005 — Turncoat legality', () => {
 
 describe('BR-GAN-VALID-006 — Done legality', () => {
   it('accepts placement with done=true', () => {
-    // State: Black to place, Black's Marshal already placed (count = 0 in hand)
+    // State: Black to place, Black's Marshal already on board at (5,3).
+    // Place a General at a different deploy-zone square (5,1) with done=true.
     const state = deployState('black');
-    state.hands.black.M = 0; // Marshal already placed
+    state.position = setStack(state.position, { col: 5, row: 3 }, createStack([
+      { type: 'M', owner: 'black' },
+    ]));
+    state.hands.black.M = 0; // Marshal no longer in hand
     state.hands.black.G = 1; // General still in hand
     const action: Action = { kind: 'placement', piece: 'G', dest: { col: 5, row: 1 }, done: true };
     const result = validateAction('G5-1!', action, state);

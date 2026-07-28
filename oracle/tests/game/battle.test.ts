@@ -12,10 +12,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { Action, GameState, PieceType, Square, TurncoatLevels } from '../../src/types.js';
+import type { Action, GameState, PieceType, Player, Square, TurncoatLevels } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
+import { validateState } from '../../src/gsfen/validate.js';
 import { validateMove, validateArata, validatePlay } from '../../src/game/battle.js';
-import { getStack, stackSize, topPiece } from '../../src/board/board.js';
+import { getStack, setStack, createStack, stackSize, topPiece } from '../../src/board/board.js';
 import {
   ARATA_ZONE_TEST,
   BATTLE_MID_VARIANT,
@@ -38,6 +39,12 @@ import {
 function gsfenState(gsfen: string): GameState {
   const result = parseGSFEN(gsfen);
   if (!result.ok) throw new Error(`Parse failed: ${result.error.message}`);
+  const validation = validateState(result.state);
+  if (!validation.ok) {
+    throw new Error(
+      `Test fixture is an illegal game state: ${validation.error.message} (${validation.error.rule})`,
+    );
+  }
   return result.state;
 }
 
@@ -169,18 +176,35 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-MOVE-005 — stack size landing restriction', () => {
+  describe('stack size landing restriction — enforced at movement seam (BR-MOVE-005) — reachability consequence (BR-MOVE-003)', () => {
     it('rejects move when source size < target size', () => {
       // Marshal size 1 at (5,9), friendly AFG size 3 at (5,7) — blocked
+      // BR-MOVE-005 (source stack size >= target stack size) is enforced inside
+      // getLegalDestinations, so validateMove sees it as unreachable (BR-MOVE-003).
       const state = gsfenState(SIZE_MISMATCH_AFG);
       const r = validateMove(state, move(5, 9, 5, 7));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
     });
+  });
 
-    it('accepts move to empty square (trivially passes)', () => {
-      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
-      expect(r.ok).toBe(true);
+  describe('BR-CAPTURE-003 — source size < target enemy stack size', () => {
+    it('rejects move when source size < target enemy stack size', () => {
+      // Marshal size 1 at (5,9), change the size-3 stack at (5,7) to enemy-owned.
+      // BR-MOVE-005 (source >= target) is enforced inside getLegalDestinations,
+      // so validateMove sees it as unreachable (BR-MOVE-003).
+      const base = gsfenState(SIZE_MISMATCH_AFG);
+      const stack = getStack(base.position, { col: 5, row: 7 })!;
+      const blackStack = createStack(
+        stack.map((p) => ({ type: p.type, owner: 'black' as Player })),
+      );
+      const state: GameState = {
+        ...base,
+        position: setStack(base.position, { col: 5, row: 7 }, blackStack),
+      };
+      const r = validateMove(state, move(5, 9, 5, 7));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
     });
   });
 
@@ -271,12 +295,11 @@ describe('validateArata', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-002');
   });
 
-  it('rejects arata of Marshal (BR-ARATA-002 fires first — not in hand)', () => {
+  it('rejects arata of Marshal — not in hand during battle phase (BR-ARATA-002)', () => {
     // Marshal is never in hand during battle phase (BR-DEPLOY-011).
-    // The first check (BR-ARATA-002: piece in hand) rejects it.
+    // The piece-in-hand check (BR-ARATA-002) rejects it regardless of target.
     const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('M', 5, 7));
     expect(r.ok).toBe(false);
-    // The first check to fire is "piece not in hand" — BR-ARATA-002 beats BR-ARATA-007.
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-002');
   });
 
@@ -306,6 +329,35 @@ describe('validateArata', () => {
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-005');
+  });
+
+  describe('Black-side Arata zone (BR-ARATA-003 symmetry)', () => {
+    it('accepts Black arata inside zone and rejects outside zone', () => {
+      // Start from BLACK_TURN_MARSHAL_ONLY: Black Marshal at (5,1), White Marshal at (5,9).
+      // Add a Black Soldier at (5,3) so the zone expands beyond row 1.
+      const base = gsfenState(BLACK_TURN_MARSHAL_ONLY);
+      const pos = setStack(
+        base.position,
+        { col: 5, row: 3 },
+        createStack([{ type: 'S', owner: 'black' }]),
+      );
+      const state: GameState = {
+        ...base,
+        position: pos,
+        hands: {
+          white: { ...base.hands.white },
+          black: { ...base.hands.black, P: 2 },
+        },
+      };
+      // Zone: rows 1-3 (most advanced Black piece at row 3).
+      // Inside zone: row 2.
+      const r1 = validateArata(state, arata('P', 5, 2));
+      expect(r1.ok).toBe(true);
+      // Outside zone: row 4 > 3.
+      const r2 = validateArata(state, arata('P', 5, 4));
+      expect(r2.ok).toBe(false);
+      if (!r2.ok) expect(r2.error.rule).toBe('BR-ARATA-003');
+    });
   });
 
   it('rejects arata onto enemy-topped square (BR-ARATA-006)', () => {
@@ -340,17 +392,30 @@ describe('validateArata', () => {
       expect(r.ok).toBe(true);
     });
 
-    it('includes afterState with correct piece placement on success', () => {
-      // Arata places a Pawn at (5,7) — verify the afterState reflects the placement.
+    it('rejects arata that does not resolve own Marshal check (BR-ACTION-002)', () => {
+      // Start from FRIENDLY_STACK_WITH_HANDS: White Marshal at (5,9), White Pawn at (5,8).
+      // Replace Pawn with Black General so the Marshal is in check.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 5, row: 8 }, createStack([{ type: 'G', owner: 'black' }]));
+      const state: GameState = { ...base, position: pos };
+      // Arata zone: rows 9-9 (Marshal is the only White piece). Arata at (7,9).
+      const r = validateArata(state, arata('P', 7, 9));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-ACTION-002');
+    });
+
+    it('includes speculativeState with correct piece placement on success', () => {
+      // Arata places a Pawn at (5,7) — verify the speculativeState reflects the placement.
       const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
       if (r.ok) {
-        expect(r.afterState).toBeDefined();
-        const stack = getStack(r.afterState.position, { col: 5, row: 7 });
+        expect(r.speculativeState).toBeDefined();
+        const stack = getStack(r.speculativeState.position, { col: 5, row: 7 });
         expect(stack).not.toBeNull();
         expect(topPiece(stack!).type).toBe('P');
         expect(topPiece(stack!).owner).toBe('white');
         // Hand should have one fewer Pawn
-        expect(r.afterState.hands.white.P).toBe(2); // was 3 in BATTLE_MID_VARIANT
+        expect(r.speculativeState.hands.white.P).toBe(2); // was 3 in BATTLE_MID_VARIANT
       }
     });
   });
@@ -377,25 +442,22 @@ describe('validatePlay', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-001');
   });
 
-  it('includes pre-computed afterState with correct board changes on success', () => {
+  it('includes pre-computed speculativeState with correct board changes on success', () => {
     // Move Marshal from (5,9) left to (4,9) — empty square
     const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
     if (r.ok) {
-      expect(r.afterState).toBeDefined();
+      expect(r.speculativeState).toBeDefined();
 
       // Origin (5,9) should now be empty (Marshal moved away)
-      const originStack = getStack(r.afterState.position, { col: 5, row: 9 });
+      const originStack = getStack(r.speculativeState.position, { col: 5, row: 9 });
       expect(originStack).toBeNull();
 
       // Dest (4,9) should have the Marshal (size 1)
-      const destStack = getStack(r.afterState.position, { col: 4, row: 9 });
+      const destStack = getStack(r.speculativeState.position, { col: 4, row: 9 });
       expect(destStack).not.toBeNull();
       expect(stackSize(destStack!)).toBe(1);
       expect(topPiece(destStack!).type).toBe('M');
       expect(topPiece(destStack!).owner).toBe('white');
-
-      // Active player should NOT be flipped (that's Step 10)
-      expect(r.afterState.turn.activePlayer).toBe('white');
     }
   });
 
@@ -404,4 +466,6 @@ describe('validatePlay', () => {
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ACTION-001');
   });
+
+  it.todo('BR-TURN-002: active player passes to opponent after Play (Step 10)');
 });

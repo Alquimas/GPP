@@ -10,6 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Action, GameState, PieceType, Square } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
+import { validateState } from '../../src/gsfen/validate.js';
 import { validatePlacement } from '../../src/game/deploy.js';
 import {
   BOTH_MARSHALS_BATTLE_NOHANDS,
@@ -27,6 +28,12 @@ import {
 function gsfenState(gsfen: string): GameState {
   const result = parseGSFEN(gsfen);
   if (!result.ok) throw new Error(`Parse failed: ${result.error.message}`);
+  const validation = validateState(result.state);
+  if (!validation.ok) {
+    throw new Error(
+      `Test fixture is an illegal game state: ${validation.error.message} (${validation.error.rule})`,
+    );
+  }
   return result.state;
 }
 
