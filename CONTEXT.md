@@ -50,7 +50,7 @@ These documents, in the project root, collectively define the Gungi specificatio
 | Document | Purpose |
 |---|---|
 | `BUSINESS_RULES.md` | Normative business rules (BR-xxx), glossary, board geometry |
-| `GSFEN.md` | GSFEN state serialization format — grammar, C1-C7, V1-V8 |
+| `GSFEN.md` | GSFEN state serialization format — grammar, canonical-form rules (BR-GSFEN-CANON-*), semantic validity rules (BR-GSFEN-VALID-*) |
 | `GAN.md` | GAN action notation — S1-S6 validation rules |
 | `TEST.md` | Testing strategy and conventions |
 | `REFINING.md` | Active refinement queue (problems found in code review) |
@@ -72,7 +72,7 @@ These documents, in the project root, collectively define the Gungi specificatio
 2. **No inline GSFEN strings in source or test code.** Every GSFEN string must live in a `.gsfen` fixture file under `oracle/fixtures/valid/` or `oracle/fixtures/invalid/` and be imported via the constants barrel (`oracle/src/gsfen/fixtures.ts`). Exceptions require a documented rationale in the commit message. A CI check (via `gsfen-find.sh`) enforces this after Phase 0 of the tooling plan (see `oracle/TOOLING.md`).
 3. **Prefer an existing fixture over writing a new GSFEN string.** The `oracle/fixtures/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to an existing fixture state.
 4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. Every fixture lives in a `.gsfen` file and is exported as a named constant from `oracle/src/gsfen/fixtures.ts`. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
-5. **Learn from rule codes.** A C-code (C1-C7) is a canonical-form error — fix the string format. A V-code (V2-V7) is a semantic error — fix the position/hands/turn arrangement. A BR-xxx code is a business rule violation.
+5. **Learn from rule codes.** A `BR-GSFEN-CANON-*` code is a canonical-form error — fix the string format. A `BR-GSFEN-VALID-*` code is a semantic error — fix the position/hands/turn arrangement. A `BR-xxx` code is a business rule violation.
 6. **Honour step-awareness markers.** Code marked `@internal`, `@step N`, or guarded by `throwIfNotImplemented` is scaffolding — it works for its limited purpose but will be replaced. Do not build on top of it. Tests using `it.fails` document behaviour that is known to be incomplete.
 
 ## Fixture Library
@@ -119,6 +119,30 @@ To use a fixture: read from `oracle/fixtures/<name>.gsfen`, parse, and mutate.
 ## GSFEN CLI
 
 `oracle/script/gsfen.ts` — validate and visualize GSFEN strings from the command line.
+
+## Rule Browser
+
+`oracle/script/browse-rule.sh` — browse rule definitions, source files,
+and tests for any BR-xxx code. Supports both business rules
+(`BR-DEPLOY-003`, `BR-MOVE-005`) and GSFEN rules
+(`BR-GSFEN-CANON-POSITION-COMPRESSION`, `BR-GSFEN-VALID-001-TOP`).
+
+```bash
+# Browse a business rule
+./oracle/script/browse-rule.sh BR-MOVE-005
+
+# Browse a GSFEN canonical-form rule
+./oracle/script/browse-rule.sh BR-GSFEN-CANON-POSITION-COMPRESSION
+
+# Browse a GSFEN semantic-validity rule (including sub-codes)
+./oracle/script/browse-rule.sh BR-GSFEN-VALID-001-TOP
+
+# List all codes (business rules + GSFEN)
+./oracle/script/browse-rule.sh --all
+
+# Show help
+./oracle/script/browse-rule.sh --help
+```
 
 ### Usage
 

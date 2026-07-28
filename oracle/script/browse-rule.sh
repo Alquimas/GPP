@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # browse-rule.sh — T2 Rule Browser (Phase 3)
 #
-# Given a BR-xxx code, returns:
-#   - The rule text from BUSINESS_RULES.md
+# Given a BR-xxx or GSFEN rule code, returns:
+#   - The rule text from BUSINESS_RULES.md or GSFEN.md
 #   - Source files that enforce it
 #   - Tests that exercise it
 #   - ORACLE.md step reference
@@ -10,7 +10,8 @@
 #
 # Usage:
 #   ./oracle/script/browse-rule.sh BR-MOVE-005
-#   ./oracle/script/browse-rule.sh --all          # list all known BR-xxx codes
+#   ./oracle/script/browse-rule.sh BR-GSFEN-CANON-POSITION-COMPRESSION
+#   ./oracle/script/browse-rule.sh --all          # list all known codes
 #   ./oracle/script/browse-rule.sh --help         # this help
 #
 # Requires: grep with -E (ERE) support (GNU grep, macOS grep, etc.) or ripgrep.
@@ -25,6 +26,7 @@ ORACLE_DOC="$PROJECT_DIR/ORACLE.md"
 REFINING_DOC="$PROJECT_DIR/REFINING.md"
 TEST_DOC="$PROJECT_DIR/TEST.md"
 GAN_DOC="$PROJECT_DIR/GAN.md"
+GSFEN_DOC="$PROJECT_DIR/GSFEN.md"
 
 # ── helpers ────────────────────────────────────────────────────────
 
@@ -43,6 +45,13 @@ command -v rg &>/dev/null && has_rg=true
 
 extract_rule_text() {
   local code="$1"
+
+  # GSFEN codes are defined in GSFEN.md, not BUSINESS_RULES.md
+  if [[ "$code" == BR-GSFEN-* ]]; then
+    extract_gsfen_rule_text "$code"
+    return
+  fi
+
   local rule_file="$BUSINESS_RULES"
 
   # Find the heading line
@@ -73,10 +82,49 @@ extract_rule_text() {
   ' "$rule_file"
 }
 
+# ── extract rule text from GSFEN.md ─────────────────────────────────
+
+extract_gsfen_rule_text() {
+  local code="$1"
+  local rule_file="$GSFEN_DOC"
+
+  local line_num
+  if $has_rg; then
+    line_num="$($has_rg && rg -nF "$code" "$rule_file" | head -1 | cut -d: -f1)"
+  else
+    line_num="$(grep -nF "$code" "$rule_file" | head -1 | cut -d: -f1)"
+  fi 2>/dev/null || true
+
+  if [[ -z "$line_num" ]]; then
+    echo "  (not found in GSFEN.md)"
+    return
+  fi
+
+  awk -v start="$line_num" '
+    NR >= start {
+      if (NR > start && (/^#{1,6} / || /^---$/ || /^- \*\*/ || /^$/)) exit
+      if (NR == start) {
+        sub(/^- \*\*[^*]+\*\* — /, "")
+        sub(/^  - \*\*[^*]+\*\* — /, "")
+        print "  " $0
+        next
+      }
+      print "  " $0
+    }
+  ' "$rule_file"
+}
+
 # ── find related rules (same group + cross-references) ─────────────
 
 find_related_rules() {
   local code="$1"
+
+  # GSFEN codes use GSFEN.md for related rules
+  if [[ "$code" == BR-GSFEN-* ]]; then
+    find_gsfen_related_rules "$code"
+    return
+  fi
+
   # Extract the group prefix (e.g. BR-MOVE from BR-MOVE-005)
   local group="${code%-*}"
   local group_section
@@ -135,6 +183,45 @@ find_related_rules() {
       echo "    (none)"
     fi
   fi
+}
+
+# ── find related GSFEN rules (same family in GSFEN.md) ─────────────
+
+find_gsfen_related_rules() {
+  local code="$1"
+
+  # Determine the family prefix (BR-GSFEN-CANON or BR-GSFEN-VALID)
+  local family
+  family="$(echo "$code" | sed -n 's/^\(BR-GSFEN-CANON\|BR-GSFEN-VALID\).*/\1/p')"
+
+  if [[ -z "$family" ]]; then
+    echo "  (unknown GSFEN rule family)"
+    return
+  fi
+
+  echo "  ${bold}Same family (${family}-*):${reset}"
+
+  local results
+  if $has_rg; then
+    results="$($has_rg && rg -n "\*\*${family}" "$GSFEN_DOC")"
+  else
+    results="$(grep -n "\*\*${family}" "$GSFEN_DOC")"
+  fi 2>/dev/null || true
+
+  if [[ -z "$results" ]]; then
+    echo "    (none)"
+    return
+  fi
+
+  echo "$results" | while IFS=: read -r line rest; do
+    local rule_code
+    rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
+    if [[ -n "$rule_code" && "$rule_code" != "$code" ]]; then
+      local title
+      title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 60)"
+      printf "    %-40s %s\n" "$rule_code" "$title"
+    fi
+  done
 }
 
 # ── search references in a directory ───────────────────────────────
@@ -252,7 +339,50 @@ list_all_codes() {
   local total
   total="$($has_rg && rg -c "^#### BR-" "$BUSINESS_RULES" || grep -c "^#### BR-" "$BUSINESS_RULES")" || true
   echo ""
-  echo "  ${bold}Total: ${total} codes${reset}"
+  echo "  ${bold}Total: ${total} BR-xxx codes${reset}"
+
+  # ────────── GSFEN codes ──────────
+  echo ""
+  echo "${bold}GSFEN codes in GSFEN.md:${reset}"
+
+  # Canonical-form codes
+  echo ""
+  echo "  ${bold}BR-GSFEN-CANON-*${reset}"
+  if $has_rg; then
+    $has_rg && rg -n "\*\*BR-GSFEN-CANON-" "$GSFEN_DOC"
+  else
+    grep -n "\*\*BR-GSFEN-CANON-" "$GSFEN_DOC"
+  fi 2>/dev/null | while IFS=: read -r line rest; do
+    local rule_code
+    rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
+    local title
+    title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 70)"
+    if [[ -n "$rule_code" ]]; then
+      printf "    %-44s %s\n" "$rule_code" "$title"
+    fi
+  done
+
+  # Semantic validity codes
+  echo ""
+  echo "  ${bold}BR-GSFEN-VALID-*${reset}"
+  if $has_rg; then
+    $has_rg && rg -n "\*\*BR-GSFEN-VALID-" "$GSFEN_DOC"
+  else
+    grep -n "\*\*BR-GSFEN-VALID-" "$GSFEN_DOC"
+  fi 2>/dev/null | while IFS=: read -r line rest; do
+    local rule_code
+    rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
+    local title
+    title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 70)"
+    if [[ -n "$rule_code" ]]; then
+      printf "    %-44s %s\n" "$rule_code" "$title"
+    fi
+  done
+
+  local gsfen_total
+  gsfen_total="$($has_rg && rg -c "\*\*BR-GSFEN-" "$GSFEN_DOC" || grep -c "\*\*BR-GSFEN-" "$GSFEN_DOC")" 2>/dev/null || gsfen_total=0
+  echo ""
+  echo "  ${bold}Total: ${gsfen_total} GSFEN codes${reset}"
 }
 
 # ── show one rule ──────────────────────────────────────────────────
@@ -260,41 +390,55 @@ list_all_codes() {
 show_rule() {
   local code="$1"
 
-  # Normalize: allow BR-MOVE-005 or MOVE-005
+  # Normalize: allow BR-MOVE-005 or MOVE-005 (GSFEN codes already include BR- prefix)
   if [[ "$code" != BR-* ]]; then
     code="BR-$code"
   fi
 
-  # Validate format
-  if ! echo "$code" | grep -qE '^BR-[A-Z]+-[0-9]+$'; then
-    echo "Error: Invalid BR-xxx code format. Expected BR-XXX-NNN (e.g. BR-MOVE-005)" >&2
+  # Validate format — accept any BR- with hyphen-separated uppercase/digit segments
+  if ! echo "$code" | grep -qE '^BR-[A-Z][A-Z0-9]*(-[A-Z0-9]+)*$'; then
+    echo "Error: Invalid rule code format. Expected BR-XXX-NNN, BR-GSFEN-CANON-*, or BR-GSFEN-VALID-* (e.g. BR-MOVE-005)" >&2
     exit 1
   fi
 
-  # Check if code exists in BUSINESS_RULES.md
-  local exists
-  exists="$($has_rg && rg -q "^#### $code " "$BUSINESS_RULES" && echo 1 || echo 0)" || true
-  if [[ "$exists" != 1 ]]; then
-    exists="$($has_rg && rg -q "^#### $code" "$BUSINESS_RULES" && echo 1 || echo 0)" || true
-  fi
-  if [[ "$exists" != 1 ]]; then
-    # Try grep fallback
-    exists="$(grep -q "^#### $code" "$BUSINESS_RULES" 2>/dev/null && echo 1 || echo 0)" || true
-  fi
-
-  local group_title
-  group_title="$(echo "$code" | sed -E 's/^(BR-[A-Z]+).*/\1/')"
-  local group_heading
-  group_heading="$($has_rg && rg "^### $group_title " "$BUSINESS_RULES" || grep "^### $group_title " "$BUSINESS_RULES")" || true
-  # Also try with hyphen-rule suffix (e.g. "BR-MOVE - Move Validation Rules")
-  if [[ -z "$group_heading" ]]; then
-    group_heading="$($has_rg && rg "^### $group_title -" "$BUSINESS_RULES" || grep "^### $group_title -" "$BUSINESS_RULES")" || true
+  # Check if code exists — search BUSINESS_RULES.md or GSFEN.md as appropriate
+  local exists=0
+  if [[ "$code" == BR-GSFEN-* ]]; then
+    exists="$($has_rg && rg -qF "$code" "$GSFEN_DOC" && echo 1 || grep -qF "$code" "$GSFEN_DOC" 2>/dev/null && echo 1 || echo 0)" || true
+  else
+    exists="$($has_rg && rg -q "^#### $code " "$BUSINESS_RULES" && echo 1 || echo 0)" || true
+    if [[ "$exists" != 1 ]]; then
+      exists="$($has_rg && rg -q "^#### $code" "$BUSINESS_RULES" && echo 1 || echo 0)" || true
+    fi
+    if [[ "$exists" != 1 ]]; then
+      exists="$(grep -q "^#### $code" "$BUSINESS_RULES" 2>/dev/null && echo 1 || echo 0)" || true
+    fi
   fi
 
   echo "${bold}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${reset}"
   echo " ${bold}$code${reset}"
-  if [[ -n "$group_heading" ]]; then
-    echo "  $(echo "$group_heading" | sed -E 's/^#+ +//')"
+  if [[ "$code" == BR-GSFEN-* ]]; then
+    # GSFEN codes belong to sections in GSFEN.md
+    local gsfen_section
+    if $has_rg; then
+      gsfen_section="$($has_rg -n "^## " "$GSFEN_DOC" | awk -F: '/Canonicalization/{s="Canonicalization"} /Semantic Validity/{s="Semantic Validity"} END{if(s) print s}')"
+    fi
+    if echo "$code" | grep -q 'CANON'; then
+      echo "  GSFEN.md → Canonicalization section"
+    else
+      echo "  GSFEN.md → Semantic Validity section"
+    fi
+  else
+    local group_title
+    group_title="$(echo "$code" | sed -E 's/^(BR-[A-Z]+).*/\1/')"
+    local group_heading
+    group_heading="$($has_rg && rg "^### $group_title " "$BUSINESS_RULES" || grep "^### $group_title " "$BUSINESS_RULES")" || true
+    if [[ -z "$group_heading" ]]; then
+      group_heading="$($has_rg && rg "^### $group_title -" "$BUSINESS_RULES" || grep "^### $group_title -" "$BUSINESS_RULES")" || true
+    fi
+    if [[ -n "$group_heading" ]]; then
+      echo "  $(echo "$group_heading" | sed -E 's/^#+ +//')"
+    fi
   fi
   echo ""
 
