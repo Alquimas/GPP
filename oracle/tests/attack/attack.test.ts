@@ -769,7 +769,6 @@ describe('GSFEN integration — attack/check/exposure states', () => {
     const pos = gsfenPos(BOTH_MARSHALS_DEPLOY_CTR2);
     // Black Marshal at (5,1), White Marshal at (5,9)
     // All other pieces are in hands, no attack possible
-    // But wait — black n at (4,3) could attack? No, other pieces aren't on board
     expect(isInCheck(pos, 'white')).toBe(false);
     expect(isInCheck(pos, 'black')).toBe(false);
   });

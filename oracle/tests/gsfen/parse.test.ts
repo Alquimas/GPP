@@ -11,7 +11,7 @@ import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLI
 
 /** Read a .gsfen fixture file by name (without extension). */
 function readFixture(name: string): string {
-  return readFileSync(`fixtures/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`fixtures/valid/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Assert a parse is successful and return the state. */

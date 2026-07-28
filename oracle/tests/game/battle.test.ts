@@ -82,7 +82,7 @@ const MARSHAL_ALONE = MARSHAL_ALONE_BATTLE;
 /** Battle: White size-1 Marshal at (5,9), friendly size-3 stack at (5,7) — too tall. */
 const SIZE_MISMATCH = SIZE_MISMATCH_AFG;
 
-/** Black-turn position: Marshal at (5,1), open board. */
+/** Black-turn position: Black Marshal at (5,1), White Marshal at (5, 9), open board. */
 const BLACK_TURN = BLACK_TURN_MARSHAL_ONLY;
 
 /**

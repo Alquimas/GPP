@@ -34,16 +34,15 @@
   .expand-all { background: #2563eb; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin-bottom: 1rem; }
   .expand-all:hover { background: #1d4ed8; }
   .empty-state { background: #fff; border-radius: 8px; padding: 2rem; text-align: center; color: #666; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-  .tag { display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 3px; margin-left: 0.5rem; }
-  .tag.deploy { background: #dbeafe; color: #1e40af; }
-  .tag.battle { background: #f3e8ff; color: #6b21a8; }
-  .tag.stack { background: #fef3c7; color: #92400e; }
+  .loc { display: inline-block; font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 3px; margin-left: 0.5rem; }
+  .loc.valid-dir { background: #dcfce7; color: #166534; }
+  .loc.invalid-dir { background: #fecaca; color: #991b1b; }
 </style>
 </head>
 <body>
 
 <h1>GSFEN Fixture Report</h1>
-<p class="subtitle">Generated from <code>oracle/fixtures/</code> &mdash; 56 fixtures</p>
+<p class="subtitle">Generated from <code>oracle/fixtures/valid/</code> &amp; <code>oracle/fixtures/invalid/</code> &mdash; 56 fixtures</p>
 
 <div class="summary">
   <div class="summary-card total">
@@ -51,19 +50,19 @@
     <div class="label">Total Fixtures</div>
   </div>
   <div class="summary-card valid">
-    <div class="num">30</div>
-    <div class="label">Valid</div>
+    <div class="num">33</div>
+    <div class="label">Pass Validation</div>
   </div>
   <div class="summary-card invalid">
-    <div class="num">26</div>
-    <div class="label">Invalid</div>
+    <div class="num">23</div>
+    <div class="label">Fail Validation</div>
   </div>
 </div>
 
 <p><button class="expand-all" onclick="toggleAll()">Expand / Collapse All</button></p>
 
-<h2 style="margin-bottom: 1rem;">Valid Fixtures</h2>
-<div id="fixtures">
+<h2 style="margin-bottom: 1rem;">Valid Fixtures <span class="loc valid-dir">valid/</span></h2>
+<div id="fixtures-valid">
 
   <div class="fixture">
     <div class="fixture-header" onclick="toggle(this)">
@@ -86,6 +85,30 @@
 9    .   .   .   .  ST  NP   M  EF  AC</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: empty  |  black: empty  |  battle  white  ctr:1  Done: none</div>
+      
+    </div>
+  </div>
+  <div class="fixture">
+    <div class="fixture-header" onclick="toggle(this)">
+      <span class="fixture-name">arata-zone-test</span>
+      <span class="fixture-status valid">VALID</span>
+    </div>
+    <div class="fixture-body">
+      <h3>GSFEN</h3>
+      <div class="gsfen-string">8,m/9/9/9/9/4,G,4/4,p,4/4,P,4/4,M,4 w AC2E2F2JLN3P2STU2Y2ac2efgjlnptuy 6</div>
+      <h3>Board</h3>
+      <div class="board">    9   8   7   6   5   4   3   2   1
+1    m   .   .   .   .   .   .   .   .
+2    .   .   .   .   .   .   .   .   .
+3    .   .   .   .   .   .   .   .   .
+4    .   .   .   .   .   .   .   .   .
+5    .   .   .   .   .   .   .   .   .
+6    .   .   .   .   G   .   .   .   .
+7    .   .   .   .   p   .   .   .   .
+8    .   .   .   .   P   .   .   .   .
+9    .   .   .   .   M   .   .   .   .</div>
+      <h3>Hands / Turn</h3>
+      <div class="hands-turn">white: A C 2E 2F 2J L N 3P 2S T U 2Y  |  black: 2a c 2e f g j l n p t u y  |  battle  white  ctr:6  Done: none</div>
       
     </div>
   </div>
@@ -187,6 +210,30 @@
   </div>
   <div class="fixture">
     <div class="fixture-header" onclick="toggle(this)">
+      <span class="fixture-name">black-turn-marshal-only</span>
+      <span class="fixture-status valid">VALID</span>
+    </div>
+    <div class="fixture-body">
+      <h3>GSFEN</h3>
+      <div class="gsfen-string">4,m,4/9/9/9/9/9/9/9/4,M,4 b - 2</div>
+      <h3>Board</h3>
+      <div class="board">    9   8   7   6   5   4   3   2   1
+1    .   .   .   .   m   .   .   .   .
+2    .   .   .   .   .   .   .   .   .
+3    .   .   .   .   .   .   .   .   .
+4    .   .   .   .   .   .   .   .   .
+5    .   .   .   .   .   .   .   .   .
+6    .   .   .   .   .   .   .   .   .
+7    .   .   .   .   .   .   .   .   .
+8    .   .   .   .   .   .   .   .   .
+9    .   .   .   .   M   .   .   .   .</div>
+      <h3>Hands / Turn</h3>
+      <div class="hands-turn">white: empty  |  black: empty  |  battle  black  ctr:2  Done: none</div>
+      
+    </div>
+  </div>
+  <div class="fixture">
+    <div class="fixture-header" onclick="toggle(this)">
       <span class="fixture-name">both-marshals-battle-nohands</span>
       <span class="fixture-status valid">VALID</span>
     </div>
@@ -206,6 +253,30 @@
 9    .   .   .   .   M   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: empty  |  black: empty  |  battle  white  ctr:2  Done: none</div>
+      
+    </div>
+  </div>
+  <div class="fixture">
+    <div class="fixture-header" onclick="toggle(this)">
+      <span class="fixture-name">both-marshals-deploy-ctr2</span>
+      <span class="fixture-status valid">VALID</span>
+    </div>
+    <div class="fixture-body">
+      <h3>GSFEN</h3>
+      <div class="gsfen-string">4,m,4/9/9/9/9/9/9/9/4,M,4 dw 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jl2n4p2stu2y 2</div>
+      <h3>Board</h3>
+      <div class="board">    9   8   7   6   5   4   3   2   1
+1    .   .   .   .   m   .   .   .   .
+2    .   .   .   .   .   .   .   .   .
+3    .   .   .   .   .   .   .   .   .
+4    .   .   .   .   .   .   .   .   .
+5    .   .   .   .   .   .   .   .   .
+6    .   .   .   .   .   .   .   .   .
+7    .   .   .   .   .   .   .   .   .
+8    .   .   .   .   .   .   .   .   .
+9    .   .   .   .   M   .   .   .   .</div>
+      <h3>Hands / Turn</h3>
+      <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 4P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l 2n 4p 2s t u 2y  |  deploy  white  ctr:2  Done: none</div>
       
     </div>
   </div>
@@ -787,82 +858,10 @@
   </div>
 </div>
 
-<h2 style="margin-top: 2rem;">Invalid Fixtures</h2>
+<h2 style="margin-top: 2rem;">Invalid Fixtures <span class="loc invalid-dir">invalid/</span></h2>
 
-<div id="invalid-fixtures">
+<div id="fixtures-invalid">
 
-  <div class="fixture">
-    <div class="fixture-header" onclick="toggle(this)">
-      <span class="fixture-name">arata-zone-test</span>
-      <span class="fixture-status invalid">INVALID</span>
-    </div>
-    <div class="fixture-body">
-      <h3>GSFEN</h3>
-      <div class="gsfen-string">9/9/9/9/9/4,G,4/4,p,4/4,P,4/4,M,4 w AC2E2F2JLN4P2STU2Y2ac2efgjlnptuy 6</div>
-      <h3>Board</h3>
-      <div class="board">    9   8   7   6   5   4   3   2   1
-1    .   .   .   .   .   .   .   .   .
-2    .   .   .   .   .   .   .   .   .
-3    .   .   .   .   .   .   .   .   .
-4    .   .   .   .   .   .   .   .   .
-5    .   .   .   .   .   .   .   .   .
-6    .   .   .   .   G   .   .   .   .
-7    .   .   .   .   p   .   .   .   .
-8    .   .   .   .   P   .   .   .   .
-9    .   .   .   .   M   .   .   .   .</div>
-      <h3>Hands / Turn</h3>
-      <div class="hands-turn">white: A C 2E 2F 2J L N 4P 2S T U 2Y  |  black: 2a c 2e f g j l n p t u y  |  battle  white  ctr:6  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
-    </div>
-  </div>
-  <div class="fixture">
-    <div class="fixture-header" onclick="toggle(this)">
-      <span class="fixture-name">black-turn-marshal-only</span>
-      <span class="fixture-status invalid">INVALID</span>
-    </div>
-    <div class="fixture-body">
-      <h3>GSFEN</h3>
-      <div class="gsfen-string">4,m,4/9/9/9/9/9/9/9/9 b - 2</div>
-      <h3>Board</h3>
-      <div class="board">    9   8   7   6   5   4   3   2   1
-1    .   .   .   .   m   .   .   .   .
-2    .   .   .   .   .   .   .   .   .
-3    .   .   .   .   .   .   .   .   .
-4    .   .   .   .   .   .   .   .   .
-5    .   .   .   .   .   .   .   .   .
-6    .   .   .   .   .   .   .   .   .
-7    .   .   .   .   .   .   .   .   .
-8    .   .   .   .   .   .   .   .   .
-9    .   .   .   .   .   .   .   .   .</div>
-      <h3>Hands / Turn</h3>
-      <div class="hands-turn">white: empty  |  black: empty  |  battle  black  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
-    </div>
-  </div>
-  <div class="fixture">
-    <div class="fixture-header" onclick="toggle(this)">
-      <span class="fixture-name">both-marshals-deploy-ctr2</span>
-      <span class="fixture-status invalid">INVALID</span>
-    </div>
-    <div class="fixture-body">
-      <h3>GSFEN</h3>
-      <div class="gsfen-string">4,m,4/9/9/9/9/9/9/9/4,M,4 dw 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2</div>
-      <h3>Board</h3>
-      <div class="board">    9   8   7   6   5   4   3   2   1
-1    .   .   .   .   m   .   .   .   .
-2    .   .   .   .   .   .   .   .   .
-3    .   .   .   .   .   .   .   .   .
-4    .   .   .   .   .   .   .   .   .
-5    .   .   .   .   .   .   .   .   .
-6    .   .   .   .   .   .   .   .   .
-7    .   .   .   .   .   .   .   .   .
-8    .   .   .   .   .   .   .   .   .
-9    .   .   .   .   M   .   .   .   .</div>
-      <h3>Hands / Turn</h3>
-      <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 4P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  deploy  white  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal is both on board and in hand during deploy phase (V3) — Marshal must be in one place (BR-DEPLOY-003)</div>
-    </div>
-  </div>
   <div class="fixture">
     <div class="fixture-header" onclick="toggle(this)">
       <span class="fixture-name">c2-unknown-piece</span>
@@ -875,7 +874,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C2: Unknown piece letter "X" in row 9</div>
+      <h3>Validation Error</h3><div class="error-box">C2: Unknown piece letter "X" in row 9</div>
     </div>
   </div>
   <div class="fixture">
@@ -890,7 +889,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C3: Row 9: adjacent empty-run items must be merged (C3) — write 5, not 4,1</div>
+      <h3>Validation Error</h3><div class="error-box">C3: Row 9: adjacent empty-run items must be merged (C3) — write 5, not 4,1</div>
     </div>
   </div>
   <div class="fixture">
@@ -905,7 +904,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C5: Hands: white pieces not in alphabetical order ("A" after "A") (C5) — alphabetical order is A C E F G J L M N P S T U Y</div>
+      <h3>Validation Error</h3><div class="error-box">C5: Hands: white pieces not in alphabetical order ("A" after "A") (C5) — alphabetical order is A C E F G J L M N P S T U Y</div>
     </div>
   </div>
   <div class="fixture">
@@ -920,7 +919,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C5: Hands: white pieces not in alphabetical order ("A" after "P") (C5) — alphabetical order is A C E F G J L M N P S T U Y</div>
+      <h3>Validation Error</h3><div class="error-box">C5: Hands: white pieces not in alphabetical order ("A" after "P") (C5) — alphabetical order is A C E F G J L M N P S T U Y</div>
     </div>
   </div>
   <div class="fixture">
@@ -935,7 +934,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C6: Counter must be a positive integer (no leading zeros), got "02" (C6) — e.g. 1 not 01</div>
+      <h3>Validation Error</h3><div class="error-box">C6: Counter must be a positive integer (no leading zeros), got "02" (C6) — e.g. 1 not 01</div>
     </div>
   </div>
   <div class="fixture">
@@ -950,7 +949,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C6: Counter must be a positive integer (no leading zeros), got "01" (C6) — e.g. 1 not 01</div>
+      <h3>Validation Error</h3><div class="error-box">C6: Counter must be a positive integer (no leading zeros), got "01" (C6) — e.g. 1 not 01</div>
     </div>
   </div>
   <div class="fixture">
@@ -974,7 +973,7 @@
 9    .   .   .   .  GG   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: C 2E 2F 2J L 2N 4P 3S T U 2Y  |  black: a c 3e 2f 2j 2l n 4p 2s t u 2y  |  battle  white  ctr:3  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -998,7 +997,7 @@
 9    .   .   .   .   M   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 4P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  deploy  white  ctr:3  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal is in hand but player has pieces on board (V3) — Marshal must be placed first (BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: Black Marshal is in hand but player has pieces on board (V3) — Marshal must be placed first (BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1022,7 +1021,7 @@
 9    .   .   .   . PPP   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 4P S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  deploy  white  ctr:3  Done: none</div>
-      <h3>Error</h3><div class="error-box">V4: White P count (board: 3, hand: 4) = 7 exceeds initial count 4 (V4 — total on board + in hand must not exceed initial count)</div>
+      <h3>Validation Error</h3><div class="error-box">V4: White P count (board: 3, hand: 4) = 7 exceeds initial count 4 (V4 — total on board + in hand must not exceed initial count)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1046,7 +1045,7 @@
 9    .   .   .   .  GG   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: C 2E 2F 2J L 2N 4P 3S T U 2Y  |  black: a c 3e 2f 2j 2l n 4p 2s t u 2y  |  battle  white  ctr:3  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1070,7 +1069,7 @@
 9    .   .   .   . GGG   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: C 2E 2F 2J L 2N 4P S T U 2Y  |  black: a c 3e 2f 2j 2l n 4p 2s t u 2y  |  battle  white  ctr:3  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1094,7 +1093,7 @@
 9    .   .   .   .   M   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: empty  |  black: empty  |  battle  white  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1118,7 +1117,7 @@
 9    .   .   .   .   M   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 3P 2S T U 2Y  |  black: 2a c 3e 2f g j l 2n 4p 2s t u 2y  |  battle  white  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1142,7 +1141,7 @@
 9    .   .   .   .   .   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L M 2N 4P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  battle  white  ctr:1  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal is in hand during battle phase (V3) — Marshal must be on board in battle (BR-DEPLOY-011)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal is in hand during battle phase (V3) — Marshal must be on board in battle (BR-DEPLOY-011)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1166,7 +1165,7 @@
 9    .   .   .   .   M   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: empty  |  black: empty  |  battle  white  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1190,7 +1189,7 @@
 9    .   .   .   .  MP   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 3P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  deploy  white  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal at row 9, col 5 is not at top of its stack (V3) — Marshal must be the last (top) letter in its stack group (BR-STACK-004)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal at row 9, col 5 is not at top of its stack (V3) — Marshal must be the last (top) letter in its stack group (BR-STACK-004)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1214,7 +1213,7 @@
 9    .   .   .   .  MP   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 3P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  deploy  white  ctr:3  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal at row 9, col 5 is not at top of its stack (V3) — Marshal must be the last (top) letter in its stack group (BR-STACK-004)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal at row 9, col 5 is not at top of its stack (V3) — Marshal must be the last (top) letter in its stack group (BR-STACK-004)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1229,7 +1228,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C2: Row 1 has fewer than 9 squares (row total does not sum to 9)</div>
+      <h3>Validation Error</h3><div class="error-box">C2: Row 1 has fewer than 9 squares (row total does not sum to 9)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1253,7 +1252,7 @@
 9    .   .   .   .   .   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: empty  |  black: empty  |  battle  white  ctr:1  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: White Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1277,7 +1276,7 @@
 9    .   .   .   . PPM   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: empty  |  black: empty  |  battle  white  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: Black Marshal appears 0 time(s) on board in battle phase (expected 1) (V3 — BR-DEPLOY-003)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1301,7 +1300,7 @@
 9    .   .   .   .   M   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: A C 2E 2J L 2N 4P 2S T U 2Y  |  black: a c 2e 2f j l n 4p 2s t u 2y  |  battle  white  ctr:5  Done: none</div>
-      <h3>Error</h3><div class="error-box">V4: White G count (board: 2, hand: 0) = 2 exceeds initial count 1 (V4 — total on board + in hand must not exceed initial count)</div>
+      <h3>Validation Error</h3><div class="error-box">V4: White G count (board: 2, hand: 0) = 2 exceeds initial count 1 (V4 — total on board + in hand must not exceed initial count)</div>
     </div>
   </div>
   <div class="fixture">
@@ -1316,7 +1315,7 @@
       <div class="board">(parse failed)</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">(parse failed)</div>
-      <h3>Error</h3><div class="error-box">C2: Stack must have 1-3 pieces in row 1, got "MPTS"</div>
+      <h3>Validation Error</h3><div class="error-box">C2: Stack must have 1-3 pieces in row 1, got "MPTS"</div>
     </div>
   </div>
   <div class="fixture">
@@ -1340,7 +1339,7 @@
 9    .   .   .   .   m   .   .   .   .</div>
       <h3>Hands / Turn</h3>
       <div class="hands-turn">white: 2A C 3E 2F G 2J L 2N 4P 2S T U 2Y  |  black: 2a c 3e 2f g 2j l m 2n 4p 2s t u 2y  |  deploy  black  ctr:2  Done: none</div>
-      <h3>Error</h3><div class="error-box">V3: Black Marshal is both on board and in hand during deploy phase (V3) — Marshal must be in one place (BR-DEPLOY-003)</div>
+      <h3>Validation Error</h3><div class="error-box">V3: Black Marshal is both on board and in hand during deploy phase (V3) — Marshal must be in one place (BR-DEPLOY-003)</div>
     </div>
   </div>
 </div>

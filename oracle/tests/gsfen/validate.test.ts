@@ -12,7 +12,7 @@ import type { GameState, Position, TurnState, Stack, PieceType } from '../../src
 
 /** Read a .gsfen fixture file. */
 function readFixture(name: string): string {
-  return readFileSync(`fixtures/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`fixtures/valid/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Parse a GSFEN string and assert success. */
