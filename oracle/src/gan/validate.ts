@@ -303,7 +303,7 @@ function checkDoneLegality(action: Action, _state: GameState): ValidationResult 
 
   // The action is a move or arata — there is no `done` property on these types
   // If we're here, it wasn't parsed as a placement, so it's fine.
-   // Done legality is enforced at parse time (BR-GAN-CANON-004: `!` only on placements),
+   // Done legality is enforced at parse time (BR-GAN-GRAMMAR-011: `!` only on placements),
   // so by the time we reach validation, a move/arata with `!` would have
   // already been rejected by the parser.
   return { ok: true };

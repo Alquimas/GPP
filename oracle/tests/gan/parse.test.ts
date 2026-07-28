@@ -192,15 +192,15 @@ describe('parseGAN — worked examples from GAN.md', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseGAN — invalid strings from GAN.md', () => {
-  // 5-8-5-7 — uses "-" instead of ">" between squares
+  // 5-8-5-7 — uses "-" instead of ">" between squares (BR-GAN-GRAMMAR-005)
   it('rejects 5-8-5-7 (uses - instead of >)', () => {
     const result = parseGAN('5-8-5-7');
-    assertError(result, 'BR-GAN-CANON-001');
+    assertError(result, 'BR-GAN-GRAMMAR-005');
   });
 
   // 3-3>3-2x — redundant x when capture is forced (BR-GAN-CANON-001 violation)
   // This is syntactically valid (grammar permits optional outcome), but
-  // semantically non-canonical (BR-GAN-CANON-001). The parser accepts it; validation rejects it.
+  // semantically non-canonical (narrowed BR-GAN-CANON-001). The parser accepts it; validation rejects it.
   it('parses 3-3>3-2x (valid syntax, BR-GAN-CANON-001 violation is semantic/validation)', () => {
     const result = parseGAN('3-3>3-2x');
     expect(result.ok).toBe(true);
@@ -213,8 +213,8 @@ describe('parseGAN — invalid strings from GAN.md', () => {
   });
 
   // 5-6>5-5 — missing outcome when choice exists
-  // This is a semantic (BR-GAN-VALID-003/BR-GAN-CANON-001) issue — at parse level it's valid syntax
-  it('parses 5-6>5-5 but validation would reject (BR-GAN-VALID-003/BR-GAN-CANON-001)', () => {
+  // This is a semantic (BR-GAN-VALID-003/narrowed BR-GAN-CANON-001) issue — at parse level it's valid syntax
+  it('parses 5-6>5-5 but validation would reject (BR-GAN-VALID-003/narrowed BR-GAN-CANON-001)', () => {
     // Parsing succeeds — outcome=null, turncoat=[]
     const result = parseGAN('5-6>5-5');
     expect(result.ok).toBe(true);
@@ -225,17 +225,17 @@ describe('parseGAN — invalid strings from GAN.md', () => {
     expect(result.action.turncoat).toEqual([]);
   });
 
-  // T*5-6+21 — levels not ascending (BR-GAN-CANON-003 violation)
+  // T*5-6+21 — levels not ascending (BR-GAN-GRAMMAR-010 violation)
   it('rejects T*5-6+21 (levels not ascending)', () => {
     const result = parseGAN('T*5-6+21');
-    assertError(result, 'BR-GAN-CANON-003');
+    assertError(result, 'BR-GAN-GRAMMAR-010');
   });
 
-  // M5-9!! — multiple "!" (BR-GAN-CANON-004/grammar violation)
+  // M5-9!! — multiple "!" (BR-GAN-GRAMMAR-011 violation)
   it('rejects M5-9!! (multiple !)', () => {
     const result = parseGAN('M5-9!!');
     // This has two '!' marks — the parser should reject it
-    assertError(result, 'BR-GAN-CANON-004');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
   });
 });
 
@@ -339,59 +339,69 @@ describe('parseGAN — additional edge cases', () => {
 describe('parseGAN — invalid inputs', () => {
   it('rejects empty string', () => {
     const result = parseGAN('');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-001: empty input
+    assertError(result, 'BR-GAN-GRAMMAR-001');
   });
 
   it('rejects whitespace-only string', () => {
     const result = parseGAN('   ');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-001: blank input
+    assertError(result, 'BR-GAN-GRAMMAR-001');
   });
 
   it('rejects lowercase piece letter in placement', () => {
     const result = parseGAN('m5-9');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-002: 'm' is not an uppercase letter or digit, so first-char dispatch
+    // rejects it before reaching piece-validation (GRAMMAR-003) logic
+    assertError(result, 'BR-GAN-GRAMMAR-002');
   });
 
   it('rejects lowercase piece letter in arata', () => {
     const result = parseGAN('t*5-6');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-002: same as placement — lowercase 't' fails first-char check
+    assertError(result, 'BR-GAN-GRAMMAR-002');
   });
 
   it('rejects invalid square col=0: M0-1', () => {
     const result = parseGAN('M0-1');
-    // The parser first validates piece letter (M is valid) then tries square
-    // parseSquare('0-1') should throw
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-004: malformed square (col=0)
+    assertError(result, 'BR-GAN-GRAMMAR-004');
   });
 
   it('rejects invalid square row=0: M1-0', () => {
     const result = parseGAN('M1-0');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-004: malformed square (row=0)
+    assertError(result, 'BR-GAN-GRAMMAR-004');
   });
 
   it('rejects invalid square col=10: M10-1', () => {
     const result = parseGAN('M10-1');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-004: malformed square (col=10)
+    assertError(result, 'BR-GAN-GRAMMAR-004');
   });
 
   it('rejects missing square: M5-', () => {
     const result = parseGAN('M5-');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-007: length 3 < 4 minimum for placement, caught before square parsing
+    assertError(result, 'BR-GAN-GRAMMAR-007');
   });
 
   it('rejects missing square part: M-9', () => {
     const result = parseGAN('M-9');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-007: length 3 < 4 minimum for placement, caught before square parsing
+    assertError(result, 'BR-GAN-GRAMMAR-007');
   });
 
   it('rejects missing entire square: M5', () => {
     const result = parseGAN('M5');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-007: placement too short (M5 < 4 chars)
+    assertError(result, 'BR-GAN-GRAMMAR-007');
   });
 
   it('rejects missing > in move: 2-72-6', () => {
     const result = parseGAN('2-72-6');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-005: no '>' separator found
+    assertError(result, 'BR-GAN-GRAMMAR-005');
   });
 
   it('T5-6 parses as a placement (no * means not an arata)', () => {
@@ -404,49 +414,55 @@ describe('parseGAN — invalid inputs', () => {
 
   it('rejects leading whitespace', () => {
     const result = parseGAN(' M5-9');
-    assertError(result, 'BR-GAN-CANON-005');
+    // BR-GAN-GRAMMAR-009: leading whitespace
+    assertError(result, 'BR-GAN-GRAMMAR-009');
   });
 
   it('rejects trailing whitespace', () => {
     const result = parseGAN('M5-9 ');
-    assertError(result, 'BR-GAN-CANON-005');
+    // BR-GAN-GRAMMAR-009: trailing whitespace
+    assertError(result, 'BR-GAN-GRAMMAR-009');
   });
 
   it('rejects internal whitespace in placement', () => {
     const result = parseGAN('M 5-9');
-    assertError(result, 'BR-GAN-CANON-005');
+    // BR-GAN-GRAMMAR-009: internal whitespace
+    assertError(result, 'BR-GAN-GRAMMAR-009');
   });
 
   it('rejects unknown piece letter X', () => {
     const result = parseGAN('X5-9');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-003: X is not a valid piece type (not in the 14-type set)
+    assertError(result, 'BR-GAN-GRAMMAR-003');
   });
 
   it('rejects starting with invalid character', () => {
     const result = parseGAN('?5-9');
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-002: ? is not a digit nor uppercase letter
+    assertError(result, 'BR-GAN-GRAMMAR-002');
   });
 
   it('rejects placement with ! not at end', () => {
     const result = parseGAN('M!5-9');
-    // BR-GAN-CANON-004: ! must be a suffix on a placement, not in the middle
-    assertError(result, 'BR-GAN-CANON-004');
+    // BR-GAN-GRAMMAR-011: ! is not after the square
+    assertError(result, 'BR-GAN-GRAMMAR-011');
   });
 
   it('rejects arata with trailing characters after square', () => {
     const result = parseGAN('T*5-6x');
-    assertError(result, 'BR-GAN-CANON-006');
+    // BR-GAN-GRAMMAR-008: trailing 'x' after square+turncoat region
+    assertError(result, 'BR-GAN-GRAMMAR-008');
   });
 
   it('rejects move with too many > separators', () => {
     const result = parseGAN('5-6>5-5>5-4');
-    // The parser detects multiple ">" separators and rejects with BR-GAN-CANON-001
-    assertError(result, 'BR-GAN-CANON-001');
+    // BR-GAN-GRAMMAR-006: multiple ">" separators
+    assertError(result, 'BR-GAN-GRAMMAR-006');
   });
 
   it('rejects move with unexpected characters', () => {
     const result = parseGAN('5-6>5-5$');
-    // This should fail BR-GAN-CANON-006 — the $ is not valid
-    assertError(result, 'BR-GAN-CANON-006');
+    // BR-GAN-GRAMMAR-008: $ is not a valid character
+    assertError(result, 'BR-GAN-GRAMMAR-008');
   });
 });

@@ -848,7 +848,7 @@ describe('property-based — GAN grammar compliance', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Property-based tests — Canonicity rules (BR-GAN-CANON-001–006)
+// Property-based tests — canonicity (CANON) and format (GRAMMAR) rules
 // ---------------------------------------------------------------------------
 
 describe('property-based — canonicity rules', () => {
@@ -905,7 +905,7 @@ describe('property-based — canonicity rules', () => {
     );
   });
 
-  it('BR-GAN-CANON-003: turncoat levels are always ascending, no duplicates', () => {
+  it('BR-GAN-GRAMMAR-010: turncoat levels are always ascending, no duplicates', () => {
     fc.assert(
       fc.property(fc.oneof(moveArb, arataArb), (action: Action) => {
         const serialized = serializeGAN(action);
@@ -932,7 +932,7 @@ describe('property-based — canonicity rules', () => {
     );
   });
 
-  it('BR-GAN-CANON-004: ! only appears on placements with done=true', () => {
+  it('BR-GAN-GRAMMAR-011: ! only appears on placements with done=true', () => {
     const placementArb: fc.Arbitrary<Action> = fc.record({
       kind: fc.constant('placement' as const),
       piece: pieceArb,

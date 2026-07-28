@@ -120,7 +120,7 @@ export type GameResult =
 
 /**
  * Turncoat swap levels for Captain moves/aratas.
- * Constrained by GAN spec rule BR-GAN-CANON-003: levels ascending, no duplicates, only 1 or 2.
+ * Constrained by GAN spec rule BR-GAN-GRAMMAR-010: levels ascending, no duplicates, only 1 or 2.
  * Valid combinations: [] (no swaps), [1], [2], [1, 2].
  */
 export type TurncoatLevels = [] | [1] | [2] | [1, 2];
