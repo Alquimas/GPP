@@ -26,14 +26,15 @@ from a central barrel, validated at module-init time.
 **Structure:**
 
 ```
-gsfen/
-├── valid/              # Canonical, passes validateState
+oracle/fixtures/
+├── valid/              # Canonical, passes validateState (populated during curation)
 │   ├── startpos.gsfen
 │   ├── battle-start.gsfen
 │   └── ...
 ├── invalid/            # Intentionally invalid (for negative tests)
 │   ├── marshal-below-pawn.gsfen
 │   └── ...
+├── *.gsfen             # Current fixture files (moved from gsfen/; to be sorted)
 ```
 
 **Barrel:** `oracle/src/gsfen/fixtures.ts` exports every fixture as a named

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { EMPTY_HAND, FULL_HAND } from '../../src/constants.js';
 import type { GameState, Player } from '../../src/types.js';
+import { BLACK_DONE_DECLARED, C2_UNKNOWN_PIECE, C3_ADJACENT_EMPTY_RUNS, C5_DUPLICATE_LETTER, C5_NON_ALPHABETICAL, C6_LEADING_ZERO_COUNTER, C6_LEADING_ZERO_COUNTER_FULL, EXAMPLE4_MIXED_STACK, LOWERCASE_HAND, MP_STACK_DEPLOY_CTR2, PIECE_AT_COL1, PIECE_AT_COL9, ROW_NOT_9, ROW_WITH_P_AND_T, STACK_OF_FOUR, V3_BLACK_MARSHAL_WRONG_ZONE, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -10,7 +11,7 @@ import type { GameState, Player } from '../../src/types.js';
 
 /** Read a .gsfen fixture file by name (without extension). */
 function readFixture(name: string): string {
-  return readFileSync(`../gsfen/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`fixtures/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Assert a parse is successful and return the state. */
@@ -169,8 +170,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
 
   // Example 2: White's first Placement (Marshal at 5-9); Black to place
   it('Example 2: White Marshal at 5-9, Black to place', () => {
-    const gsfen = '9/9/9/9/9/9/9/9/4,M,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2';
-    const state = assertOk(parseGSFEN(gsfen));
+    const state = assertOk(parseGSFEN(WHITE_MARSHAL_AT_5_9));
 
     // Row 9 (idx 8): 4 empty, White Marshal at Col 5, 4 empty
     const stack = state.position[8][4];
@@ -193,9 +193,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
 
   // Example 3: Mid-deploy; Black has declared Done; White to place
   it('Example 3: Black done, White to place', () => {
-    const gsfen =
-      '4,g,4/4,m,4/9/9/9/9/9/4,G,4/4,M,4 dwB 2AC3E2F2JL2N4P2STU2Y2ac3e2f2jl2n4p2stu2y 5';
-    const state = assertOk(parseGSFEN(gsfen));
+    const state = assertOk(parseGSFEN(BLACK_DONE_DECLARED));
 
     // Black Marshal at (row 2, col 5) → position[1][4]
     const blackM = state.position[1][4];
@@ -221,8 +219,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
 
   // Example 4: Regular play with mixed-ownership stack; White to move, turn 12
   it('Example 4: Mixed stack at 5-5', () => {
-    const gsfen = '4,m,4/9/9/9/4,PyT,4/9/9/9/4,M,4 w 2AC3E2FG2JL2N3P2SU2Y2ac3e2fg2jl2n4p2stuy 12';
-    const state = assertOk(parseGSFEN(gsfen));
+    const state = assertOk(parseGSFEN(EXAMPLE4_MIXED_STACK));
 
     // Stack at (row 5, col 5) → position[4][4]
     const stack = state.position[4][4];
@@ -251,16 +248,14 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
 
 describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
   it('C3: adjacent empty runs not merged (4,1 instead of 5)', () => {
-    const gsfen = '9/9/9/9/9/9/9/9/4,1,M,3 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2';
-    const result = parseGSFEN(gsfen);
+    const result = parseGSFEN(C3_ADJACENT_EMPTY_RUNS);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C3');
   });
 
   it('C6: leading zero in counter', () => {
-    const gsfen = '9/9/9/9/9/9/9/9/M,8 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 02';
-    const result = parseGSFEN(gsfen);
+    const result = parseGSFEN(C6_LEADING_ZERO_COUNTER_FULL);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C6');
@@ -269,8 +264,7 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
   it('V3 bug: lowercase m on row 9 (Black Marshal in wrong zone + White Marshal missing)', () => {
     // This should parse OK (the parser just checks C1-C7), the semantic
     // validation (V3, V6) would reject it.
-    const gsfen = '9/9/9/9/9/9/9/9/4,m,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2';
-    const result = parseGSFEN(gsfen);
+    const result = parseGSFEN(V3_BLACK_MARSHAL_WRONG_ZONE);
     // It parses correctly — lowercase = black owner
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -283,8 +277,7 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
   });
 
   it('V3: Marshal not at top of stack', () => {
-    const gsfen = '9/9/9/9/9/9/9/9/4,MP,4 dw 2AC3E2FG2JL2N3P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2';
-    const result = parseGSFEN(gsfen);
+    const result = parseGSFEN(MP_STACK_DEPLOY_CTR2);
     // Parser parses it fine (C1-C7 ok), validation should catch it
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -324,7 +317,7 @@ describe('parseGSFEN — additional invalid cases', () => {
   });
 
   it('unknown piece letter', () => {
-    const result = parseGSFEN('9/9/9/9/9/9/9/9/4,X,4 dw - 1');
+    const result = parseGSFEN(C2_UNKNOWN_PIECE);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C2');
@@ -338,26 +331,26 @@ describe('parseGSFEN — additional invalid cases', () => {
   });
 
   it('stack with 4 letters', () => {
-    const result = parseGSFEN('4,MPTS,4/9/9/9/9/9/9/9/9 dw - 1');
+    const result = parseGSFEN(STACK_OF_FOUR);
     expect(result.ok).toBe(false);
   });
 
   it('hand duplicate letter', () => {
-    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw AAP 1');
+    const result = parseGSFEN(C5_DUPLICATE_LETTER);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C5');
   });
 
   it('hand non-alphabetical order', () => {
-    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw PA 1');
+    const result = parseGSFEN(C5_NON_ALPHABETICAL);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C5');
   });
 
   it('hand lowercase only (white empty, black has piece)', () => {
-    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw a 1');
+    const result = parseGSFEN(LOWERCASE_HAND);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.state.hands.black.A).toBe(1);
@@ -365,14 +358,14 @@ describe('parseGSFEN — additional invalid cases', () => {
   });
 
   it('counter with leading zero', () => {
-    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 w - 01');
+    const result = parseGSFEN(C6_LEADING_ZERO_COUNTER);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C6');
   });
 
   it('row does not sum to 9 squares', () => {
-    const result = parseGSFEN('8/9/9/9/9/9/9/9/9 w - 1');
+    const result = parseGSFEN(ROW_NOT_9);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('C2');
@@ -382,8 +375,7 @@ describe('parseGSFEN — additional invalid cases', () => {
 describe('parseGSFEN — coordinate mapping', () => {
   it('piece at Col 1 maps to position[row][0]', () => {
     // Row 9 has 8 empty squares then one piece at Col 1
-    const gsfen = '9/9/9/9/9/9/9/9/8,M dw - 1';
-    const state = assertOk(parseGSFEN(gsfen));
+    const state = assertOk(parseGSFEN(PIECE_AT_COL1));
     const stack = state.position[8][0]; // Col 1 → idx 0
     expect(stack).not.toBeNull();
     if (stack) {
@@ -393,8 +385,7 @@ describe('parseGSFEN — coordinate mapping', () => {
 
   it('piece at Col 9 maps to position[row][8]', () => {
     // Row 9 has piece at Col 9 then 8 empty
-    const gsfen = '9/9/9/9/9/9/9/9/M,8 dw - 1';
-    const state = assertOk(parseGSFEN(gsfen));
+    const state = assertOk(parseGSFEN(PIECE_AT_COL9));
     const stack = state.position[8][8]; // Col 9 → idx 8
     expect(stack).not.toBeNull();
     if (stack) {
@@ -416,8 +407,7 @@ describe('parseGSFEN — coordinate mapping', () => {
     //   idx 2 (Col 3): [White Captain]
     //   idx 1 (Col 2): null
     //   idx 0 (Col 1): null
-    const gsfen = '3,P,2,T,2/9/9/9/9/9/9/9/9 w - 1';
-    const state = assertOk(parseGSFEN(gsfen));
+    const state = assertOk(parseGSFEN(ROW_WITH_P_AND_T));
 
     expect(state.position[0][8]).toBeNull(); // Col 9
     expect(state.position[0][7]).toBeNull(); // Col 8

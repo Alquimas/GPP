@@ -16,6 +16,7 @@ import type { Action, GameState, PieceType, Square, TurncoatLevels } from '../..
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateMove, validateArata, validatePlay } from '../../src/game/battle.js';
 import { getStack, stackSize, topPiece } from '../../src/board/board.js';
+import { ARATA_ZONE_TEST, BATTLE_MID_VARIANT, BLACK_TURN_MARSHAL_ONLY, CHOICE_POS, DEPLOY_PHASE_CTR1, ENEMY_MARSHAL_STACK_TEST, FORCED_CAPTURE, FRIENDLY_STACK_TEST, FRIENDLY_STACK_WITH_HANDS, MARSHAL_ALONE_BATTLE, SELF_CHECK_POS, SIZE_MISMATCH_AFG } from '../../src/gsfen/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -67,33 +68,29 @@ function placement(piece: PieceType, dc: number, dr: number, done = false): Acti
 /* ------------------------------------------------------------------ */
 
 /** Battle-midgame: White to move, turn 14 */
-const BATTLE_W =
-  '4,m,4/4,g,4/4,s,4/4,P,4/9/9/4,A,4/4,GS,4/4,M,4 w C2E2F2JL2N3PUYac3e2f2jln4ptuy 14';
+const BATTLE_W = BATTLE_MID_VARIANT;
 
 /** Simple battle position: White Marshal at (5,9), empty board, White turn. */
-const MARSHAL_ALONE = '9/9/9/9/9/9/9/9/4,M,4 w - 2';
+const MARSHAL_ALONE = MARSHAL_ALONE_BATTLE;
 
 /** Battle: White size-2 stack at (5,9), single Black Pawn at (5,8) — choice exists. */
-const CHOICE_POS = '4,m,4/4,g,4/9/9/9/9/9/4,p,4/4,GG,4 w C2E2F2JL2N4P3STU2Yac3e2f2j2ln4p2stu2y 3';
+// CHOICE_POS — imported from fixtures barrel
 
 /** Battle: White size-3 stack at (5,9), Black 3-stack at (5,8) — capture forced. */
-const FORCED_CAPTURE =
-  '4,m,4/4,g,4/9/9/9/9/9/4,ppp,4/4,GGG,4 w C2E2F2JL2N4PSTU2Yac3e2f2j2ln4p2stu2y 3';
+// FORCED_CAPTURE — imported from fixtures barrel
 
 /** Battle: White size-1 Marshal at (5,9), friendly size-3 stack at (5,7) — too tall. */
-const SIZE_MISMATCH =
-  '4,m,4/4,g,4/9/9/9/9/4,AFG,4/4,G,4/4,M,4 w AC2E2JL2N4P2STU2Yac2e2fjln4p2stu2y 5';
+const SIZE_MISMATCH = SIZE_MISMATCH_AFG;
 
 /** Black-turn position: Marshal at (5,1), open board. */
-const BLACK_TURN = '4,m,4/9/9/9/9/9/9/9/9 b - 2';
+const BLACK_TURN = BLACK_TURN_MARSHAL_ONLY;
 
 /**
  * Friendly stacking test case — White Marshal at (5,9), White Pawn at (5,8).
  * Marshal moves forward to (5,8) → automatic stacking on friendly piece.
  * All other pieces are in hands. Black Marshal at (5,1) is far away.
  */
-const FRIENDLY_STACK =
-  '9/9/9/9/9/9/9/4,P,4/4,M,4 w 2AC3E2FG2JL2N3P2STU2Y2ac3e2fgjl2n4p2stu2y 2';
+const FRIENDLY_STACK = FRIENDLY_STACK_WITH_HANDS;
 
 /**
  * Self Check test case — Marshal stack-size change after capture exposes it.
@@ -106,7 +103,7 @@ const FRIENDLY_STACK =
  * General at (5,7) has range forward and can now attack (5,8) since
  * source size 1 >= target size 1 → Self Check.
  */
-const SELF_CHECK_POS = '9/9/9/9/9/9/4,g,4/4,p,4/4,PPM,4 w - 2';
+// SELF_CHECK_POS — imported from fixtures barrel
 
 /* ------------------------------------------------------------------ */
 /*  validateMove                                                       */
@@ -117,7 +114,7 @@ describe('validateMove', () => {
     it('rejects a move during deploy phase', () => {
       // Deploy-phase state (STARTPOS-like): any move must be rejected.
       const state = gsfenState(
-        '9/9/9/9/9/9/9/9/4,M,4 dw 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 1',
+        DEPLOY_PHASE_CTR1,
       );
       const r = validateMove(state, move(5, 9, 4, 9));
       expect(r.ok).toBe(false);
@@ -241,7 +238,7 @@ describe('validateMove', () => {
     it('rejects a move that would land on a friendly Marshal', () => {
       // White Pawn at (5,8), White Marshal at (5,9).
       // Move Pawn north to (5,9) would stack onto the friendly Marshal — illegal.
-      const state = gsfenState('9/9/9/9/9/9/9/4,P,4/4,M,4 w - 2');
+      const state = gsfenState(FRIENDLY_STACK_TEST);
       const r = validateMove(state, move(5, 8, 5, 9));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-004');
@@ -253,7 +250,7 @@ describe('validateMove', () => {
       // a Marshal — friendly or enemy. The Marshal is never actually captured;
       // Checkmate ends the Game before Capture resolves.
       const state = gsfenState(
-        '9/9/9/9/9/9/9/4,m,4/4,GG,4 w C2E2F2JL2N4P3STU2Yac3e2f2j2ln4p2stu2y 3',
+        ENEMY_MARSHAL_STACK_TEST,
       );
       const r = validateMove(state, move(5, 9, 5, 8, null));
       expect(r.ok).toBe(false);
@@ -295,9 +292,7 @@ describe('validateMove', () => {
 describe('validateArata', () => {
   it('rejects arata during deploy phase (BR-ARATA-001)', () => {
     // Deploy-phase state: any arata must be rejected.
-    const state = gsfenState(
-      '9/9/9/9/9/9/9/9/4,M,4 dw 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 1',
-    );
+    const state = gsfenState(DEPLOY_PHASE_CTR1);
     const r = validateArata(state, arata('P', 5, 8));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-001');
@@ -341,7 +336,7 @@ describe('validateArata', () => {
   it('rejects arata onto a full stack (BR-ARATA-005)', () => {
     // AFG size 3 at (5,7) — cannot stack on top
     const state = gsfenState(
-      '4,m,4/4,g,4/9/9/9/9/4,AFG,4/4,G,4/4,M,4 w AC2E2JL2N4P2STU2Yac2e2fjln4p2stu2y 5',
+      SIZE_MISMATCH_AFG,
     );
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);
@@ -353,7 +348,7 @@ describe('validateArata', () => {
     // White's most advanced piece is at row 5 (General), zone = rows 5-9.
     // Row 7 has a Black Pawn [p] at (5,7) — within zone, enemy-topped.
     const state = gsfenState(
-      '9/9/9/9/9/4,G,4/4,p,4/4,P,4/4,M,4 w AC2E2F2JLN4P2STU2Y2ac2efgjlnptuy 6',
+      ARATA_ZONE_TEST,
     );
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);

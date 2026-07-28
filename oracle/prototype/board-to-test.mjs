@@ -9,8 +9,8 @@
  * Usage:  node prototype/board-to-test.mjs <name>
  *
  * Expects:
- *   ../gsfen/<name>.gsfen       — the GSFEN string (single line or file)
- *   ../gsfen/<name>.state.txt   — visual description (see below)
+ *   ../fixtures/<name>.gsfen        — the GSFEN string (single line or file)
+ *   ../../gsfen/<name>.state.txt    — visual description (see below)
  *
  * Visual format (.state.txt):
  *
@@ -219,14 +219,14 @@ function main() {
   const name = process.argv[2];
   if (!name) {
     console.error('Usage: node prototype/board-to-test.mjs <name>');
-    console.error('  Reads ../gsfen/<name>.gsfen  +  ../gsfen/<name>.state.txt');
+    console.error('  Reads ../fixtures/<name>.gsfen  +  ../../gsfen/<name>.state.txt');
     console.error('  Outputs test code to stdout.');
     process.exit(1);
   }
 
-  const gsfenDir = join(__dirname, '..', '..', 'gsfen');
-  const stateFile = join(gsfenDir, `${name}.state.txt`);
-  const gsfenFile = join(gsfenDir, `${name}.gsfen`);
+  const fixtureDir = join(__dirname, '..', 'fixtures');
+  const stateFile = join(__dirname, '..', '..', 'gsfen', `${name}.state.txt`);
+  const gsfenFile = join(fixtureDir, `${name}.gsfen`);
 
   if (!existsSync(stateFile)) {
     console.error(`Missing: ${stateFile}`);

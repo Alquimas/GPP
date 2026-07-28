@@ -158,5 +158,7 @@ export const PIECE_MOVEMENT: Record<PieceType, MovementDef> = {
   T: { step: ['FL', 'FR', 'B'], limitedRange: [], range: [], jumps: [] },
 };
 
+import { STARTPOS_EXPANDED } from './gsfen/fixtures.js';
+
 /** The known startpos GSFEN string (canonical expansion of the `startpos` keyword, GSFEN.md). */
-export const START_GSFEN = '9/9/9/9/9/9/9/9/9 dw 2AC3E2FG2JLM2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 1';
+export const START_GSFEN = STARTPOS_EXPANDED;

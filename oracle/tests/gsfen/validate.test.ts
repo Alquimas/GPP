@@ -3,6 +3,7 @@ import { validateState } from '../../src/gsfen/validate.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { readFileSync } from 'node:fs';
 import { EMPTY_HAND, FULL_HAND, INITIAL_COUNTS, START_GSFEN } from '../../src/constants.js';
+import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 import type { GameState, Position, TurnState, Stack, PieceType } from '../../src/types.js';
 
 // ---------------------------------------------------------------------------
@@ -11,7 +12,7 @@ import type { GameState, Position, TurnState, Stack, PieceType } from '../../src
 
 /** Read a .gsfen fixture file. */
 function readFixture(name: string): string {
-  return readFileSync(`../gsfen/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`fixtures/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Parse a GSFEN string and assert success. */
@@ -113,21 +114,17 @@ describe('validateState — valid states', () => {
   });
 
   it('worked example 2 is valid', () => {
-    const state = parseOk('9/9/9/9/9/9/9/9/4,M,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2');
+    const state = parseOk(WHITE_MARSHAL_AT_5_9);
     assertValid(state);
   });
 
   it('worked example 3 (done flag) is valid', () => {
-    const state = parseOk(
-      '4,g,4/4,m,4/9/9/9/9/9/4,G,4/4,M,4 dwB 2AC3E2F2JL2N4P2STU2Y2ac3e2f2jl2n4p2stu2y 5',
-    );
+    const state = parseOk(BLACK_DONE_DECLARED);
     assertValid(state);
   });
 
   it('worked example 4 (mixed stack) is valid', () => {
-    const state = parseOk(
-      '4,m,4/9/9/9/4,PyT,4/9/9/9/4,M,4 w 2AC3E2FG2JL2N3P2SU2Y2ac3e2fg2jl2n4p2stuy 12',
-    );
+    const state = parseOk(EXAMPLE4_MIXED_STACK);
     assertValid(state);
   });
 });

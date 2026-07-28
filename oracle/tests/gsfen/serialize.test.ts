@@ -15,6 +15,7 @@ import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { EMPTY_HAND, START_GSFEN } from '../../src/constants.js';
 import type { GameState, Hand, Position, Stack } from '../../src/types.js';
+import { BLACK_DONE_DECLARED, EXAMPLE4_MIXED_STACK, WHITE_DONE_MULTI_COUNT_HAND, WHITE_MARSHAL_AT_5_9 } from '../../src/gsfen/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,7 +23,7 @@ import type { GameState, Hand, Position, Stack } from '../../src/types.js';
 
 /** Read a .gsfen fixture file by name (without extension). */
 function readFixture(name: string): string {
-  return readFileSync(`../gsfen/${name}.gsfen`, 'utf-8').trim();
+  return readFileSync(`fixtures/${name}.gsfen`, 'utf-8').trim();
 }
 
 /** Assert a parse is successful and return the state. */
@@ -110,7 +111,7 @@ describe('GSFEN round-trip — startpos keyword', () => {
 
 describe('GSFEN round-trip — GSFEN.md worked examples', () => {
   it('Example 2: White Marshal at 5-9, Black to place', () => {
-    const gsfen = '9/9/9/9/9/9/9/9/4,M,4 db 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2';
+    const gsfen = WHITE_MARSHAL_AT_5_9;
     const state = assertOk(parseGSFEN(gsfen));
     expect(serializeGSFEN(state)).toBe(gsfen);
     const reparsed = assertOk(parseGSFEN(serializeGSFEN(state)));
@@ -118,8 +119,7 @@ describe('GSFEN round-trip — GSFEN.md worked examples', () => {
   });
 
   it('Example 3: Black done, White to place', () => {
-    const gsfen =
-      '4,g,4/4,m,4/9/9/9/9/9/4,G,4/4,M,4 dwB 2AC3E2F2JL2N4P2STU2Y2ac3e2f2jl2n4p2stu2y 5';
+    const gsfen = BLACK_DONE_DECLARED;
     const state = assertOk(parseGSFEN(gsfen));
     expect(serializeGSFEN(state)).toBe(gsfen);
     const reparsed = assertOk(parseGSFEN(serializeGSFEN(state)));
@@ -127,7 +127,7 @@ describe('GSFEN round-trip — GSFEN.md worked examples', () => {
   });
 
   it('Example 4: Mixed stack at 5-5', () => {
-    const gsfen = '4,m,4/9/9/9/4,PyT,4/9/9/9/4,M,4 w 2AC3E2FG2JL2N3P2SU2Y2ac3e2fg2jl2n4p2stuy 12';
+    const gsfen = EXAMPLE4_MIXED_STACK;
     const state = assertOk(parseGSFEN(gsfen));
     expect(serializeGSFEN(state)).toBe(gsfen);
     const reparsed = assertOk(parseGSFEN(serializeGSFEN(state)));
@@ -223,14 +223,12 @@ describe('serializeGSFEN — edge cases', () => {
 
   it('deploy turn with done flag serializes correctly (dwB / dbW)', () => {
     // Black done, white to place → dwB
-    const gsfen =
-      '4,g,4/4,m,4/9/9/9/9/9/4,G,4/4,M,4 dwB 2AC3E2F2JL2N4P2STU2Y2ac3e2f2jl2n4p2stu2y 5';
+    const gsfen = BLACK_DONE_DECLARED;
     const state = assertOk(parseGSFEN(gsfen));
     expect(serializeGSFEN(state)).toBe(gsfen);
 
     // White done, black to place → dbW
-    const gsfen2 =
-      '4,m,g,e,2/4,s,t,3/4,a,c,3/9/9/9/4,A,4/4,S,T,3/4,M,G,3 dbW AC3E2FJL2N4PSU2Ya2e2fjl2n4psu2y 13';
+    const gsfen2 = WHITE_DONE_MULTI_COUNT_HAND;
     const state2 = assertOk(parseGSFEN(gsfen2));
     expect(serializeGSFEN(state2)).toBe(gsfen2);
   });

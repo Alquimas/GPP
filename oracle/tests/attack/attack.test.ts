@@ -16,6 +16,7 @@ import { isSquareUnderAttack, isInCheck, isExposed } from '../../src/board/attac
 import { getLegalDestinations } from '../../src/board/movement.js';
 import type { BoardCoord, PieceType, Player, Position, Stack } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
+import { BATTLE_START, BOTH_MARSHALS_DEPLOY_CTR2, BOTH_MARSHALS_PLACED, DENSE_ENGAGEMENT } from '../../src/gsfen/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -765,9 +766,7 @@ describe('GSFEN integration — attack/check/exposure states', () => {
   });
 
   it('white-marshal-at-5-9 — only White Marshal on board, no enemies near', () => {
-    const pos = gsfenPos(
-      '4,m,4/9/9/9/9/9/9/9/4,M,4 dw 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 2',
-    );
+    const pos = gsfenPos(BOTH_MARSHALS_DEPLOY_CTR2);
     // Black Marshal at (5,1), White Marshal at (5,9)
     // All other pieces are in hands, no attack possible
     // But wait — black n at (4,3) could attack? No, other pieces aren't on board
@@ -776,17 +775,13 @@ describe('GSFEN integration — attack/check/exposure states', () => {
   });
 
   it('both-marshals-placed — Marshals placed, no threats', () => {
-    const pos = gsfenPos(
-      '4,m,4/9/9/9/9/9/9/9/4,M,4 dw 2AC3E2FG2JL2N4P2STU2Y2ac3e2fg2jl2n4p2stu2y 3',
-    );
+    const pos = gsfenPos(BOTH_MARSHALS_PLACED);
     expect(isInCheck(pos, 'white')).toBe(false);
     expect(isInCheck(pos, 'black')).toBe(false);
   });
 
   it('battle-start — Marshals have no direct threats', () => {
-    const pos = gsfenPos(
-      '4,m,4/4,g,4/5,n,3/9/9/9/5,P,3/4,G,4/4,M,4 w 2AC3E2F2JL2N3P2STU2Y2ac3e2f2jln4p2stu2y 1',
-    );
+    const pos = gsfenPos(BATTLE_START);
     // White Marshal at (5,9), Black Marshal at (5,1)
     // Both have pieces in between — check threats
     expect(isInCheck(pos, 'white')).toBe(false);
@@ -807,9 +802,7 @@ describe('GSFEN integration — attack/check/exposure states', () => {
     // are at rows 1-3, too far for step movement, and row 8 has only white pieces).
     // Black Marshal at (5,3) — no white piece reaches it (white pieces on rows 5-9
     // are blocked or out of range).
-    const pos = gsfenPos(
-      '2,p,3,e,2/4,gn,4/2,a,1,m,1,a,2/9/2,YN,3,F,2/4,EP,4/3,PS,2,PU,2/2,s,2,G,s,2/4,M,4 w AC2E2JLSTYc2e2fjlnp 45',
-    );
+    const pos = gsfenPos(DENSE_ENGAGEMENT);
     expect(isInCheck(pos, 'white')).toBe(false);
     expect(isInCheck(pos, 'black')).toBe(false);
     const exp = isExposed(pos);

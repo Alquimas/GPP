@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PIECE_NAMES, INITIAL_COUNTS, PIECE_MOVEMENT, START_GSFEN } from '../src/constants.js';
 import type { PieceType } from '../src/types.js';
+import { STARTPOS_EXPANDED } from '../src/gsfen/fixtures.js';
 
 const ALL_TYPES: PieceType[] = [
   'A',
@@ -75,6 +76,6 @@ describe('PIECE_MOVEMENT', () => {
 
 describe('START_GSFEN', () => {
   it('is the canonical startpos expansion (GSFEN.md)', () => {
-    expect(START_GSFEN).toBe('9/9/9/9/9/9/9/9/9 dw 2AC3E2FG2JLM2N4P2STU2Y2ac3e2fg2jlm2n4p2stu2y 1');
+    expect(START_GSFEN).toBe(STARTPOS_EXPANDED);
   });
 });

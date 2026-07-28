@@ -69,15 +69,15 @@ These documents, in the project root, collectively define the Gungi specificatio
 ## Workflow Rules for Agents
 
 1. **Never hand-write a GSFEN string without validating it.** Use the CLI (`npm run gsfen -- check "<string>"`) to confirm correctness before using any GSFEN in code or tests. A string that "looks right" is very often wrong in at least one of the traps above.
-2. **No inline GSFEN strings in source or test code.** Every GSFEN string must live in a `.gsfen` fixture file under `gsfen/valid/` or `gsfen/invalid/` and be imported via the constants barrel (`oracle/src/gsfen/fixtures.ts`). Exceptions require a documented rationale in the commit message. A CI check (via `gsfen-find.sh`) enforces this after Phase 0 of the tooling plan (see `oracle/TOOLING.md`).
-3. **Prefer an existing fixture over writing a new GSFEN string.** The `gsfen/valid/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to an existing fixture state.
-4. **Use existing fixtures.** The `gsfen/` directory contains curated `.gsfen` fixture files split into `valid/` and `invalid/`. The constants barrel validates every `valid/` fixture against `validateState()` at module-init time. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
+2. **No inline GSFEN strings in source or test code.** Every GSFEN string must live in a `.gsfen` fixture file under `oracle/fixtures/valid/` or `oracle/fixtures/invalid/` and be imported via the constants barrel (`oracle/src/gsfen/fixtures.ts`). Exceptions require a documented rationale in the commit message. A CI check (via `gsfen-find.sh`) enforces this after Phase 0 of the tooling plan (see `oracle/TOOLING.md`).
+3. **Prefer an existing fixture over writing a new GSFEN string.** The `oracle/fixtures/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to an existing fixture state.
+4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. The constants barrel validates every valid fixture against `validateState()` at module-init time. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
 5. **Learn from rule codes.** A C-code (C1-C7) is a canonical-form error — fix the string format. A V-code (V2-V7) is a semantic error — fix the position/hands/turn arrangement. A BR-xxx code is a business rule violation.
 6. **Honour step-awareness markers.** Code marked `@internal`, `@step N`, or guarded by `throwIfNotImplemented` is scaffolding — it works for its limited purpose but will be replaced. Do not build on top of it. Tests using `it.fails` document behaviour that is known to be incomplete.
 
 ## Fixture Library
 
-The 21 `.gsfen` files in `gsfen/` cover the major state shapes:
+The 21 `.gsfen` files in `oracle/fixtures/` cover the major state shapes:
 
 | Fixture | Description |
 |---|---|
@@ -94,7 +94,7 @@ The 21 `.gsfen` files in `gsfen/` cover the major state shapes:
 | `one-side-fully-deployed` | Asymmetric deploy |
 | `white-done-multi-count-hand` | Hand with count ≥ 2 |
 
-To use a fixture: read from `gsfen/<name>.gsfen`, parse, and mutate.
+To use a fixture: read from `oracle/fixtures/<name>.gsfen`, parse, and mutate.
 
 ## GSFEN Finder
 
@@ -115,14 +115,14 @@ startpos|[A-Za-z0-9,]+(/[A-Za-z0-9,]+){8} (w|b|dw|db|dwB|dbW) (-|[A-Za-z0-9]+) [
 ./oracle/script/gsfen-find.sh
 
 # Search a specific path
-./oracle/script/gsfen-find.sh gsfen/         # fixture files
-./oracle/script/gsfen-find.sh oracle/tests/   # test files
+./oracle/script/gsfen-find.sh oracle/fixtures/   # fixture files
+./oracle/script/gsfen-find.sh oracle/tests/      # test files
 
 # Exclude markdown files (GSFEN.md has many example strings)
 ./oracle/script/gsfen-find.sh . --no-md
 
 # Highlight matches
-./oracle/script/gsfen-find.sh gsfen/ --color
+./oracle/script/gsfen-find.sh oracle/fixtures/ --color
 ```
 
 Output format: `file:line:match` (same as `grep -rn`).
