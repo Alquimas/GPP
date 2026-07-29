@@ -27,15 +27,17 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
 /* ------------------------------------------------------------------ */
 
 /**
- * Play validation result — includes a SPECULATIVE post-action state on success.
+ * Play validation result — includes the FULL committed post-action state on success.
  *
- * WARNING: `speculativeState` is NOT a committed next GameState.
- * It lacks: turn transition (active player flip), turn counter increment,
- * turncoat application, history recording, and terminal-condition evaluation.
- * Step 10 will replace it with a real committed state.
+ * The state includes: board position, hand contents, active player flip
+ * (BR-TURN-002), turn counter increment, and Turncoat swap resolution (BR-STACK-006).
  *
- * Consumers MUST NOT treat `speculativeState` as the "next game state" for
- * any purpose other than Self-Check (BR-ACTION-002) evaluation.
+ * What it still lacks (added in Steps 11–12):
+ *   - Terminal-condition evaluation (Checkmate, Stalemate, Repetition)
+ *   - History recording for Repetition detection
+ *
+ * Consumers (Game.applyAction in Step 12) can use `speculativeState` directly
+ * as the next GameState after a successful Play.
  */
 export type PlayValidation =
   | { ok: true; speculativeState: GameState }

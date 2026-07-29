@@ -142,7 +142,7 @@ function getArataZone(
  *   2. BR-MOVE-005: Stack size landing restriction (source >= target)
  *   3. BR-MOVE-003: Destination is reachable (calls movement.ts)
  *   4. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
- *   5. BR-STACK-006: Turncoat (defensively rejected until Step 10)
+ *   5. BR-STACK-006: Turncoat validation (Captain check, levels, hand)
  *   6. BR-STACK-004: No stacking on Marshal
  *   7. BR-ACTION-002: Self Check — own Marshal not under attack after move
  *
@@ -153,7 +153,7 @@ function getArataZone(
  *
  * @param state - Current GameState.
  * @param action - The Move action to validate.
- * @returns PlayValidation with speculativeState on success.
+ * @returns PlayValidation with committed state on success.
  */
 export function validateMove(state: GameState, action: Action): PlayValidation {
   if (action.kind !== 'move') {
@@ -225,17 +225,53 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     return { ok: false, error: outcomeError };
   }
 
-  // BR-STACK-006: Turncoat — explicitly rejected until Step 10
+  // 5. BR-STACK-006: Turncoat validation
+  const outcomeIsStack = outcome === 'stack' || (outcome === null && targetStack !== null && topPiece(targetStack).owner === player);
   if (action.turncoat.length > 0) {
-    return {
-      ok: false,
-      error: new GameError('Turncoat validation is not yet implemented (Step 10)', 'BR-STACK-006'),
-    };
+    // Only the Captain can trigger Turncoat
+    if (originTop.type !== 'T') {
+      return {
+        ok: false,
+        error: new GameError('Only the Captain can perform Turncoat swaps', 'BR-STACK-006'),
+      };
+    }
+    // Turncoat requires a Stack outcome (not Capture)
+    if (!outcomeIsStack) {
+      return {
+        ok: false,
+        error: new GameError('Turncoat swaps are only allowed on a Stack outcome (not Capture)', 'BR-STACK-006'),
+      };
+    }
+    // Each elected level must have an enemy piece, and hand must have match
+    const postMoveStack = targetStack === null ? [originTop] : [...targetStack, originTop];
+    for (const level of action.turncoat) {
+      const idx = level - 1;
+      if (idx >= postMoveStack.length) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} does not exist in the target stack`, 'BR-STACK-006'),
+        };
+      }
+      const targetPiece = postMoveStack[idx];
+      if (targetPiece.owner === player) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} is occupied by a friendly piece`, 'BR-STACK-006'),
+        };
+      }
+      if (state.hands[player][targetPiece.type] < 1) {
+        return {
+          ok: false,
+          error: new GameError(
+            `No ${targetPiece.type} in hand for Turncoat swap at level ${level}`,
+            'BR-STACK-006',
+          ),
+        };
+      }
+    }
   }
 
   // 6. BR-STACK-004: No stacking on Marshal (friendly or enemy)
-  // The Marshal is never actually captured — Checkmate ends the Game first.
-  // BR-STACK-004 prohibits any piece from being placed or moved on top of a Marshal.
   if (targetStack !== null && targetStack.length > 0) {
     const targetTop = topPiece(targetStack);
     if (targetTop.type === 'M') {
@@ -247,15 +283,15 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
   }
 
   // 7. BR-ACTION-002: Self Check — apply the move and check
-  const speculativeState = applyMove(state, action);
-  if (isInCheck(speculativeState.position, player)) {
+  const { state: postMoveState } = applyMove(state, action);
+  if (isInCheck(postMoveState.position, player)) {
     return {
       ok: false,
       error: new GameError('Move would leave own Marshal in check', 'BR-ACTION-002'),
     };
   }
 
-  return { ok: true, speculativeState };
+  return { ok: true, speculativeState: postMoveState };
 }
 
 /* ------------------------------------------------------------------ */
@@ -352,24 +388,58 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
     }
   }
 
-  // BR-STACK-006: Turncoat — explicitly rejected until Step 10
+  // 5. BR-STACK-006: Turncoat validation (Arata)
   if (action.turncoat.length > 0) {
-    return {
-      ok: false,
-      error: new GameError('Turncoat validation is not yet implemented (Step 10)', 'BR-STACK-006'),
-    };
+    // Only the Captain can trigger Turncoat
+    if (piece !== 'T') {
+      return {
+        ok: false,
+        error: new GameError('Only the Captain can perform Turncoat swaps', 'BR-STACK-006'),
+      };
+    }
+    // Each elected level must have an enemy piece, and hand must have match
+    // After arata, the stack will be [...targetStack, captain]
+    const captainPiece = { type: 'T' as const, owner: player };
+    const postArataStack = targetStack === null ? [captainPiece] : [...targetStack, captainPiece];
+    for (const level of action.turncoat) {
+      const idx = level - 1;
+      if (idx >= postArataStack.length) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} does not exist in the target stack`, 'BR-STACK-006'),
+        };
+      }
+      const targetPiece = postArataStack[idx];
+      if (targetPiece.owner === player) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} is occupied by a friendly piece`, 'BR-STACK-006'),
+        };
+      }
+      // Hand must have the piece for the swap (the arata piece T is consumed separately,
+      // and each swap uses an additional copy)
+      if (state.hands[player][targetPiece.type] < 1) {
+        return {
+          ok: false,
+          error: new GameError(
+            `No ${targetPiece.type} in hand for Turncoat swap at level ${level}`,
+            'BR-STACK-006',
+          ),
+        };
+      }
+    }
   }
 
   // 6. BR-ACTION-002: Self Check
-  const speculativeState = applyArata(state, action);
-  if (isInCheck(speculativeState.position, player)) {
+  const { state: postArataState } = applyArata(state, action);
+  if (isInCheck(postArataState.position, player)) {
     return {
       ok: false,
       error: new GameError('Arata would leave own Marshal in check', 'BR-ACTION-002'),
     };
   }
 
-  return { ok: true, speculativeState };
+  return { ok: true, speculativeState: postArataState };
 }
 
 /* ------------------------------------------------------------------ */

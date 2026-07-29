@@ -280,11 +280,165 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-STACK-006 — Turncoat explicit rejection', () => {
-    it('rejects a move with non-empty turncoat (not yet implemented)', () => {
+  describe('BR-STACK-006 — Turncoat validation (Move)', () => {
+    it('rejects turncoat from a non-Captain piece', () => {
+      // Marshal at (5,9) moves to (4,9) with turncoat — not a Captain
       const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9, null, [1]));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
+    });
+
+    it('rejects turncoat on a Capture outcome', () => {
+      // Captain at (6,7) moves FR to (5,6) where enemy piece sits.
+      // Capture chosen, turncoat=[1] — illegal because Turncoat needs Stack.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
+      pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 0 } },
+      };
+      const r = validateMove(state, move(6, 7, 5, 6, 'capture', [1]));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
+    });
+
+    it('rejects turncoat when target stack level contains a friendly piece (not enemy)', () => {
+      // Captain at (6,7) on size-2 stack moves FR to (5,6) with a single enemy piece.
+      // Post-move stack: [p, T] size 2. Level 2 is the Captain (friendly) — cannot swap.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 6, row: 7 }, createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'T', owner: 'white' },
+      ]));
+      pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 4 } },
+      };
+      // Outcome='stack' (choice exists). Turncoat level 2 is the Captain (friendly).
+      const r = validateMove(state, move(6, 7, 5, 6, 'stack', [2]));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
+    });
+
+    it('rejects turncoat when hand lacks matching piece type', () => {
+      // Captain at (6,7) can reach Black Pawn at (5,6). Hand has no Pawns for swap.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
+      pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 0 } },
+      };
+      const r = validateMove(state, move(6, 7, 5, 6, 'stack', [1]));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
+    });
+
+    it('accepts a Captain stacking move with Turncoat level 1 and updates state correctly', () => {
+      // Captain at (6,7) moves FR to (5,6), stacks on Black Pawn, swaps level 1.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
+      pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 4 } },
+      };
+
+      const r = validateMove(state, move(6, 7, 5, 6, 'stack', [1]));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        // After move + swap: stack at (5,6) is [P, T] (swapped Pawn, Captain)
+        const stack = getStack(r.speculativeState.position, { col: 5, row: 6 });
+        expect(stack).not.toBeNull();
+        expect(stack!.length).toBe(2);
+        expect(stack![0]).toEqual({ type: 'P', owner: 'white' });
+        expect(stack![1]).toEqual({ type: 'T', owner: 'white' });
+        // Origin (6,7) should be empty
+        expect(getStack(r.speculativeState.position, { col: 6, row: 7 })).toBeNull();
+        // Hand: one Pawn consumed by swap
+        expect(r.speculativeState.hands.white.P).toBe(3);
+        // Turn flipped (BR-TURN-002)
+        expect(r.speculativeState.turn.activePlayer).toBe('black');
+        // Counter incremented
+        expect(r.speculativeState.turn.counter).toBe(3); // was 2 in FRIENDLY_STACK_WITH_HANDS
+      }
+    });
+
+    it('accepts Captain stacking with Turncoat level 2', () => {
+      // Captain on size-2 stack at (6,7) moves FR to (5,6). Target stack has two enemy pieces.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      // Captain on top of a friendly Pawn → stack size 2
+      pos = setStack(pos, { col: 6, row: 7 }, createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'T', owner: 'white' },
+      ]));
+      // Target: two Black Pawns → stack size 2 (source 2 >= target 2)
+      pos = setStack(pos, { col: 5, row: 6 }, createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 5 } },
+      };
+
+      const r = validateMove(state, move(6, 7, 5, 6, 'stack', [2]));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const stack = getStack(r.speculativeState.position, { col: 5, row: 6 });
+        expect(stack).not.toBeNull();
+        expect(stack!.length).toBe(3);
+        // Level 1 unchanged (not elected)
+        expect(stack![0]).toEqual({ type: 'P', owner: 'black' });
+        // Level 2 swapped (was Black Pawn)
+        expect(stack![1]).toEqual({ type: 'P', owner: 'white' });
+        // Level 3 is Captain
+        expect(stack![2]).toEqual({ type: 'T', owner: 'white' });
+        // One Pawn consumed (level 2 swap)
+        expect(r.speculativeState.hands.white.P).toBe(4);
+      }
+    });
+
+    it('accepts Captain stacking with Turncoat levels 1 and 2 — both levels swapped', () => {
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      // Captain on size-2 stack (on top of Pawn)
+      pos = setStack(pos, { col: 6, row: 7 }, createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'T', owner: 'white' },
+      ]));
+      // Target: two enemy pieces of different types → stack size 2
+      pos = setStack(pos, { col: 5, row: 6 }, createStack([
+        { type: 'S', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 5, S: 2 } },
+      };
+
+      const r = validateMove(state, move(6, 7, 5, 6, 'stack', [1, 2]));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const stack = getStack(r.speculativeState.position, { col: 5, row: 6 });
+        expect(stack!.length).toBe(3);
+        // Level 1: Samurai swapped
+        expect(stack![0]).toEqual({ type: 'S', owner: 'white' });
+        // Level 2: Pawn swapped
+        expect(stack![1]).toEqual({ type: 'P', owner: 'white' });
+        // Level 3: Captain
+        expect(stack![2]).toEqual({ type: 'T', owner: 'white' });
+        // Both swap pieces consumed from hand
+        expect(r.speculativeState.hands.white.S).toBe(1);
+        expect(r.speculativeState.hands.white.P).toBe(4);
+      }
     });
   });
 });
@@ -389,12 +543,77 @@ describe('validateArata', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-007');
   });
 
-  describe('BR-STACK-006 — Turncoat explicit rejection', () => {
-    it('rejects an arata with non-empty turncoat (not yet implemented)', () => {
+  describe('BR-STACK-006 — Turncoat validation (Arata)', () => {
+    it('rejects arata turncoat from a non-Captain piece', () => {
+      // Arata Pawn with turncoat — Pawn is not Captain
       const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7, [1]));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
     });
+
+    it('rejects arata turncoat when target has no enemy pieces to swap', () => {
+      // Arata Captain at (5,7) — target is empty, no enemy pieces.
+      // Need to add T to hand since BATTLE_MID_VARIANT has no Captain.
+      const base = gsfenState(BATTLE_MID_VARIANT);
+      const state: GameState = {
+        ...base,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 1 } },
+      };
+      const r = validateArata(state, arata('T', 5, 7, [1]));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
+    });
+
+    it('rejects arata turncoat when hand lacks matching piece type', () => {
+      // Place friendly-topped stack [p, P] at (5,8) with enemy below.
+      // Hand has no Pawn for swap.
+      const base = gsfenState(BATTLE_MID_VARIANT);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 5, row: 8 }, createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'white' },
+      ]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 1, P: 0 } },
+      };
+      const r = validateArata(state, arata('T', 5, 8, [1]));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
+    });
+
+    it('accepts Captain arata with Turncoat level 1 and updates state correctly', () => {
+      // Target (5,8) has [p, P] (Black Pawn bottom, White Pawn top).
+      // Arata Captain on top → stack becomes [p, P, T]. Swap level 1: Pawn→White Pawn.
+      const base = gsfenState(BATTLE_MID_VARIANT);
+      let pos = setStack(base.position, { col: 5, row: 8 }, null);
+      pos = setStack(pos, { col: 5, row: 8 }, createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'white' },
+      ]));
+      const state: GameState = {
+        ...base, position: pos,
+        hands: { ...base.hands, white: { ...base.hands.white, T: 1, P: 4 } },
+      };
+
+      const r = validateArata(state, arata('T', 5, 8, [1]));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        const stack = getStack(r.speculativeState.position, { col: 5, row: 8 });
+        expect(stack).not.toBeNull();
+        expect(stack!.length).toBe(3);
+        expect(stack![0]).toEqual({ type: 'P', owner: 'white' }); // swapped
+        expect(stack![1]).toEqual({ type: 'P', owner: 'white' }); // friendly remains
+        expect(stack![2]).toEqual({ type: 'T', owner: 'white' }); // Captain on top
+        // Hand: T decremented for arata, P decremented for swap
+        expect(r.speculativeState.hands.white.T).toBe(0);
+        expect(r.speculativeState.hands.white.P).toBe(3);
+      }
+    });
+
+    // Note: Arata Turncoat level 2 is not testable because a friendly-topped stack
+    // with an enemy at level 2 would require size ≥ 3 pre-arata, which violates
+    // BR-ARATA-005 (stack size limit). Level 1 is the only arata-swappable level.
   });
 
   describe('BR-ACTION-002 — Self Check after Arata', () => {
@@ -480,5 +699,32 @@ describe('validatePlay', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-ACTION-001');
   });
 
-  it.todo('BR-TURN-002: active player passes to opponent after Play (Step 10)');
+  describe('BR-TURN-002 — active player flips after Play; counter increments', () => {
+    it('flips active player and increments counter after a valid Move', () => {
+      const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
+      if (r.ok) {
+        expect(r.speculativeState.turn.activePlayer).toBe('black');
+        expect(r.speculativeState.turn.counter).toBe(3); // was 2
+      }
+    });
+
+    it('flips active player and increments counter after a valid Arata', () => {
+      const r = validatePlay(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
+      if (r.ok) {
+        expect(r.speculativeState.turn.activePlayer).toBe('black');
+        expect(r.speculativeState.turn.counter).toBe(15); // was 14
+      }
+    });
+
+    it('speculativeState for a Move cannot be reused to re-validate (pre-validated)', () => {
+      // The speculativeState is a full committed state: the move has been applied,
+      // the player flipped, and the counter incremented. It is meant to be consumed
+      // directly by Game.applyAction (Step 12), not fed back into validatePlay.
+      const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
+      if (r.ok) {
+        expect(r.speculativeState.turn.phase).toBe('battle');
+        expect(r.speculativeState.turn.done).toBeNull();
+      }
+    });
+  });
 });

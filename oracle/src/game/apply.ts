@@ -1,18 +1,15 @@
 /**
  * Action application functions for the Gungi game engine.
  *
- * Step 8 (Self Check scaffolding): applyMove, applyArata — minimal speculative
- *   state computation.
- * Step 9 (Deploy Phase): applyPlacement — full placement with turn management
- *   and deploy→battle transition.
- * Step 10 (Battle Phase): planned replacement of applyMove/applyArata with
- *   full turn management.
+ * Step 9  (Deploy Phase): applyPlacement — full placement with turn management.
+ * Step 10 (Battle Phase): applyMove, applyArata — full state transitions with
+ *   Turncoat swaps, active player flip, and turn counter increment.
  *
  * @module
  */
 
-import type { Action, GameResult, GameState, Hand, Piece, Player, PieceType } from '../types.js';
-import { createStack, getStack, setStack, topPiece } from '../board/board.js';
+import type { Action, GameResult, GameState, Hand, Piece, Player, PieceType, TurncoatLevels } from '../types.js';
+import { createStack, getStack, setStack, topPiece, stackSize } from '../board/board.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
 import { evaluateExposure } from './terminal.js';
 
@@ -181,80 +178,153 @@ export function applyPlacement(state: GameState, action: PlacementAction): Apply
 /*  applyMove — compute the post-move state                            */
 /* ------------------------------------------------------------------ */
 
+/* ------------------------------------------------------------------ */
+/*  Turncoat swap helper (BR-STACK-006)                                */
+/* ------------------------------------------------------------------ */
+
 /**
- * Apply a Move action to produce the resulting GameState.
+ * Apply Turncoat swaps to a stack and hand.
  *
- * @internal Step-8 scaffolding. Step 10 replaces this with full turn management.
+ * For each elected level:
+ * 1. The enemy piece at that level is removed from the game.
+ * 2. A friendly piece of the same type is taken from hand and placed
+ *    at that level.
  *
- * Does NOT handle:
- * - Turn transition (active player flip)
- * - Turncoat (Captain swaps)
- * - Terminal condition evaluation
- * - History recording
+ * The caller guarantees (via validation) that:
+ * - Each level is occupied by an enemy piece.
+ * - The hand contains a matching piece type for each swap.
  *
- * Those are added in Step 10.
+ * Levels are processed in ascending order (bottom→top). Swapping a
+ * lower level does not shift higher-level positions because each
+ * replacement is in-place.
  *
- * @param state - The current GameState.
- * @param action - The validated Move action.
- * @returns The new GameState after applying the move.  WARNING: this is a
- *   SPECULATIVE state — it is missing turn transition, turncoat, terminal
- *   conditions, and history.  See `PlayValidation.speculativeState`.
+ * @param stack    - The post-move/post-arata stack (Captain already on top).
+ * @param levels   - Elected turncoat levels (validated before calling).
+ * @param hand     - The player's hand (will be mutated).
+ * @param player   - The player performing the swaps.
+ * @returns The modified stack and hand.
  */
-export function applyMove(state: GameState, action: MoveAction): GameState {
+function applyTurncoatSwaps(
+  stack: Stack,
+  levels: TurncoatLevels,
+  hand: Hand,
+  player: Player,
+): { stack: Stack; hand: Hand } {
+  const newStack: Piece[] = [...stack];
+  const newHand: Hand = { ...hand };
+
+  for (const level of levels) {
+    const idx = level - 1;               // 0-indexed from bottom
+    const enemyPiece = newStack[idx];
+    // Validated before: enemyPiece exists and belongs to opponent
+    newStack[idx] = { type: enemyPiece.type, owner: player };
+    newHand[enemyPiece.type]--;
+  }
+
+  return { stack: createStack(newStack), hand: newHand };
+}
+
+/* ------------------------------------------------------------------ */
+/*  applyMove — full battle-phase state transition                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Apply a validated Move action to the current GameState.
+ *
+ * Performs (in order):
+ * 1. Detach top piece from origin stack.
+ * 2. Resolve outcome (Capture or Stack) per BR-STACK/BR-CAPTURE.
+ * 3. Apply Turncoat swaps (BR-STACK-006) if elected.
+ * 4. Flip active player (BR-TURN-002).
+ * 5. Increment turn counter.
+ *
+ * Terminal-condition evaluation and history recording are handled by
+ * the Game engine (Step 11–12), not here.
+ *
+ * @param state  - The current GameState (pre-validated).
+ * @param action - The validated Move action.
+ * @returns ApplyResult with the new state and result (always 'ongoing').
+ */
+export function applyMove(state: GameState, action: MoveAction): ApplyResult {
   const newState = cloneState(state);
   const { origin, dest, outcome } = action;
+  const player = newState.turn.activePlayer;
 
   // 1. Detach top piece from origin
   const originStack = getStack(newState.position, origin);
-  if (!originStack) return newState; // should not happen — caller validates first
+  if (!originStack) return { state: newState, result: { kind: 'ongoing' } };
   const { newStack: updatedOrigin, piece: movingPiece } = detachTop(originStack);
   newState.position = setStack(newState.position, origin, updatedOrigin);
 
   // 2. Resolve destination
   const targetStack = getStack(newState.position, dest);
 
+  let destStack: Stack | null;
+
   if (targetStack === null) {
     // Empty square — place piece alone
-    newState.position = setStack(newState.position, dest, createStack([movingPiece]));
+    destStack = createStack([movingPiece]);
   } else if (
     outcome === 'capture' ||
     (outcome === null && topPiece(targetStack).owner !== movingPiece.owner)
   ) {
-    // Capture: outcome is either explicit 'capture', or null with enemy-topped target
-    // (null on enemy-topped target means capture is forced — validated by validateOutcome).
-    // Remove enemy pieces, keep friendly, then add moving piece on top.
+    // Capture: remove enemy pieces, keep friendly, then add moving piece on top
     const remaining = removeEnemyPieces(targetStack, movingPiece.owner);
     if (remaining === null) {
-      newState.position = setStack(newState.position, dest, createStack([movingPiece]));
+      destStack = createStack([movingPiece]);
     } else {
       const pieces = [...remaining, movingPiece];
-      newState.position = setStack(newState.position, dest, createStack(pieces));
+      destStack = createStack(pieces);
     }
   } else {
-    // Stack: moving piece becomes new top (friendly-topped target, or outcome='stack')
+    // Stack: moving piece becomes new top
     const pieces = [...targetStack, movingPiece];
-    newState.position = setStack(newState.position, dest, createStack(pieces));
+
+    // 3. Turncoat swaps (BR-STACK-006) — only for Stack outcome
+    if (movingPiece.type === 'T' && action.turncoat.length > 0) {
+      const result = applyTurncoatSwaps(
+        createStack(pieces),
+        action.turncoat,
+        newState.hands[player],
+        player,
+      );
+      destStack = result.stack;
+      newState.hands[player] = result.hand;
+    } else {
+      destStack = createStack(pieces);
+    }
   }
 
-  return newState;
+  newState.position = setStack(newState.position, dest, destStack);
+
+  // 4. Flip active player (BR-TURN-002)
+  newState.turn.activePlayer = opponent(player);
+
+  // 5. Increment turn counter
+  newState.turn.counter++;
+
+  return { state: newState, result: { kind: 'ongoing' as const } };
 }
 
 /* ------------------------------------------------------------------ */
-/*  applyArata — compute the post-arata state                          */
+/*  applyArata — full battle-phase state transition                    */
 /* ------------------------------------------------------------------ */
 
 /**
- * Apply an Arata action to produce the resulting GameState.
+ * Apply a validated Arata action to the current GameState.
  *
- * @internal Step-8 scaffolding. Step 10 replaces this with full turn management.
+ * Performs (in order):
+ * 1. Remove piece from hand.
+ * 2. Place on destination (empty or friendly stack).
+ * 3. Apply Turncoat swaps (BR-STACK-006) if elected.
+ * 4. Flip active player (BR-TURN-002).
+ * 5. Increment turn counter.
  *
- * @param state - The current GameState.
+ * @param state  - The current GameState (pre-validated).
  * @param action - The validated Arata action.
- * @returns The new GameState after applying the arata.  WARNING: this is a
- *   SPECULATIVE state — it is missing turn transition, turncoat, terminal
- *   conditions, and history.  See `PlayValidation.speculativeState`.
+ * @returns ApplyResult with the new state and result (always 'ongoing').
  */
-export function applyArata(state: GameState, action: ArataAction): GameState {
+export function applyArata(state: GameState, action: ArataAction): ApplyResult {
   const newState = cloneState(state);
   const { piece, dest } = action;
   const player = newState.turn.activePlayer;
@@ -265,14 +335,35 @@ export function applyArata(state: GameState, action: ArataAction): GameState {
 
   // 2. Place on destination
   const targetStack = getStack(newState.position, dest);
+  let destStack: Stack;
 
   if (targetStack === null) {
-    newState.position = setStack(newState.position, dest, createStack([pieceObj]));
+    destStack = createStack([pieceObj]);
   } else {
-    // Stack on top of friendly stack (validated already)
     const pieces = [...targetStack, pieceObj];
-    newState.position = setStack(newState.position, dest, createStack(pieces));
+
+    // 3. Turncoat swaps (BR-STACK-006)
+    if (piece === 'T' && action.turncoat.length > 0) {
+      const result = applyTurncoatSwaps(
+        createStack(pieces),
+        action.turncoat,
+        newState.hands[player],
+        player,
+      );
+      destStack = result.stack;
+      newState.hands[player] = result.hand;
+    } else {
+      destStack = createStack(pieces);
+    }
   }
 
-  return newState;
+  newState.position = setStack(newState.position, dest, destStack);
+
+  // 4. Flip active player (BR-TURN-002)
+  newState.turn.activePlayer = opponent(player);
+
+  // 5. Increment turn counter
+  newState.turn.counter++;
+
+  return { state: newState, result: { kind: 'ongoing' as const } };
 }
