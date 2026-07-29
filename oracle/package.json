@@ -7,6 +7,7 @@
     "board-to-test": "node prototype/board-to-test.mjs",
     "check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
+    "dev-client": "cd .. && npx tsx client/server.ts",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
     "gsfen": "npx tsx script/gsfen.ts",
     "gsfen:gen": "npx tsx script/gsfen-gen.ts",

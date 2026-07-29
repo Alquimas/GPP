@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gungi Developer Client</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────── */
+
+#app {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  position: relative;
+}
+
+#board-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-width: 0;
+  position: relative;
+}
+
+#panel-area {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.25s ease;
+  background: #16213e;
+  border-left: 1px solid #0f3460;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+#panel-area.open {
+  width: 460px;
+}
+
+.panel {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.panel.active {
+  display: flex;
+}
+
+.panel-header {
+  padding: 12px 16px;
+  background: #0f3460;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #e94560;
+  flex-shrink: 0;
+  border-bottom: 1px solid #1a1a2e;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Info Bar ── */
+#info-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #16213e;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  width: 100%;
+  max-width: 630px;
+  flex-shrink: 0;
+  border: 1px solid #0f3460;
+}
+
+.info-phase {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #e94560;
+  padding: 2px 10px;
+  border-radius: 4px;
+  background: rgba(233, 69, 96, 0.1);
+}
+
+.info-player {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.info-player.white { color: #f0e6d3; }
+.info-player.black { color: #8888aa; }
+
+.info-counter {
+  margin-left: auto;
+  font-size: 12px;
+  color: #888;
+  font-variant-numeric: tabular-nums;
+}
+
+.info-done {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: #e94560;
+  color: #fff;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.info-result {
+  font-size: 14px;
+  font-weight: 700;
+  color: #e94560;
+  background: rgba(233, 69, 96, 0.15);
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+/* ── Board ── */
+#board-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#board-frame {
+  display: inline-block;
+  background: #2d1b0e;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+#board {
+  display: grid;
+  grid-template-columns: 28px repeat(9, 60px);
+  grid-template-rows: 28px repeat(9, 60px);
+  gap: 1px;
+  background: #4a2e14;
+}
+
+.board-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #b8a68e;
+  background: #2d1b0e;
+  user-select: none;
+}
+
+.board-label.corner { background: #1f1308; }
+
+.cell {
+  width: 60px;
+  height: 60px;
+  background: #c9ad8a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.cell.empty-cell { background: #bc9e7a; }
+.cell.empty-cell:hover { background: #d4b896; }
+
+.cell.deploy-zone { background: #b08a6a; }
+.cell.deploy-zone.empty-cell:hover { background: #c49a6c; }
+
+.cell.selected {
+  background: #5a9e6f;
+  box-shadow: inset 0 0 0 2px #3d8b5e;
+}
+
+.cell.legal-target {
+  background: #6aaf70;
+  box-shadow: inset 0 0 0 2px #4a9f50;
+}
+
+.cell.legal-target:hover {
+  background: #7abf80;
+}
+
+.piece-wrapper {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  pointer-events: none;
+  user-select: none;
+}
+.piece-wrapper img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  display: block;
+}
+.piece-fb {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  font-family: Georgia, serif;
+  border-radius: 4px;
+}
+
+/* Stack popup */
+#stack-popup {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  background: #0f3460;
+  border: 1px solid #e94560;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  min-width: 100px;
+}
+
+#stack-popup.visible {
+  display: block;
+}
+
+.stack-popup-title {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.stack-popup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: 4px;
+}
+
+
+
+.stack-popup-item .item-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Actions Panel ── */
+.action-list {
+  list-style: none;
+}
+
+.action-item {
+  padding: 6px 10px;
+  margin: 2px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Consolas', monospace;
+  transition: background 0.1s;
+  border: 1px solid transparent;
+}
+
+.action-item:hover {
+  background: #1a1a3e;
+  border-color: #0f3460;
+}
+
+.action-item.selected {
+  background: #1a3a2e;
+  border-color: #5a9e6f;
+}
+
+.action-item .action-num {
+  color: #e94560;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+/* ── History Panel ── */
+.history-entry {
+  padding: 5px 8px;
+  margin: 2px 0;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.history-entry:hover {
+  background: #1a1a3e;
+}
+
+.history-entry.current {
+  background: #1a3a2e;
+  border-left: 3px solid #5a9e6f;
+}
+
+.history-entry .h-num {
+  color: #e94560;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.history-entry .h-action {
+  color: #aaa;
+}
+
+/* ── GSFEN Panel ── */
+.gsfen-display {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 13px;
+  word-break: break-all;
+  line-height: 1.6;
+  background: #0d1b2a;
+  padding: 12px;
+  border-radius: 6px;
+  user-select: all;
+  border: 1px solid #0f3460;
+}
+
+.gsfen-copy {
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: #0f3460;
+  color: #e0e0e0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.gsfen-copy:hover { background: #1a4a80; }
+.gsfen-copy.copied { background: #3d8b5e; }
+
+/* ── Hands Panel (turn info) ── */
+.hands-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.hand-col h3 {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #0f3460;
+}
+
+.hand-col h3.white { color: #f0e6d3; }
+.hand-col h3.black { color: #8888aa; }
+
+.hand-piece-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.hand-piece-row img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.hand-piece-row .hp-name { flex: 1; font-weight: 600; }
+.hand-piece-row .hp-count { color: #e94560; font-weight: 700; font-size: 14px; }
+
+.hand-empty-text {
+  color: #666;
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ── Help Panel ── */
+.help-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.help-row {
+  display: flex;
+  gap: 12px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.help-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 26px;
+  padding: 0 8px;
+  background: #0f3460;
+  border-radius: 4px;
+  font-family: 'SF Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #e94560;
+}
+
+.help-desc { color: #aaa; }
+
+/* ── Status bar ── */
+#status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 16px;
+  background: #0d1b2a;
+  border-top: 1px solid #0f3460;
+  font-size: 11px;
+  color: #666;
+  display: flex;
+  gap: 16px;
+  z-index: 100;
+}
+
+.status-item { display: flex; gap: 6px; }
+.status-key { color: #e94560; font-weight: 700; }
+
+/* ── Keyboard bar ── */
+#keyboard-hint {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 52, 96, 0.9);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 12px;
+  color: #888;
+  z-index: 50;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+}
+
+#keyboard-hint span { color: #e94560; font-weight: 700; }
+
+/* ── Reset dialog ── */
+#reset-dialog {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+}
+
+#reset-dialog.visible {
+  display: flex;
+}
+
+.reset-box {
+  background: #16213e;
+  border-radius: 12px;
+  padding: 24px;
+  width: 520px;
+  max-width: 90vw;
+  border: 1px solid #0f3460;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+
+.reset-box h2 {
+  color: #e94560;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.reset-box input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  background: #0d1b2a;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-family: 'SF Mono', monospace;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.reset-box input:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.reset-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.reset-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+
+.reset-actions .btn-primary {
+  background: #e94560;
+  color: #fff;
+}
+
+.reset-actions .btn-primary:hover { background: #d13a52; }
+
+.reset-actions .btn-cancel {
+  background: #0f3460;
+  color: #aaa;
+}
+
+.reset-actions .btn-cancel:hover { background: #1a4a80; color: #e0e0e0; }
+
+/* ── Responsive ── */
+@media (max-width: 800px) {
+  #board {
+    grid-template-columns: 20px repeat(9, 40px);
+    grid-template-rows: 20px repeat(9, 40px);
+  }
+  .cell { width: 40px; height: 40px; }
+  .cell .piece-img { width: 36px; height: 36px; }
+  #panel-area.open { width: 320px; }
+}
+
+@media (max-width: 600px) {
+  #app { flex-direction: column; }
+  #board-area { padding: 8px; }
+  #board {
+    grid-template-columns: 18px repeat(9, 34px);
+    grid-template-rows: 18px repeat(9, 34px);
+  }
+  .cell { width: 34px; height: 34px; }
+  .cell .piece-img { width: 30px; height: 30px; }
+  #panel-area.open { width: 100%; max-height: 50vh; }
+  #info-bar { flex-wrap: wrap; font-size: 12px; padding: 8px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Board area -->
+  <div id="board-area">
+    <div id="info-bar">
+      <span class="info-phase" id="phaseLabel">—</span>
+      <span class="info-player" id="playerLabel">—</span>
+      <span class="info-counter" id="counterLabel"></span>
+      <span class="info-done" id="doneLabel" style="display:none"></span>
+      <span class="info-result" id="resultLabel" style="display:none"></span>
+    </div>
+
+    <div id="board-wrap">
+      <div id="board-frame">
+        <div id="board"></div>
+      </div>
+    </div>
+
+    <div id="actions-toolbar" style="margin-top:10px;display:flex;gap:6px;">
+      <button class="gsfen-copy" data-panel="gsfen" style="font-size:11px;">G GSFEN</button>
+      <button class="gsfen-copy" data-panel="actions" style="font-size:11px;">A Actions</button>
+      <button class="gsfen-copy" data-panel="history" style="font-size:11px;">H History</button>
+      <button class="gsfen-copy" data-panel="turninfo" style="font-size:11px;">T Turn</button>
+      <button class="gsfen-copy" id="undoBtn" style="font-size:11px;">U Undo</button>
+      <button class="gsfen-copy" id="resetBtn" style="font-size:11px;">R Reset</button>
+    </div>
+  </div>
+
+  <!-- Panel area -->
+  <div id="panel-area">
+    <!-- GSFEN Panel -->
+    <div class="panel" id="panel-gsfen">
+      <div class="panel-header">GSFEN — Game State</div>
+      <div class="panel-body">
+        <div class="gsfen-display" id="gsfenContent"></div>
+        <button class="gsfen-copy" id="gsfenCopyBtn">📋 Copy GSFEN</button>
+        <div style="margin-top:16px;">
+          <div style="font-size:12px;color:#888;margin-bottom:6px;">GSFEN Fields</div>
+          <div style="font-size:11px;line-height:1.8;color:#aaa;">
+            <div><strong style="color:#e94560;">Position</strong> — 9 rows separated by /</div>
+            <div><strong style="color:#e94560;">Turn</strong> — w/b (battle) dw/db/dwB/dbW (deploy)</div>
+            <div><strong style="color:#e94560;">Hands</strong> — uppercase=White, lowercase=Black</div>
+            <div><strong style="color:#e94560;">Counter</strong> — turn number</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Panel -->
+    <div class="panel" id="panel-actions">
+      <div class="panel-header">Legal Actions <span id="actionCount" style="font-weight:400;color:#888;font-size:12px;"></span></div>
+      <div class="panel-body">
+        <div id="actionsFilter" style="margin-bottom:8px;display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="gsfen-copy" data-filter="all" style="font-size:10px;padding:3px 8px;">All</button>
+          <button class="gsfen-copy" data-filter="placement" style="font-size:10px;padding:3px 8px;">Placement</button>
+          <button class="gsfen-copy" data-filter="move" style="font-size:10px;padding:3px 8px;">Move</button>
+          <button class="gsfen-copy" data-filter="arata" style="font-size:10px;padding:3px 8px;">Arata</button>
+        </div>
+        <div id="actionsList" style="margin-top:8px;"></div>
+      </div>
+    </div>
+
+    <!-- History Panel -->
+    <div class="panel" id="panel-history">
+      <div class="panel-header">Game History <span id="historyCount" style="font-weight:400;color:#888;font-size:12px;"></span></div>
+      <div class="panel-body">
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <button class="gsfen-copy" id="historyPrevBtn" style="font-size:10px;padding:3px 8px;">◀ Prev</button>
+          <button class="gsfen-copy" id="historyNextBtn" style="font-size:10px;padding:3px 8px;">Next ▶</button>
+          <button class="gsfen-copy" id="historyLatestBtn" style="font-size:10px;padding:3px 8px;">Latest</button>
+        </div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+
+    <!-- Turn Info Panel -->
+    <div class="panel" id="panel-turninfo">
+      <div class="panel-header">Turn &amp; Hands</div>
+      <div class="panel-body">
+        <div id="turnDetail" style="margin-bottom:16px;"></div>
+        <div class="hands-grid" id="handsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Help Panel -->
+    <div class="panel" id="panel-help">
+      <div class="panel-header">Keyboard Shortcuts</div>
+      <div class="panel-body">
+        <div class="help-grid">
+          <div class="help-row"><span class="help-key">G</span><span class="help-desc">Toggle GSFEN panel</span></div>
+          <div class="help-row"><span class="help-key">A</span><span class="help-desc">Toggle Actions panel</span></div>
+          <div class="help-row"><span class="help-key">H</span><span class="help-desc">Toggle History panel</span></div>
+          <div class="help-row"><span class="help-key">T</span><span class="help-desc">Toggle Turn info / Hands panel</span></div>
+          <div class="help-row"><span class="help-key">U</span><span class="help-desc">Undo last action</span></div>
+          <div class="help-row"><span class="help-key">←</span><span class="help-desc">Previous history state</span></div>
+          <div class="help-row"><span class="help-key">→</span><span class="help-desc">Next history state</span></div>
+          <div class="help-row"><span class="help-key">R</span><span class="help-desc">Reset game / load new GSFEN</span></div>
+          <div class="help-row"><span class="help-key">?</span><span class="help-desc">Show this help</span></div>
+          <div class="help-row"><span class="help-key">Esc</span><span class="help-desc">Close panels / dialogs</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stack popup -->
+<div id="stack-popup"></div>
+
+<!-- Reset dialog -->
+<div id="reset-dialog">
+  <div class="reset-box">
+    <h2>Reset Game</h2>
+    <input type="text" id="resetGsfenInput" placeholder="Enter GSFEN or leave empty for startpos">
+    <div style="font-size:11px;color:#888;margin-bottom:12px;">
+      Enter a GSFEN string to start from that position, or leave empty for the standard starting position.
+    </div>
+    <div class="reset-actions">
+      <button class="btn-cancel" id="resetCancelBtn">Cancel</button>
+      <button class="btn-primary" id="resetConfirmBtn">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Status bar -->
+<div id="status-bar">
+  <div class="status-item"><span class="status-key">G</span> GSFEN</div>
+  <div class="status-item"><span class="status-key">A</span> Actions</div>
+  <div class="status-item"><span class="status-key">H</span> History</div>
+  <div class="status-item"><span class="status-key">T</span> Turn</div>
+  <div class="status-item"><span class="status-key">U</span> Undo</div>
+  <div class="status-item"><span class="status-key">←→</span> Navigate</div>
+  <div class="status-item"><span class="status-key">R</span> Reset</div>
+  <div class="status-item"><span class="status-key">?</span> Help</div>
+</div>
+
+<script>
+// Global piece image error handler — must be at window scope for inline onerror attributes.
+window._pieceErr = function (imgId) {
+  var img = document.getElementById(imgId);
+  if (!img) return;
+  img.style.display = 'none';
+  var fb = document.getElementById('fb-' + imgId);
+  if (fb) fb.style.display = 'flex';
+};
+
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────
+  let gameState = null;
+  let activePanel = null;
+  let actionsFilter = 'all';
+  let selectedActionIndex = -1;
+  let selectedCell = null; // { col, row }
+
+  // Piece name mapping for assets (Black calls Knight → "Horse")
+  const ASSET_NAMES = {
+    white: {
+      A:'Archer', C:'Cannon', E:'Spear', F:'Fortress',
+      G:'General', J:'Major', L:'Lieutenant', M:'Marshal',
+      N:'Knight', P:'Pawn', S:'Samurai', T:'Captain',
+      U:'Musketeer', Y:'Spy'
+    },
+    black: {
+      A:'Archer', C:'Cannon', E:'Spear', F:'Fortress',
+      G:'General', J:'Major', L:'Lieutenant', M:'Marshal',
+      N:'Knight', P:'Pawn', S:'Samurai', T:'Captain',
+      U:'Musketeer', Y:'Spy'
+    }
+  };
+
+  const PIECE_LABELS = {
+    A:'Archer', C:'Cannon', E:'Spear', F:'Fortress',
+    G:'General', J:'Major', L:'Lieutenant', M:'Marshal',
+    N:'Knight', P:'Pawn', S:'Samurai', T:'Captain',
+    U:'Musketeer', Y:'Spy'
+  };
+
+  const ALL_PIECE_TYPES = ['A','C','E','F','G','J','L','M','N','P','S','T','U','Y'];
+
+  function assetUrl(color, type, level) {
+    const name = ASSET_NAMES[color][type];
+    if (!name) return '';
+    const cap = color === 'white' ? 'White' : 'Black';
+    return `/assets/${cap}_${name}_${level}.png`;
+  }
+
+  // ── API ────────────────────────────────────────────────────────────
+  async function api(method, path, body) {
+    const opts = { method, headers: {} };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(path, opts);
+    return res.json();
+  }
+
+  async function fetchState() {
+    gameState = await api('GET', '/api/state');
+    render();
+  }
+
+  async function applyAction(action) {
+    const res = await api('POST', '/api/action', { action });
+    if (res.error) {
+      showStatus(res.error, true);
+      return;
+    }
+    gameState = res;
+    selectedCell = null;
+    selectedActionIndex = -1;
+    render();
+  }
+
+  async function undo() {
+    const res = await api('POST', '/api/undo');
+    if (res.error) { showStatus(res.error, true); return; }
+    gameState = res;
+    selectedActionIndex = -1;
+    render();
+  }
+
+  async function gotoHistory(index) {
+    const res = await api('POST', '/api/goto', { index });
+    if (res.error) { showStatus(res.error, true); return; }
+    gameState = res;
+    selectedActionIndex = -1;
+    render();
+  }
+
+  async function resetGame(gsfen) {
+    const res = await api('POST', '/api/reset', { gsfen: gsfen || undefined });
+    if (res.error) { showStatus(res.error, true); return; }
+    gameState = res;
+    selectedActionIndex = -1;
+    selectedCell = null;
+    render();
+  }
+
+  // ── Panel management ───────────────────────────────────────────────
+  function showPanel(name) {
+    const panelArea = document.getElementById('panel-area');
+    const panels = document.querySelectorAll('.panel');
+
+    if (activePanel === name) {
+      // Toggle off
+      panelArea.classList.remove('open');
+      panels.forEach(p => p.classList.remove('active'));
+      activePanel = null;
+      return;
+    }
+
+    activePanel = name;
+    panelArea.classList.add('open');
+    panels.forEach(p => {
+      p.classList.toggle('active', p.id === 'panel-' + name);
+    });
+  }
+
+  function closePanel() {
+    const panelArea = document.getElementById('panel-area');
+    panelArea.classList.remove('open');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    activePanel = null;
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────
+  function render() {
+    if (!gameState) return;
+    renderBoard();
+    renderInfoBar();
+    renderGSFENPanel();
+    renderActionsPanel();
+    renderHistoryPanel();
+    renderTurnInfoPanel();
+    updateActionButtons();
+  }
+
+  function renderBoard() {
+    const boardEl = document.getElementById('board');
+    const state = gameState;
+    const isDeploy = state.phase === 'deploy';
+    const activePlayer = state.activePlayer;
+    const isTerminal = state.isTerminal;
+    const legalActions = state.legalActions || [];
+
+    // Build lookup maps for quick highlighting
+    const selectedMoves = new Set();
+    const selectedPlacements = new Set();
+    const selectedAratas = new Set();
+
+    if (selectedCell) {
+      for (const action of legalActions) {
+        if (action.kind === 'move' && action.origin.col === selectedCell.col && action.origin.row === selectedCell.row) {
+          selectedMoves.add(`${action.dest.col},${action.dest.row}`);
+        }
+        if (action.kind === 'placement' && action.dest.col === selectedCell.col && action.dest.row === selectedCell.row) {
+          selectedPlacements.add(`${action.piece}`);
+        }
+      }
+    }
+
+    // Build board HTML
+    let html = '';
+
+    // Column headers (col 9 → col 1)
+    html += '<div class="board-label corner"></div>';
+    for (let c = 9; c >= 1; c--) {
+      html += `<div class="board-label">${c}</div>`;
+    }
+
+    // Rows
+    for (let r = 0; r < 9; r++) {
+      const rowNum = r + 1;
+      const rowData = state.board[r];
+
+      // Row label
+      html += `<div class="board-label">${rowNum}</div>`;
+
+      for (let d = 0; d < 9; d++) {
+        const cell = rowData[d];
+        const colNum = cell ? cell.col : (9 - d); // use API col (matches display)
+        const isOccupied = cell && cell.stack && cell.stack.length > 0;
+        const piece = isOccupied ? cell.stack[cell.stack.length - 1] : null;
+
+        // Highlight logic
+        let extraClass = '';
+        if (!isOccupied) {
+          extraClass = ' empty-cell';
+          if (isDeploy && !isTerminal) {
+            // Check if deploy zone
+            if ((activePlayer === 'white' && rowNum >= 7) || (activePlayer === 'black' && rowNum <= 3)) {
+              extraClass = ' deploy-zone';
+            }
+          }
+        }
+
+        // Legal target highlight
+        const moveKey = `${colNum},${rowNum}`;
+        if (selectedMoves.has(moveKey)) {
+          extraClass += ' legal-target';
+        }
+
+        // Selected cell
+        if (selectedCell && selectedCell.col === colNum && selectedCell.row === rowNum) {
+          extraClass += ' selected';
+        }
+
+        html += `<div class="cell${extraClass}" data-col="${colNum}" data-row="${rowNum}" data-r="${r}" data-c="${d}">`;
+
+        if (piece) {
+          const topPiece = piece;
+          const level = cell.stack.length;
+          const imgUrl = assetUrl(topPiece.owner, topPiece.type, level);
+          const letter = topPiece.owner === 'white' ? topPiece.type.toUpperCase() : topPiece.type.toLowerCase();
+          const bg = topPiece.owner === 'white' ? '#f0e6d3' : '#2a1a0a';
+          const fg = topPiece.owner === 'white' ? '#2a1a0a' : '#f0e6d3';
+          const imgId = 'pi_' + r + '_' + d + '_' + (Date.now() % 10000);
+          html += `<div class="piece-wrapper" style="position:relative;width:52px;height:52px;">`;
+          html += `<img id="${imgId}" src="${imgUrl}" alt="${letter}"
+                    style="width:52px;height:52px;object-fit:cover;display:block;"
+                    onerror="window._pieceErr('${imgId}')">`;
+          html += `<span id="fb-${imgId}" class="piece-fb" style="display:none;position:absolute;inset:0;
+                    align-items:center;justify-content:center;font-weight:700;font-size:16px;
+                    font-family:Georgia,serif;color:${fg};background:${bg};border-radius:4px;">${letter}</span>`;
+          html += `</div>`;
+        }
+
+        html += '</div>';
+      }
+    }
+
+    boardEl.innerHTML = html;
+
+    // Cell click handling
+    boardEl.querySelectorAll('.cell').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onCellClick(el);
+      });
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        onCellRightClick(e, el);
+      });
+    });
+  }
+
+  // Click outside the board → deselect
+  document.getElementById('board-area').addEventListener('click', function () {
+    if (selectedCell) {
+      selectedCell = null;
+      selectedActionIndex = -1;
+      render();
+    }
+  });
+
+  function onCellClick(el) {
+    if (!gameState || gameState.isTerminal) return;
+    const col = parseInt(el.dataset.col);
+    const row = parseInt(el.dataset.row);
+    const legalActions = gameState.legalActions || [];
+
+    // Determine occupancy from API data, not DOM
+    const cellData = gameState.board[parseInt(el.dataset.r)][parseInt(el.dataset.c)];
+    const topPiece = cellData?.stack?.length > 0 ? cellData.stack[cellData.stack.length - 1] : null;
+    const isOccupied = topPiece !== null;
+
+    if (topPiece && topPiece.owner === gameState.activePlayer) {
+      // Select this piece — filter actions to moves from this origin
+      if (selectedCell && selectedCell.col === col && selectedCell.row === row) {
+        selectedCell = null; // deselect
+      } else {
+        selectedCell = { col, row };
+      }
+      render();
+      return;
+    }
+
+    // If clicking on an empty space or enemy piece in deploy zone
+    if (gameState.phase === 'deploy') {
+      // Try to find placement actions for this destination
+      const placements = legalActions.filter(a => a.kind === 'placement' && a.dest.col === col && a.dest.row === row);
+      if (placements.length > 0) {
+        // If only one, apply it
+        if (placements.length === 1) {
+          applyAction(placements[0]);
+          return;
+        }
+        // Otherwise show filtered actions panel
+        selectedCell = { col, row };
+        actionsFilter = 'placement';
+        showPanel('actions');
+        render();
+        return;
+      }
+    }
+
+    // If we have a selected cell, try to move here
+    if (selectedCell) {
+      const moveActions = legalActions.filter(a =>
+        a.kind === 'move' &&
+        a.origin.col === selectedCell.col && a.origin.row === selectedCell.row &&
+        a.dest.col === col && a.dest.row === row
+      );
+      if (moveActions.length === 1) {
+        applyAction(moveActions[0]);
+        return;
+      }
+      if (moveActions.length > 1) {
+        // Multiple outcomes (stack/capture/turncoat variants)
+        if (activePanel !== 'actions') showPanel('actions');
+        actionsFilter = 'move';
+        // Find these actions in the list and let user pick
+        render();
+        // Highlight first one
+        const allActions = getFilteredActions();
+        const firstIdx = allActions.findIndex(a =>
+          a.kind === 'move' &&
+          a.origin.col === selectedCell.col && a.origin.row === selectedCell.row &&
+          a.dest.col === col && a.dest.row === row
+        );
+        if (firstIdx >= 0) {
+          const items = document.querySelectorAll('.action-item');
+          if (items[firstIdx]) items[firstIdx].scrollIntoView({ block: 'nearest' });
+        }
+        return;
+      }
+    }
+  }
+
+  function onCellRightClick(e, el) {
+    const r = parseInt(el.dataset.r);
+    const c = parseInt(el.dataset.c);
+    const cellData = gameState?.board[r]?.[c];
+    if (!cellData || !cellData.stack || cellData.stack.length <= 1) return;
+
+    const popup = document.getElementById('stack-popup');
+    const stack = cellData.stack;
+
+    let html = `<div class="stack-popup-title">Stack at ${cellData.col}-${cellData.row}</div>`;
+    for (let i = stack.length - 1; i >= 0; i--) {
+      const p = stack[i];
+      const level = i + 1;
+      const imgUrl = assetUrl(p.owner, p.type, level);
+      const ownerLabel = p.owner === 'white' ? 'W' : 'B';
+      const letter = p.owner === 'white' ? p.type.toUpperCase() : p.type.toLowerCase();
+      const bg = p.owner === 'white' ? '#f0e6d3' : '#2a1a0a';
+      const fg = p.owner === 'white' ? '#2a1a0a' : '#f0e6d3';
+      const spId = 'sp_' + i + '_' + (Date.now() % 10000);
+      html += `<div class="stack-popup-item">
+        <div style="position:relative;width:36px;height:36px;flex-shrink:0;">
+          <img id="${spId}" src="${imgUrl}" alt="${letter}"
+            style="width:36px;height:36px;object-fit:contain;display:block;"
+            onerror="window._pieceErr('${spId}')">
+          <span id="fb-${spId}" class="piece-fb" style="display:none;position:absolute;inset:0;
+            align-items:center;justify-content:center;font-weight:700;font-size:14px;
+            background:${bg};color:${fg};border-radius:4px;">${letter}</span>
+        </div>
+        <div class="item-label">${PIECE_LABELS[p.type]} (${ownerLabel}) — Level ${level}</div>
+      </div>`;
+    }
+
+    popup.innerHTML = html;
+    popup.classList.add('visible');
+    popup.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
+    popup.style.top = Math.min(e.clientY, window.innerHeight - stack.length * 48 - 40) + 'px';
+  }
+
+  // Close popup on any click
+  document.addEventListener('click', function (e) {
+    const popup = document.getElementById('stack-popup');
+    if (popup.classList.contains('visible') && !popup.contains(e.target)) {
+      popup.classList.remove('visible');
+    }
+  });
+
+  function renderInfoBar() {
+    const state = gameState;
+    document.getElementById('phaseLabel').textContent = state.phaseDesc || '';
+    const playerEl = document.getElementById('playerLabel');
+    playerEl.textContent = state.turnDesc || '';
+    playerEl.className = 'info-player ' + state.activePlayer;
+    document.getElementById('counterLabel').textContent = `Turn ${state.counter}`;
+
+    const doneLabel = document.getElementById('doneLabel');
+    if (state.done) {
+      doneLabel.textContent = state.done + ' done';
+      doneLabel.style.display = 'inline';
+    } else {
+      doneLabel.style.display = 'none';
+    }
+
+    const resultLabel = document.getElementById('resultLabel');
+    if (state.isTerminal) {
+      resultLabel.textContent = state.resultLabel;
+      resultLabel.style.display = 'inline';
+    } else {
+      resultLabel.style.display = 'none';
+    }
+  }
+
+  function renderGSFENPanel() {
+    document.getElementById('gsfenContent').textContent = gameState.gsfen;
+  }
+
+  function getFilteredActions() {
+    if (!gameState) return [];
+    let actions = gameState.legalActions || [];
+
+    // Filter by type
+    if (actionsFilter !== 'all') {
+      actions = actions.filter(a => a.kind === actionsFilter);
+    }
+
+    // Filter by selected cell
+    if (selectedCell && actionsFilter !== 'all') {
+      if (actionsFilter === 'move') {
+        actions = actions.filter(a => a.origin.col === selectedCell.col && a.origin.row === selectedCell.row);
+      } else if (actionsFilter === 'placement') {
+        actions = actions.filter(a => a.dest.col === selectedCell.col && a.dest.row === selectedCell.row);
+      }
+    }
+
+    return actions;
+  }
+
+  function renderActionsPanel() {
+    const state = gameState;
+    const allActions = state.legalActions || [];
+    const filtered = getFilteredActions();
+
+    document.getElementById('actionCount').textContent = `(${allActions.length} total, ${filtered.length} shown)`;
+
+    const list = document.getElementById('actionsList');
+    if (filtered.length === 0) {
+      list.innerHTML = '<div style="color:#666;font-style:italic;padding:8px;">No legal actions available</div>';
+      return;
+    }
+
+    let html = '<div class="action-list">';
+    // Track which display text we've already shown to deduplicate
+    const seen = new Set();
+    for (let i = 0; i < filtered.length; i++) {
+      const a = filtered[i];
+      const isSelected = i === selectedActionIndex;
+      html += `<div class="action-item${isSelected ? ' selected' : ''}" data-ai="${i}">
+        <span class="action-num">${i + 1}</span>
+        ${escapeHtml(a.display)}
+      </div>`;
+    }
+    html += '</div>';
+    list.innerHTML = html;
+
+    // Click handlers
+    list.querySelectorAll('.action-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.ai);
+        const filteredActions = getFilteredActions();
+        if (idx >= 0 && idx < filteredActions.length) {
+          selectedActionIndex = idx;
+          render();
+          applyAction(filteredActions[idx]);
+        }
+      });
+    });
+  }
+
+  function renderHistoryPanel() {
+    const state = gameState;
+    const history = state.history || [];
+    const currentIdx = state.currentIndex;
+
+    document.getElementById('historyCount').textContent = `(${history.length} states)`;
+
+    const list = document.getElementById('historyList');
+    let html = '<div class="history-list">';
+    for (let i = 0; i < history.length; i++) {
+      const entry = history[i];
+      const isCurrent = i === currentIdx;
+      const actionLabel = entry.action || '(initial)';
+      html += `<div class="history-entry${isCurrent ? ' current' : ''}" data-hi="${i}">
+        <span class="h-num">#${i}</span>
+        <span class="h-action">${escapeHtml(actionLabel)}</span>
+      </div>`;
+    }
+    html += '</div>';
+    list.innerHTML = html;
+
+    list.querySelectorAll('.history-entry').forEach(el => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.dataset.hi);
+        if (idx !== currentIdx) {
+          gotoHistory(idx);
+        }
+      });
+    });
+  }
+
+  function renderTurnInfoPanel() {
+    const state = gameState;
+    const turn = state;
+    document.getElementById('turnDetail').innerHTML = `
+      <div style="margin-bottom:8px;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${turn.phaseDesc}</div>
+        <div style="color:#aaa;font-size:12px;">
+          Active: <strong style="color:${turn.activePlayer === 'white' ? '#f0e6d3' : '#8888aa'}">${turn.playerLabel}</strong>
+          &middot; Turn ${turn.counter}
+          ${turn.done ? '&middot; <span style="color:#e94560;">' + turn.done + ' done</span>' : ''}
+        </div>
+        ${turn.isTerminal ? `<div style="color:#e94560;font-weight:700;margin-top:4px;">${turn.resultLabel}</div>` : ''}
+      </div>
+    `;
+
+    // Hands
+    const grid = document.getElementById('handsGrid');
+    const hands = state.hands;
+    let html = '';
+    for (const color of ['white', 'black']) {
+      const hand = hands[color];
+      const colorLabel = color === 'white' ? 'White' : 'Black';
+      const colorClass = color;
+      html += `<div class="hand-col"><h3 class="${colorClass}">${colorLabel}</h3>`;
+      let hasPieces = false;
+      for (const pt of ALL_PIECE_TYPES) {
+        const count = hand[pt] || 0;
+        if (count > 0) {
+          hasPieces = true;
+          const imgUrl = assetUrl(color, pt, 1);
+          const hId = 'h_' + color + '_' + pt + '_' + (Date.now() % 10000);
+          html += `<div class="hand-piece-row">
+            <div style="position:relative;width:28px;height:28px;">
+              <img id="${hId}" src="${imgUrl}" alt="${pt}"
+                style="width:28px;height:28px;object-fit:contain;display:block;"
+                onerror="window._pieceErr('${hId}')">
+              <span id="fb-${hId}" class="piece-fb" style="display:none;position:absolute;inset:0;
+                align-items:center;justify-content:center;font-weight:700;font-size:10px;
+                border-radius:3px;">${pt}</span>
+            </div>
+            <span class="hp-name">${PIECE_LABELS[pt]}</span>
+            <span class="hp-count">×${count}</span>
+          </div>`;
+        }
+      }
+      if (!hasPieces) {
+        html += `<div class="hand-empty-text">empty hand</div>`;
+      }
+      html += '</div>';
+    }
+    grid.innerHTML = html;
+  }
+
+  function updateActionButtons() {
+    document.getElementById('undoBtn').style.opacity = gameState?.canUndo ? '1' : '0.4';
+  }
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────
+  document.addEventListener('keydown', function (e) {
+    // Don't handle if typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+      if (e.key === 'Escape') {
+        document.getElementById('reset-dialog').classList.remove('visible');
+      }
+      return;
+    }
+
+    switch (e.key.toLowerCase()) {
+      case 'g':
+        closePanel();
+        showPanel('gsfen');
+        e.preventDefault();
+        break;
+      case 'a':
+        closePanel();
+        showPanel('actions');
+        e.preventDefault();
+        break;
+      case 'h':
+        closePanel();
+        showPanel('history');
+        e.preventDefault();
+        break;
+      case 't':
+        closePanel();
+        showPanel('turninfo');
+        e.preventDefault();
+        break;
+      case 'u':
+        undo();
+        e.preventDefault();
+        break;
+      case 'arrowleft':
+        if (gameState && gameState.currentIndex > 0) {
+          gotoHistory(gameState.currentIndex - 1);
+        }
+        e.preventDefault();
+        break;
+      case 'arrowright':
+        if (gameState && gameState.currentIndex < gameState.historySize - 1) {
+          gotoHistory(gameState.currentIndex + 1);
+        }
+        e.preventDefault();
+        break;
+      case 'r':
+        document.getElementById('reset-dialog').classList.add('visible');
+        document.getElementById('resetGsfenInput').value = '';
+        document.getElementById('resetGsfenInput').focus();
+        e.preventDefault();
+        break;
+      case '?':
+        closePanel();
+        showPanel('help');
+        e.preventDefault();
+        break;
+      case 'escape':
+        closePanel();
+        document.getElementById('reset-dialog').classList.remove('visible');
+        e.preventDefault();
+        break;
+      case '1': case '2': case '3': case '4': case '5':
+      case '6': case '7': case '8': case '9':
+        // Quick-select an action by number
+        if (activePanel === 'actions') {
+          const idx = parseInt(e.key) - 1;
+          const filteredActions = getFilteredActions();
+          if (idx >= 0 && idx < filteredActions.length) {
+            selectedActionIndex = idx;
+            render();
+            applyAction(filteredActions[idx]);
+          }
+        }
+        break;
+    }
+  });
+
+  // ── Event bindings ─────────────────────────────────────────────────
+  document.querySelectorAll('[data-panel]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panel = btn.dataset.panel;
+      if (panel === 'gsfen' || panel === 'actions' || panel === 'history' || panel === 'turninfo' || panel === 'help') {
+        showPanel(panel);
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      actionsFilter = btn.dataset.filter;
+      selectedActionIndex = -1;
+      render();
+    });
+  });
+
+  document.getElementById('gsfenCopyBtn').addEventListener('click', function () {
+    const val = document.getElementById('gsfenContent').textContent;
+    navigator.clipboard.writeText(val).then(() => {
+      this.textContent = '✓ Copied!';
+      this.classList.add('copied');
+      setTimeout(() => {
+        this.textContent = '📋 Copy GSFEN';
+        this.classList.remove('copied');
+      }, 1500);
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = val;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      this.textContent = '✓ Copied!';
+      setTimeout(() => { this.textContent = '📋 Copy GSFEN'; }, 1500);
+    });
+  });
+
+  document.getElementById('undoBtn').addEventListener('click', undo);
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('reset-dialog').classList.add('visible');
+    document.getElementById('resetGsfenInput').value = '';
+    document.getElementById('resetGsfenInput').focus();
+  });
+
+  document.getElementById('resetCancelBtn').addEventListener('click', () => {
+    document.getElementById('reset-dialog').classList.remove('visible');
+  });
+
+  document.getElementById('resetConfirmBtn').addEventListener('click', async () => {
+    const input = document.getElementById('resetGsfenInput').value.trim();
+    document.getElementById('reset-dialog').classList.remove('visible');
+    closePanel();
+    await resetGame(input || undefined);
+  });
+
+  document.getElementById('historyPrevBtn').addEventListener('click', () => {
+    if (gameState && gameState.currentIndex > 0) gotoHistory(gameState.currentIndex - 1);
+  });
+
+  document.getElementById('historyNextBtn').addEventListener('click', () => {
+    if (gameState && gameState.currentIndex < gameState.historySize - 1) gotoHistory(gameState.currentIndex + 1);
+  });
+
+  document.getElementById('historyLatestBtn').addEventListener('click', () => {
+    if (gameState) gotoHistory(gameState.historySize - 1);
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  let statusTimeout = null;
+  function showStatus(msg, isError) {
+    const bar = document.getElementById('status-bar');
+    bar.innerHTML = `<span style="color:${isError ? '#e94560' : '#888'}">${escapeHtml(msg)}</span>`;
+    clearTimeout(statusTimeout);
+    statusTimeout = setTimeout(() => {
+      // Re-render status bar defaults
+      bar.innerHTML = `
+        <div class="status-item"><span class="status-key">G</span> GSFEN</div>
+        <div class="status-item"><span class="status-key">A</span> Actions</div>
+        <div class="status-item"><span class="status-key">H</span> History</div>
+        <div class="status-item"><span class="status-key">T</span> Turn</div>
+        <div class="status-item"><span class="status-key">U</span> Undo</div>
+        <div class="status-item"><span class="status-key">←→</span> Navigate</div>
+        <div class="status-item"><span class="status-key">R</span> Reset</div>
+        <div class="status-item"><span class="status-key">?</span> Help</div>
+      `;
+    }, 3000);
+  }
+
+  // ── Initial load ───────────────────────────────────────────────────
+  fetchState();
+
+})();
+</script>
+</body>
+</html>
