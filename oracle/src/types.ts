@@ -109,6 +109,7 @@ export type GlobalState = {
  * - exposure: exactly one Marshal exposed → that player loses
  * - exposure-draw: both Marshals exposed → draw
  * - repetition: four identical game states → draw
+ * - insufficient-material: both players have only their Marshals → draw
  */
 export type GameResult =
   | { kind: 'ongoing' }
@@ -116,7 +117,8 @@ export type GameResult =
   | { kind: 'stalemate'; loser: Player }
   | { kind: 'exposure'; loser: Player }
   | { kind: 'exposure-draw' }
-  | { kind: 'repetition' };
+  | { kind: 'repetition' }
+  | { kind: 'insufficient-material' };
 
 /**
  * Turncoat swap levels for Captain moves/aratas.

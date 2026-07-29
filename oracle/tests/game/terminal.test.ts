@@ -13,12 +13,19 @@ import { describe, it, expect } from 'vitest';
 import type { GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
-import { evaluateExposure, checkTerminal, hasLegalPlays } from '../../src/game/terminal.js';
+import {
+  evaluateExposure,
+  checkTerminal,
+  hasLegalPlays,
+  hasInsufficientMaterial,
+} from '../../src/game/terminal.js';
 import { emptyPosition, setStack, createStack } from '../../src/board/board.js';
 import { getLegalDestinations } from '../../src/board/movement.js';
 import { isInCheck } from '../../src/board/attack.js';
 import {
+  BOTH_MARSHALS_BATTLE_NOHANDS,
   BOTH_MARSHALS_PLACED,
+  BLACK_TURN_MARSHAL_ONLY,
   DEPLOY_BLACK_MARSHAL_PLACED,
   DEPLOY_PHASE_CTR1,
   MARSHAL_ALONE_BATTLE,
@@ -190,6 +197,68 @@ describe('hasLegalPlays', () => {
 });
 
 /* ------------------------------------------------------------------ */
+/*  hasInsufficientMaterial                                            */
+/* ------------------------------------------------------------------ */
+
+describe('hasInsufficientMaterial', () => {
+  it('returns true when both players have only their Marshal and empty hands', () => {
+    const state = gsfenState(MARSHAL_ALONE_BATTLE);
+    expect(hasInsufficientMaterial(state)).toBe(true);
+  });
+
+  it('returns true for BLACK_TURN_MARSHAL_ONLY', () => {
+    const state = gsfenState(BLACK_TURN_MARSHAL_ONLY);
+    expect(hasInsufficientMaterial(state)).toBe(true);
+  });
+
+  it('returns true for BOTH_MARSHALS_BATTLE_NOHANDS', () => {
+    const state = gsfenState(BOTH_MARSHALS_BATTLE_NOHANDS);
+    expect(hasInsufficientMaterial(state)).toBe(true);
+  });
+
+  it('returns false when a player has an extra piece on board', () => {
+    // Add a White Pawn to the MARSHAL_ALONE_BATTLE position
+    const base = gsfenState(MARSHAL_ALONE_BATTLE);
+    const pos = setStack(
+      base.position,
+      { col: 3, row: 9 },
+      createStack([{ type: 'P', owner: 'white' }]),
+    );
+    const state: GameState = { ...base, position: pos };
+    expect(hasInsufficientMaterial(state)).toBe(false);
+  });
+
+  it('returns false when a player has pieces in hand', () => {
+    const base = gsfenState(MARSHAL_ALONE_BATTLE);
+    const state: GameState = {
+      ...base,
+      hands: { ...base.hands, white: { ...base.hands.white, P: 1 } },
+    };
+    expect(hasInsufficientMaterial(state)).toBe(false);
+  });
+
+  it('returns false when both players have pieces in hand', () => {
+    const base = gsfenState(MARSHAL_ALONE_BATTLE);
+    const state: GameState = {
+      ...base,
+      hands: {
+        white: { ...base.hands.white, P: 2 },
+        black: { ...base.hands.black, E: 1 },
+      },
+    };
+    expect(hasInsufficientMaterial(state)).toBe(false);
+  });
+
+  it('returns false when one player has no Marshal on board', () => {
+    // Clear Black's Marshal at (1,1) — MARSHAL_ALONE_BATTLE row 1 is "8,m"
+    const base = gsfenState(MARSHAL_ALONE_BATTLE);
+    const pos = setStack(base.position, { col: 1, row: 1 }, null);
+    const state: GameState = { ...base, position: pos };
+    expect(hasInsufficientMaterial(state)).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /*  checkTerminal — Checkmate & Stalemate                              */
 /* ------------------------------------------------------------------ */
 
@@ -329,7 +398,13 @@ describe('checkTerminal', () => {
   });
 
   it('returns ongoing when the game continues', () => {
-    const state = gsfenState(MARSHAL_ALONE_BATTLE);
+    // MARSHAL_ALONE_BATTLE would trigger insufficient-material — add a
+    // Pawn to White's hand to give both players mating potential.
+    const base = gsfenState(MARSHAL_ALONE_BATTLE);
+    const state: GameState = {
+      ...base,
+      hands: { ...base.hands, white: { ...base.hands.white, P: 1 } },
+    };
     const r = checkTerminal(state, []);
     expect(r.kind).toBe('ongoing');
   });
@@ -371,5 +446,17 @@ describe('checkTerminal', () => {
     // checkTerminal: not stalemate, game continues
     const r = checkTerminal(state, []);
     expect(r.kind).toBe('ongoing');
+  });
+
+  it('returns insufficient-material when both players have only their Marshals', () => {
+    const state = gsfenState(MARSHAL_ALONE_BATTLE);
+    const r = checkTerminal(state, []);
+    expect(r.kind).toBe('insufficient-material');
+  });
+
+  it('returns insufficient-material for BLACK_TURN_MARSHAL_ONLY', () => {
+    const state = gsfenState(BLACK_TURN_MARSHAL_ONLY);
+    const r = checkTerminal(state, []);
+    expect(r.kind).toBe('insufficient-material');
   });
 });

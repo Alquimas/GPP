@@ -57,6 +57,6 @@ export { applyPlacement } from './game/apply.js';
 // Step 9 — Exposure evaluation
 export { evaluateExposure } from './game/terminal.js';
 // Step 11 — Terminal conditions
-export { checkTerminal, hasLegalPlays } from './game/terminal.js';
+export { checkTerminal, hasLegalPlays, hasInsufficientMaterial } from './game/terminal.js';
 // Step 12 — Public API
 export { Game } from './game/game.js';

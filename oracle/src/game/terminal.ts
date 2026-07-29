@@ -308,6 +308,54 @@ function countRepetitions(state: GameState, history: GameState[]): number {
 }
 
 /* ------------------------------------------------------------------ */
+/*  hasInsufficientMaterial                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Check whether the game is in an Insufficient Material state
+ * (BR-TERMINATION-003).
+ *
+ * Returns true when both players have exactly their Marshal on the
+ * board and no pieces in either hand — a dead position where neither
+ * can ever deliver checkmate.
+ *
+ * @param state - Current GameState.
+ * @returns true if the material is insufficient to continue.
+ */
+export function hasInsufficientMaterial(state: GameState): boolean {
+  let whiteCount = 0;
+  let blackCount = 0;
+  let whiteHasMarshal = false;
+  let blackHasMarshal = false;
+
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      const stack = state.position[r][c];
+      if (stack === null) continue;
+      for (const piece of stack) {
+        if (piece.owner === 'white') {
+          whiteCount++;
+          if (piece.type === 'M') whiteHasMarshal = true;
+        } else {
+          blackCount++;
+          if (piece.type === 'M') blackHasMarshal = true;
+        }
+      }
+    }
+  }
+
+  if (whiteCount !== 1 || !whiteHasMarshal) return false;
+  if (blackCount !== 1 || !blackHasMarshal) return false;
+
+  for (const pt of ALL_PIECE_TYPES) {
+    if (state.hands.white[pt] !== 0) return false;
+    if (state.hands.black[pt] !== 0) return false;
+  }
+
+  return true;
+}
+
+/* ------------------------------------------------------------------ */
 /*  checkTerminal                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -318,6 +366,8 @@ function countRepetitions(state: GameState, history: GameState[]): number {
  * 1. Checkmate (BR-TERMINATION-001) — in Check + no legal plays.
  * 2. Stalemate (BR-TERMINATION-002) — not in Check + no legal plays.
  * 3. Repetition (BR-REPETITION-001) — same state 4× in battle history.
+ * 4. Insufficient Material (BR-TERMINATION-003) — both players have
+ *    only their Marshals (no other pieces, empty hands).
  *
  * Returns `{ kind: 'ongoing' }` if the game continues.
  *
@@ -338,6 +388,11 @@ export function checkTerminal(state: GameState, history: GameState[]): GameResul
   //    via checkmate/stalemate, per BR-GAME-004 ordering).
   if (countRepetitions(state, history) >= 4) {
     return { kind: 'repetition' };
+  }
+
+  // 4. Insufficient Material (BR-TERMINATION-003).
+  if (hasInsufficientMaterial(state)) {
+    return { kind: 'insufficient-material' };
   }
 
   return { kind: 'ongoing' };

@@ -68,8 +68,9 @@ function makeState(
 
 describe('checkTerminal — Repetition (BR-REPETITION-001)', () => {
   it('returns ongoing with < 4 occurrences of the same state', () => {
-    // Same state appears twice in battle-phase history + current = 3 total
-    const state = makeState('white', null, null);
+    // Same state appears twice in battle-phase history + current = 3 total.
+    // Add a Pawn to White's hand to avoid triggering insufficient-material.
+    const state = makeState('white', { P: 1 }, null);
     const history = [state, state]; // 2 prior matching states
     // history has only 2 of the same state + current = 3 — < 4 → no repetition
     const r = checkTerminal(state, history);
@@ -85,9 +86,10 @@ describe('checkTerminal — Repetition (BR-REPETITION-001)', () => {
   });
 
   it('returns ongoing when state matches but active player differs', () => {
-    // Different active player → different Game State for repetition
-    const stateWhite = makeState('white', null, null);
-    const stateBlack = makeState('black', null, null);
+    // Different active player → different Game State for repetition.
+    // Add a Pawn to avoid triggering insufficient-material.
+    const stateWhite = makeState('white', { P: 1 }, null);
+    const stateBlack = makeState('black', { P: 1 }, null);
     const history = [stateWhite, stateWhite, stateWhite];
     // State is Black's turn, but history has White's turn → not matching
     const r = checkTerminal(stateBlack, history);
@@ -104,7 +106,8 @@ describe('checkTerminal — Repetition (BR-REPETITION-001)', () => {
   });
 
   it('excludes Deploy Phase states from repetition count', () => {
-    const state = makeState('white', null, null);
+    // Add a Pawn to avoid triggering insufficient-material.
+    const state = makeState('white', { P: 1 }, null);
     // Create a deploy-phase state with the same active player, position, hands
     const deployState: GameState = {
       ...state,
@@ -117,7 +120,8 @@ describe('checkTerminal — Repetition (BR-REPETITION-001)', () => {
   });
 
   it('counts initial Battle Phase state as first occurrence', () => {
-    const state = makeState('white', null, null);
+    // Add a Pawn to avoid triggering insufficient-material.
+    const state = makeState('white', { P: 1 }, null);
     // Empty history → current is the first occurrence → count = 1 → not repetition
     const r = checkTerminal(state, []);
     expect(r.kind).toBe('ongoing');

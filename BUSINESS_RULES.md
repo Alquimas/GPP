@@ -229,6 +229,7 @@ or declares a draw. They are:
 - [Stalemate](<#stalemate>)
 - [Repetition](<#repetition>)
 - [Exposure](<#exposure>)
+- [Insufficient Material](<#insufficient-material>)
 
 #### Check
 A condition where a [Player's](<#player>) [Marshal](<#marshal>) occupies a
@@ -264,6 +265,14 @@ are under [Attack](<#attack>), the [Game](<#game>) is a draw.
 [Exposure](<#exposure>) is not [Check](<#check>) --- there is no escape
 attempt at this boundary. See
 [BR-DEPLOY-012](<#br-deploy-012---exposure-evaluation>).
+
+#### Insufficient Material
+A [Terminal Condition](<#terminal-condition>) evaluated before each
+[Turn](<#turn>) in the [Battle Phase](<#battle-phase>), after
+[Repetition](<#repetition>). If both [Players](<#player>) have exactly
+their [Marshal](<#marshal>) on the [Board](<#board>) and no pieces remaining
+in either [Hand](<#hand>), the [Game](<#game>) ends in a draw — no
+[Player](<#player>) can ever deliver [Checkmate](<#checkmate>).
 
 #### Attack
 A [Piece](<#piece>) attacks a [Square](<#square>) if, applying the same
@@ -633,6 +642,7 @@ Before each [Turn](<#turn>), [Terminal Conditions](<#terminal-condition>) are
 evaluated in the following order:
 1. [Checkmate](<#checkmate>) and [Stalemate](<#stalemate>)
 2. [Repetition](<#repetition>)
+3. [Insufficient Material](<#insufficient-material>)
 The first applicable condition ends the [Game](<#game>).
 [Terminal Conditions](<#terminal-condition>) are not evaluated during the
 [Deploy Phase](<#deploy-phase>); the only boundary evaluation is
@@ -976,5 +986,12 @@ legal [Play](<#play>) available, the [Game](<#game>) ends with the loss of the
 #### BR-TERMINATION-002 - Stalemate
 If the [Active Player](<#active player>) is in [Stalemate](<#stalemate>), the
 [Game](<#game>) ends with the loss of the [Active Player](<#active player>).
+
+#### BR-TERMINATION-003 - Insufficient Material Draw
+If both [Players](<#player>) have only their [Marshal](<#marshal>) on the
+[Board](<#board>) (no other [Pieces](<#piece>) belonging to either
+[Player](<#player>)) and no [Pieces](<#piece>) in either
+[Hand](<#hand>), the [Game](<#game>) ends in a draw — no
+[Player](<#player>) can ever deliver [Checkmate](<#checkmate>).
 
 

@@ -845,7 +845,9 @@ describe('validatePlay', () => {
       // The bug: legalActions threw "Stack must have 1–3 pieces, got 4".
       // Now it must return a valid list without throwing.
       let actions: Action[];
-      expect(() => { actions = game.legalActions; }).not.toThrow();
+      expect(() => {
+        actions = game.legalActions;
+      }).not.toThrow();
       expect(actions!.length).toBeGreaterThan(0);
     });
   });
@@ -870,7 +872,9 @@ describe('validatePlay', () => {
         turn: { ...base.turn, activePlayer: 'black' },
       };
       let hasLegal: boolean;
-      expect(() => { hasLegal = hasLegalPlays(blackState); }).not.toThrow();
+      expect(() => {
+        hasLegal = hasLegalPlays(blackState);
+      }).not.toThrow();
       expect(hasLegal!).toBe(true);
     });
   });
