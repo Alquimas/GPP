@@ -40,5 +40,4 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
  * as the next GameState after a successful Play.
  */
 export type PlayValidation =
-  | { ok: true; speculativeState: GameState }
-  | { ok: false; error: GameError };
+  { ok: true; speculativeState: GameState } | { ok: false; error: GameError };

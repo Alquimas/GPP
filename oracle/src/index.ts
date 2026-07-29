@@ -56,6 +56,7 @@ export type { ApplyResult } from './game/apply.js';
 export { applyPlacement } from './game/apply.js';
 // Step 9 — Exposure evaluation
 export { evaluateExposure } from './game/terminal.js';
-// applyMove, applyArata deliberately NOT exported from the public barrel:
-// they are Step-8 scaffolding and will be replaced by full turn management in Step 10.
-// Consumers should use validatePlay to get the speculative afterState instead.
+// Step 11 — Terminal conditions
+export { checkTerminal, hasLegalPlays } from './game/terminal.js';
+// Step 12 — Public API
+export { Game } from './game/game.js';

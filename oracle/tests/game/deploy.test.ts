@@ -241,7 +241,7 @@ describe('applyPlacement', () => {
   });
 
   it('sets done flag and gives opponent the turn when declaring Done', () => {
-    let state = gsfenState(STARTPOS);
+    const state = gsfenState(STARTPOS);
 
     // White places Marshal, declares Done
     const r = applyPlacement(state, placement('M', 5, 9, true));

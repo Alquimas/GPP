@@ -12,7 +12,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { Action, GameState, PieceType, Player, Square, TurncoatLevels } from '../../src/types.js';
+import type {
+  Action,
+  GameState,
+  PieceType,
+  Player,
+  Square,
+  TurncoatLevels,
+} from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { validateMove, validateArata, validatePlay } from '../../src/game/battle.js';
@@ -296,7 +303,8 @@ describe('validateMove', () => {
       pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
       pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 0 } },
       };
       const r = validateMove(state, move(6, 7, 5, 6, 'capture', [1]));
@@ -309,13 +317,18 @@ describe('validateMove', () => {
       // Post-move stack: [p, T] size 2. Level 2 is the Captain (friendly) — cannot swap.
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
-      pos = setStack(pos, { col: 6, row: 7 }, createStack([
-        { type: 'P', owner: 'white' },
-        { type: 'T', owner: 'white' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 6, row: 7 },
+        createStack([
+          { type: 'P', owner: 'white' },
+          { type: 'T', owner: 'white' },
+        ]),
+      );
       pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 4 } },
       };
       // Outcome='stack' (choice exists). Turncoat level 2 is the Captain (friendly).
@@ -331,7 +344,8 @@ describe('validateMove', () => {
       pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
       pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 0 } },
       };
       const r = validateMove(state, move(6, 7, 5, 6, 'stack', [1]));
@@ -346,7 +360,8 @@ describe('validateMove', () => {
       pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
       pos = setStack(pos, { col: 5, row: 6 }, createStack([{ type: 'P', owner: 'black' }]));
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 4 } },
       };
 
@@ -375,17 +390,26 @@ describe('validateMove', () => {
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
       // Captain on top of a friendly Pawn → stack size 2
-      pos = setStack(pos, { col: 6, row: 7 }, createStack([
-        { type: 'P', owner: 'white' },
-        { type: 'T', owner: 'white' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 6, row: 7 },
+        createStack([
+          { type: 'P', owner: 'white' },
+          { type: 'T', owner: 'white' },
+        ]),
+      );
       // Target: two Black Pawns → stack size 2 (source 2 >= target 2)
-      pos = setStack(pos, { col: 5, row: 6 }, createStack([
-        { type: 'P', owner: 'black' },
-        { type: 'P', owner: 'black' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 5, row: 6 },
+        createStack([
+          { type: 'P', owner: 'black' },
+          { type: 'P', owner: 'black' },
+        ]),
+      );
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 5 } },
       };
 
@@ -410,17 +434,26 @@ describe('validateMove', () => {
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
       // Captain on size-2 stack (on top of Pawn)
-      pos = setStack(pos, { col: 6, row: 7 }, createStack([
-        { type: 'P', owner: 'white' },
-        { type: 'T', owner: 'white' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 6, row: 7 },
+        createStack([
+          { type: 'P', owner: 'white' },
+          { type: 'T', owner: 'white' },
+        ]),
+      );
       // Target: two enemy pieces of different types → stack size 2
-      pos = setStack(pos, { col: 5, row: 6 }, createStack([
-        { type: 'S', owner: 'black' },
-        { type: 'P', owner: 'black' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 5, row: 6 },
+        createStack([
+          { type: 'S', owner: 'black' },
+          { type: 'P', owner: 'black' },
+        ]),
+      );
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 0, P: 5, S: 2 } },
       };
 
@@ -569,12 +602,17 @@ describe('validateArata', () => {
       // Hand has no Pawn for swap.
       const base = gsfenState(BATTLE_MID_VARIANT);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
-      pos = setStack(pos, { col: 5, row: 8 }, createStack([
-        { type: 'P', owner: 'black' },
-        { type: 'P', owner: 'white' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 5, row: 8 },
+        createStack([
+          { type: 'P', owner: 'black' },
+          { type: 'P', owner: 'white' },
+        ]),
+      );
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 1, P: 0 } },
       };
       const r = validateArata(state, arata('T', 5, 8, [1]));
@@ -587,12 +625,17 @@ describe('validateArata', () => {
       // Arata Captain on top → stack becomes [p, P, T]. Swap level 1: Pawn→White Pawn.
       const base = gsfenState(BATTLE_MID_VARIANT);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
-      pos = setStack(pos, { col: 5, row: 8 }, createStack([
-        { type: 'P', owner: 'black' },
-        { type: 'P', owner: 'white' },
-      ]));
+      pos = setStack(
+        pos,
+        { col: 5, row: 8 },
+        createStack([
+          { type: 'P', owner: 'black' },
+          { type: 'P', owner: 'white' },
+        ]),
+      );
       const state: GameState = {
-        ...base, position: pos,
+        ...base,
+        position: pos,
         hands: { ...base.hands, white: { ...base.hands.white, T: 1, P: 4 } },
       };
 

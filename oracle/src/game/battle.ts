@@ -43,9 +43,15 @@ function validateOutcome(
     // Engine says no capture possible — empty or friendly target
     if (actionOutcome !== null) {
       if (targetStack === null) {
-        return new GameError('Cannot specify outcome when landing on an empty square', 'BR-MOVE-004');
+        return new GameError(
+          'Cannot specify outcome when landing on an empty square',
+          'BR-MOVE-004',
+        );
       }
-      return new GameError('Cannot specify outcome when stacking on a friendly piece', 'BR-MOVE-004');
+      return new GameError(
+        'Cannot specify outcome when stacking on a friendly piece',
+        'BR-MOVE-004',
+      );
     }
     return null;
   }
@@ -226,7 +232,9 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
   }
 
   // 5. BR-STACK-006: Turncoat validation
-  const outcomeIsStack = outcome === 'stack' || (outcome === null && targetStack !== null && topPiece(targetStack).owner === player);
+  const outcomeIsStack =
+    outcome === 'stack' ||
+    (outcome === null && targetStack !== null && topPiece(targetStack).owner === player);
   if (action.turncoat.length > 0) {
     // Only the Captain can trigger Turncoat
     if (originTop.type !== 'T') {
@@ -239,7 +247,10 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     if (!outcomeIsStack) {
       return {
         ok: false,
-        error: new GameError('Turncoat swaps are only allowed on a Stack outcome (not Capture)', 'BR-STACK-006'),
+        error: new GameError(
+          'Turncoat swaps are only allowed on a Stack outcome (not Capture)',
+          'BR-STACK-006',
+        ),
       };
     }
     // Each elected level must have an enemy piece, and hand must have match
@@ -249,14 +260,20 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
       if (idx >= postMoveStack.length) {
         return {
           ok: false,
-          error: new GameError(`Turncoat level ${level} does not exist in the target stack`, 'BR-STACK-006'),
+          error: new GameError(
+            `Turncoat level ${level} does not exist in the target stack`,
+            'BR-STACK-006',
+          ),
         };
       }
       const targetPiece = postMoveStack[idx];
       if (targetPiece.owner === player) {
         return {
           ok: false,
-          error: new GameError(`Turncoat level ${level} is occupied by a friendly piece`, 'BR-STACK-006'),
+          error: new GameError(
+            `Turncoat level ${level} is occupied by a friendly piece`,
+            'BR-STACK-006',
+          ),
         };
       }
       if (state.hands[player][targetPiece.type] < 1) {
@@ -406,14 +423,20 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
       if (idx >= postArataStack.length) {
         return {
           ok: false,
-          error: new GameError(`Turncoat level ${level} does not exist in the target stack`, 'BR-STACK-006'),
+          error: new GameError(
+            `Turncoat level ${level} does not exist in the target stack`,
+            'BR-STACK-006',
+          ),
         };
       }
       const targetPiece = postArataStack[idx];
       if (targetPiece.owner === player) {
         return {
           ok: false,
-          error: new GameError(`Turncoat level ${level} is occupied by a friendly piece`, 'BR-STACK-006'),
+          error: new GameError(
+            `Turncoat level ${level} is occupied by a friendly piece`,
+            'BR-STACK-006',
+          ),
         };
       }
       // Hand must have the piece for the swap (the arata piece T is consumed separately,

@@ -7,12 +7,14 @@
  * @module
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { describe, it, expect } from 'vitest';
 import type { GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { evaluateExposure, checkTerminal, hasLegalPlays } from '../../src/game/terminal.js';
-import { emptyPosition, getStack, setStack, createStack, validatePosition, stackSize } from '../../src/board/board.js';
+import { emptyPosition, setStack, createStack } from '../../src/board/board.js';
 import { getLegalDestinations } from '../../src/board/movement.js';
 import { isInCheck } from '../../src/board/attack.js';
 import {
@@ -76,17 +78,13 @@ describe('evaluateExposure', () => {
   });
 
   it('returns exposure-draw when both Marshals are under attack', () => {
-    let state = gsfenState(BOTH_MARSHALS_PLACED);
+    const state = gsfenState(BOTH_MARSHALS_PLACED);
     let pos = setStack(
       state.position,
       { col: 5, row: 2 },
       createStack([{ type: 'G', owner: 'white' }]),
     );
-    pos = setStack(
-      pos,
-      { col: 5, row: 8 },
-      createStack([{ type: 'G', owner: 'black' }]),
-    );
+    pos = setStack(pos, { col: 5, row: 8 }, createStack([{ type: 'G', owner: 'black' }]));
     const r = evaluateExposure(pos);
     expect(r.kind).toBe('exposure-draw');
   });
@@ -114,7 +112,11 @@ describe('hasLegalPlays', () => {
     // Place a White Pawn at (5,7) so the most advanced piece is row 7.
     // Arata zone: rows 7–9. (5,8) is in zone and empty — valid arata target.
     const base = gsfenState(MARSHAL_ALONE_BATTLE);
-    let pos = setStack(base.position, { col: 5, row: 7 }, createStack([{ type: 'P', owner: 'white' }]));
+    const pos = setStack(
+      base.position,
+      { col: 5, row: 7 },
+      createStack([{ type: 'P', owner: 'white' }]),
+    );
     const state: GameState = {
       ...base,
       position: pos,
@@ -131,23 +133,57 @@ describe('hasLegalPlays', () => {
     // White has no other pieces and empty hands — no aratas.
     const state = emptyBattleState('white');
     let pos = state.position;
-    pos = setStack(pos, { col: 5 as any, row: 9 as any }, createStack([{ type: 'M', owner: 'white' }]));
+    pos = setStack(
+      pos,
+      { col: 5 as any, row: 9 as any },
+      createStack([{ type: 'M', owner: 'white' }]),
+    );
     // Block all five escape squares
-    pos = setStack(pos, { col: 5 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
-    ]));
-    pos = setStack(pos, { col: 6 as any, row: 9 as any }, createStack([
-      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
-    ]));
-    pos = setStack(pos, { col: 4 as any, row: 9 as any }, createStack([
-      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
-    ]));
-    pos = setStack(pos, { col: 6 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
-    ]));
-    pos = setStack(pos, { col: 4 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
-    ]));
+    pos = setStack(
+      pos,
+      { col: 5 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 6 as any, row: 9 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 4 as any, row: 9 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 6 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 4 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
     const testState: GameState = { ...state, position: pos };
     expect(hasLegalPlays(testState)).toBe(false);
   });
@@ -183,28 +219,48 @@ describe('checkTerminal', () => {
     // No Self Check computation needed — move engine rejects size violations directly.
     const state = emptyBattleState('white');
     let pos = state.position;
-    pos = setStack(pos, { col: 1 as any, row: 9 as any }, createStack([{ type: 'M', owner: 'white' }]));
-    pos = setStack(pos, { col: 2 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-      { type: 'M', owner: 'black' },
-    ]));
-    pos = setStack(pos, { col: 1 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-    ]));
-    pos = setStack(pos, { col: 2 as any, row: 9 as any }, createStack([
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-    ]));
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 9 as any },
+      createStack([{ type: 'M', owner: 'white' }]),
+    );
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'M', owner: 'black' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 9 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
     const testState: GameState = { ...state, position: pos };
 
     // Sanity: is the Marshal in check?
     expect(isInCheck(testState.position, 'white')).toBe(true);
     // Sanity: does the movement engine return any legal destinations?
-    const marshalMoves = getLegalDestinations(testState.position, { col: 1 as any, row: 9 as any }, 'white');
+    const marshalMoves = getLegalDestinations(
+      testState.position,
+      { col: 1 as any, row: 9 as any },
+      'white',
+    );
     expect(marshalMoves.length).toBe(0);
 
     const r = checkTerminal(testState, []);
@@ -220,31 +276,51 @@ describe('checkTerminal', () => {
     // None attack (1,9).
     const state = emptyBattleState('white');
     let pos = state.position;
-    pos = setStack(pos, { col: 1 as any, row: 9 as any }, createStack([{ type: 'M', owner: 'white' }]));
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 9 as any },
+      createStack([{ type: 'M', owner: 'white' }]),
+    );
     // (1,8): Spy top — Spy never attacks (1,9) (diagonals only)
-    pos = setStack(pos, { col: 1 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-      { type: 'Y', owner: 'black' },
-    ]));
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'Y', owner: 'black' },
+      ]),
+    );
     // (2,9): Pawn top — Pawn F from (2,9) is off-board
-    pos = setStack(pos, { col: 2 as any, row: 9 as any }, createStack([
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-    ]));
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 9 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
     // (2,8): Pawn top — Pawn F from (2,8) = (2,9), not (1,9)
-    pos = setStack(pos, { col: 2 as any, row: 8 as any }, createStack([
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-      { type: 'P', owner: 'black' },
-    ]));
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 8 as any },
+      createStack([
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
     const testState: GameState = { ...state, position: pos };
 
     // Sanity: Marshal NOT in check
     expect(isInCheck(testState.position, 'white')).toBe(false);
     // Sanity: no legal destinations (all size 3 > source size 1)
-    const marshalMoves = getLegalDestinations(testState.position, { col: 1 as any, row: 9 as any }, 'white');
+    const marshalMoves = getLegalDestinations(
+      testState.position,
+      { col: 1 as any, row: 9 as any },
+      'white',
+    );
     expect(marshalMoves.length).toBe(0);
 
     const r = checkTerminal(testState, []);
@@ -274,11 +350,19 @@ describe('checkTerminal', () => {
     const state = gsfenState(MARSHAL_BLOCKED_GENERAL_FREE);
 
     // Marshal has 3 reachable squares geometrically
-    const marshalMoves = getLegalDestinations(state.position, { col: 5 as any, row: 1 as any }, 'black');
+    const marshalMoves = getLegalDestinations(
+      state.position,
+      { col: 5 as any, row: 1 as any },
+      'black',
+    );
     expect(marshalMoves.length).toBe(3);
 
     // General has many legal destinations (18 in this position)
-    const generalMoves = getLegalDestinations(state.position, { col: 1 as any, row: 4 as any }, 'black');
+    const generalMoves = getLegalDestinations(
+      state.position,
+      { col: 1 as any, row: 4 as any },
+      'black',
+    );
     expect(generalMoves.length).toBeGreaterThan(0);
 
     // hasLegalPlays scans ALL pieces — finds the General's safe move

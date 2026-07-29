@@ -23,7 +23,7 @@
 12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic) ✅
 13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase) ✅
 14. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition) ✅
-15. [Step 12 — Public API](#step-12--public-api)
+15. [Step 12 — Public API](#step-12--public-api) ✅
 16. [Step 13 — Property Tests & Gherkin Step Defs](#step-13--property-tests--gherkin-step-defs)
 17. [Step 14 — Action Visualizer](#step-14--action-visualizer)
 18. [Verification Strategy Map](#verification-strategy-map)
@@ -906,10 +906,9 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
 
 ---
 
-### Step 12 — Public API
+### Step 12 — Public API ✅
 
-**What to build — `src/game/game.ts` — the single entry point consumed by
-all external code (and the Action Visualizer in Step 14):**
+**What was built in `src/game/game.ts`:**
 
 ```typescript
 class Game {

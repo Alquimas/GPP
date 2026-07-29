@@ -8,8 +8,18 @@
  * @module
  */
 
-import type { Action, GameResult, GameState, Hand, Piece, Player, PieceType, TurncoatLevels } from '../types.js';
-import { createStack, getStack, setStack, topPiece, stackSize } from '../board/board.js';
+import type {
+  Action,
+  GameResult,
+  GameState,
+  Hand,
+  Piece,
+  Player,
+  PieceType,
+  Stack,
+  TurncoatLevels,
+} from '../types.js';
+import { createStack, getStack, setStack, topPiece } from '../board/board.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
 import { evaluateExposure } from './terminal.js';
 
@@ -210,11 +220,11 @@ function applyTurncoatSwaps(
   hand: Hand,
   player: Player,
 ): { stack: Stack; hand: Hand } {
-  const newStack: Piece[] = [...stack];
+  const newStack = [...stack] as Piece[];
   const newHand: Hand = { ...hand };
 
   for (const level of levels) {
-    const idx = level - 1;               // 0-indexed from bottom
+    const idx = level - 1; // 0-indexed from bottom
     const enemyPiece = newStack[idx];
     // Validated before: enemyPiece exists and belongs to opponent
     newStack[idx] = { type: enemyPiece.type, owner: player };

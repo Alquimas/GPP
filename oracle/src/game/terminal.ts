@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { GameResult, GameState, PieceType, Player, Position, Square } from '../types.js';
+import type { GameResult, GameState, Player, Position, Square } from '../types.js';
 import { isExposed, isInCheck } from '../board/attack.js';
 import { getLegalDestinations } from '../board/movement.js';
 import {
@@ -48,10 +48,7 @@ export function evaluateExposure(position: Position): GameResult {
 /* ------------------------------------------------------------------ */
 
 /** Compute the Arata placement zone for a player (BR-ARATA-003). */
-function getArataZone(
-  player: Player,
-  state: GameState,
-): { minRow: number; maxRow: number } {
+function getArataZone(player: Player, state: GameState): { minRow: number; maxRow: number } {
   if (player === 'white') {
     let mostAdvanced = 9;
     for (let r = 0; r < 9; r++) {
@@ -98,12 +95,7 @@ function getArataZone(
  * Handles: empty target, friendly target (automatic stack),
  * enemy target with stacking outcome (moving piece on top).
  */
-function isMoveSafe(
-  position: Position,
-  origin: Square,
-  dest: Square,
-  player: Player,
-): boolean {
+function isMoveSafe(position: Position, origin: Square, dest: Square, player: Player): boolean {
   const originStack = getStack(position, origin);
   if (!originStack) return false;
   const movingPiece = topPiece(originStack);
@@ -113,7 +105,7 @@ function isMoveSafe(
   if (originStack.length === 1) {
     newPos = setStack(position, origin, null);
   } else {
-    newPos = setStack(position, origin, createStack(originStack.slice(0, -1) as any));
+    newPos = setStack(position, origin, createStack(originStack.slice(0, -1)));
   }
 
   // Resolve destination
@@ -141,12 +133,7 @@ function isMoveSafe(
  * Removes all enemy pieces from the target stack, keeps friendly
  * pieces, and places the moving piece on top.
  */
-function isCaptureSafe(
-  position: Position,
-  origin: Square,
-  dest: Square,
-  player: Player,
-): boolean {
+function isCaptureSafe(position: Position, origin: Square, dest: Square, player: Player): boolean {
   const originStack = getStack(position, origin);
   if (!originStack) return false;
   const movingPiece = topPiece(originStack);
@@ -156,7 +143,7 @@ function isCaptureSafe(
   if (originStack.length === 1) {
     newPos = setStack(position, origin, null);
   } else {
-    newPos = setStack(position, origin, createStack(originStack.slice(0, -1) as any));
+    newPos = setStack(position, origin, createStack(originStack.slice(0, -1)));
   }
 
   // Resolve as Capture: remove all enemy pieces, keep friendly
