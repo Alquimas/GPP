@@ -21,8 +21,8 @@
 10. [Step 7 — Attack & Check Detection](#step-7--attack--check-detection) ✅
 11. [Step 8 — Action Validation (Move, Arata)](#step-8--action-validation-move-arata) ✅
 12. [Step 9 — Deploy Phase Logic](#step-9--deploy-phase-logic) ✅
-13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase)
-14. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition)
+13. [Step 10 — Game Engine + Battle Phase](#step-10--game-engine--battle-phase) ✅
+14. [Step 11 — Terminal Conditions & Repetition](#step-11--terminal-conditions--repetition) ✅
 15. [Step 12 — Public API](#step-12--public-api)
 16. [Step 13 — Property Tests & Gherkin Step Defs](#step-13--property-tests--gherkin-step-defs)
 17. [Step 14 — Action Visualizer](#step-14--action-visualizer)
@@ -830,9 +830,9 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
 
 ---
 
-### Step 10 — Game Engine + Battle Phase
+### Step 10 — Game Engine + Battle Phase ✅
 
-**What to build — `src/game/apply.ts` (battle portion):**
+**What was built in `src/game/apply.ts` (battle portion):**
 
 - `applyMove(state, action): ApplyResult`:
   1. Detach top piece from origin stack
@@ -870,9 +870,9 @@ means `validatePlay` calls into `apply.ts` (Step 10) speculatively.
 
 ---
 
-### Step 11 — Terminal Conditions & Repetition
+### Step 11 — Terminal Conditions & Repetition ✅
 
-**What to build in `src/game/terminal.ts`:**
+**What was built in `src/game/terminal.ts`:**
 
 - `checkTerminal(state, history): GameResult` — evaluated before each Battle
   Phase Turn (BR-GAME-004):

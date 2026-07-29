@@ -73,6 +73,7 @@ export const FORCED_CAPTURE = readValid('forced-capture');
 export const FRIENDLY_STACK_TEST = readValid('friendly-stack-test');
 export const FRIENDLY_STACK_WITH_HANDS = readValid('friendly-stack-with-hands');
 export const MARSHAL_ALONE_BATTLE = readValid('marshal-alone-battle');
+export const MARSHAL_BLOCKED_GENERAL_FREE = readValid('marshal-blocked-general-free');
 export const MP_STACK_DEPLOY_CTR3 = readValid('mp-stack-deploy-ctr3');
 export const ONE_SIDE_FULLY_DEPLOYED = readValid('one-side-fully-deployed');
 export const ROW_WITH_P_AND_T = readValid('row-with-P-and-T');

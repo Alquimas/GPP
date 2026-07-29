@@ -1,7 +1,8 @@
 /**
- * Terminal condition tests (Step 9: evaluateExposure).
+ * Terminal condition tests.
  *
- * Covers BR-DEPLOY-012 — Exposure evaluation at the Deploy→Battle boundary.
+ * Step  9: evaluateExposure — Deploy→Battle boundary (BR-DEPLOY-012).
+ * Step 11: checkTerminal, hasLegalPlays — Checkmate, Stalemate, Repetition.
  *
  * @module
  */
@@ -10,12 +11,16 @@ import { describe, it, expect } from 'vitest';
 import type { GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
-import { evaluateExposure } from '../../src/game/terminal.js';
-import { getStack, setStack, createStack } from '../../src/board/board.js';
+import { evaluateExposure, checkTerminal, hasLegalPlays } from '../../src/game/terminal.js';
+import { emptyPosition, getStack, setStack, createStack, validatePosition, stackSize } from '../../src/board/board.js';
+import { getLegalDestinations } from '../../src/board/movement.js';
+import { isInCheck } from '../../src/board/attack.js';
 import {
   BOTH_MARSHALS_PLACED,
   DEPLOY_BLACK_MARSHAL_PLACED,
   DEPLOY_PHASE_CTR1,
+  MARSHAL_ALONE_BATTLE,
+  MARSHAL_BLOCKED_GENERAL_FREE,
   WHITE_MARSHAL_AT_5_9,
 } from '../../src/gsfen/fixtures.js';
 
@@ -41,17 +46,13 @@ function gsfenState(gsfen: string): GameState {
 
 describe('evaluateExposure', () => {
   it('returns ongoing when neither Marshal is under attack', () => {
-    // BOTH_MARSHALS_PLACED: White M at (5,9), Black m at (5,1), no enemy threats
     const state = gsfenState(BOTH_MARSHALS_PLACED);
     const r = evaluateExposure(state.position);
     expect(r.kind).toBe('ongoing');
   });
 
   it('returns exposure with loser when White Marshal is under attack', () => {
-    // Start from state with White Marshal at (5,9), place threatening piece
     const state = gsfenState(WHITE_MARSHAL_AT_5_9);
-
-    // Black General at (5,1) can range along the file unobstructed → attacks (5,9)
     const pos = setStack(
       state.position,
       { col: 5, row: 1 },
@@ -63,10 +64,7 @@ describe('evaluateExposure', () => {
   });
 
   it('returns exposure with loser when Black Marshal is under attack', () => {
-    // DEPLOY_BLACK_MARSHAL_PLACED: Black m at (5,1)
     const state = gsfenState(DEPLOY_BLACK_MARSHAL_PLACED);
-
-    // White General at (5,9) can range along the file unobstructed → attacks (5,1)
     const pos = setStack(
       state.position,
       { col: 5, row: 9 },
@@ -78,34 +76,216 @@ describe('evaluateExposure', () => {
   });
 
   it('returns exposure-draw when both Marshals are under attack', () => {
-    // Build a position where both Marshals are threatened.
-    // White M at (5,9), Black m at (5,1).
-    // White General at (5,2) threatens (5,1) — Black Marshal.
-    // Black General at (5,8) threatens (5,9) — White Marshal.
     let state = gsfenState(BOTH_MARSHALS_PLACED);
-
-    // Add White General at (5,2) to threaten Black Marshal at (5,1)
     let pos = setStack(
       state.position,
       { col: 5, row: 2 },
       createStack([{ type: 'G', owner: 'white' }]),
     );
-
-    // Add Black General at (5,8) to threaten White Marshal at (5,9)
     pos = setStack(
       pos,
       { col: 5, row: 8 },
       createStack([{ type: 'G', owner: 'black' }]),
     );
-
     const r = evaluateExposure(pos);
     expect(r.kind).toBe('exposure-draw');
   });
 
   it('returns ongoing when no Marshals are on board (deploy phase edge case)', () => {
-    // DEPLOY_PHASE_CTR1: deploy phase, no pieces placed
     const state = gsfenState(DEPLOY_PHASE_CTR1);
     const r = evaluateExposure(state.position);
+    expect(r.kind).toBe('ongoing');
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  hasLegalPlays                                                      */
+/* ------------------------------------------------------------------ */
+
+describe('hasLegalPlays', () => {
+  it('returns true when a player has a move available', () => {
+    // White Marshal at (5,9) can step left to (4,9)
+    const state = gsfenState(MARSHAL_ALONE_BATTLE);
+    expect(hasLegalPlays(state)).toBe(true);
+  });
+
+  it('returns true when a player has an arata available', () => {
+    // Build: White Marshal at (5,9); White has Pawn in hand.
+    // Place a White Pawn at (5,7) so the most advanced piece is row 7.
+    // Arata zone: rows 7–9. (5,8) is in zone and empty — valid arata target.
+    const base = gsfenState(MARSHAL_ALONE_BATTLE);
+    let pos = setStack(base.position, { col: 5, row: 7 }, createStack([{ type: 'P', owner: 'white' }]));
+    const state: GameState = {
+      ...base,
+      position: pos,
+      hands: { ...base.hands, white: { ...base.hands.white, P: 1 } },
+    };
+    expect(hasLegalPlays(state)).toBe(true);
+  });
+
+  it('returns false when no moves or aratas are possible', () => {
+    // White Marshal at (5,9). Five reachable directions:
+    //   F=(5,8), L=(6,9), R=(4,9), FL=(6,8), FR=(4,8).
+    // Block all five with BLACK size-3 stacks so the Marshal cannot land
+    // on them (BR-MOVE-005: source stack size 1 < target stack size 3).
+    // White has no other pieces and empty hands — no aratas.
+    const state = emptyBattleState('white');
+    let pos = state.position;
+    pos = setStack(pos, { col: 5 as any, row: 9 as any }, createStack([{ type: 'M', owner: 'white' }]));
+    // Block all five escape squares
+    pos = setStack(pos, { col: 5 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
+    ]));
+    pos = setStack(pos, { col: 6 as any, row: 9 as any }, createStack([
+      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
+    ]));
+    pos = setStack(pos, { col: 4 as any, row: 9 as any }, createStack([
+      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
+    ]));
+    pos = setStack(pos, { col: 6 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
+    ]));
+    pos = setStack(pos, { col: 4 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' }, { type: 'P', owner: 'black' },
+    ]));
+    const testState: GameState = { ...state, position: pos };
+    expect(hasLegalPlays(testState)).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  checkTerminal — Checkmate & Stalemate                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Build a battle-phase GameState from scratch with empty hands and the
+ * given active player, using emptyPosition() as the board seed.
+ */
+function emptyBattleState(activePlayer: 'white' | 'black'): GameState {
+  return {
+    position: emptyPosition(),
+    turn: { phase: 'battle', activePlayer, done: null, counter: 1 },
+    hands: {
+      white: { A: 0, C: 0, E: 0, F: 0, G: 0, J: 0, L: 0, M: 0, N: 0, P: 0, S: 0, T: 0, U: 0, Y: 0 },
+      black: { A: 0, C: 0, E: 0, F: 0, G: 0, J: 0, L: 0, M: 0, N: 0, P: 0, S: 0, T: 0, U: 0, Y: 0 },
+    },
+  };
+}
+
+describe('checkTerminal', () => {
+  it('returns checkmate when Marshal is in check and has no legal moves', () => {
+    // White Marshal at (1,9) — corner.
+    // All three reachable squares are blocked by Black size-3 stacks
+    // so BR-MOVE-005 prevents landing (source size 1 < target size 3).
+    //   (1,8) = size-3 Black stack
+    //   (2,9) = size-3 Black stack
+    //   (2,8) = size-3 stack topped by Black Marshal (step-FL attacks (1,9))
+    // No Self Check computation needed — move engine rejects size violations directly.
+    const state = emptyBattleState('white');
+    let pos = state.position;
+    pos = setStack(pos, { col: 1 as any, row: 9 as any }, createStack([{ type: 'M', owner: 'white' }]));
+    pos = setStack(pos, { col: 2 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'M', owner: 'black' },
+    ]));
+    pos = setStack(pos, { col: 1 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]));
+    pos = setStack(pos, { col: 2 as any, row: 9 as any }, createStack([
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]));
+    const testState: GameState = { ...state, position: pos };
+
+    // Sanity: is the Marshal in check?
+    expect(isInCheck(testState.position, 'white')).toBe(true);
+    // Sanity: does the movement engine return any legal destinations?
+    const marshalMoves = getLegalDestinations(testState.position, { col: 1 as any, row: 9 as any }, 'white');
+    expect(marshalMoves.length).toBe(0);
+
+    const r = checkTerminal(testState, []);
+    expect(r.kind).toBe('checkmate');
+    if (r.kind === 'checkmate') expect(r.loser).toBe('white');
+  });
+
+  it('returns stalemate when Marshal is not in check but has no legal moves', () => {
+    // White Marshal at (1,9). All three escape squares blocked by
+    // Black size-3 stacks. The top of (1,8) is a Spy so it does NOT
+    // attack (1,9) (Spy has diagonal-only movement). (2,8) and (2,9)
+    // tops are Pawns — Pawn F from (2,8)→(2,9), from (2,9)→off-board.
+    // None attack (1,9).
+    const state = emptyBattleState('white');
+    let pos = state.position;
+    pos = setStack(pos, { col: 1 as any, row: 9 as any }, createStack([{ type: 'M', owner: 'white' }]));
+    // (1,8): Spy top — Spy never attacks (1,9) (diagonals only)
+    pos = setStack(pos, { col: 1 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'Y', owner: 'black' },
+    ]));
+    // (2,9): Pawn top — Pawn F from (2,9) is off-board
+    pos = setStack(pos, { col: 2 as any, row: 9 as any }, createStack([
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]));
+    // (2,8): Pawn top — Pawn F from (2,8) = (2,9), not (1,9)
+    pos = setStack(pos, { col: 2 as any, row: 8 as any }, createStack([
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]));
+    const testState: GameState = { ...state, position: pos };
+
+    // Sanity: Marshal NOT in check
+    expect(isInCheck(testState.position, 'white')).toBe(false);
+    // Sanity: no legal destinations (all size 3 > source size 1)
+    const marshalMoves = getLegalDestinations(testState.position, { col: 1 as any, row: 9 as any }, 'white');
+    expect(marshalMoves.length).toBe(0);
+
+    const r = checkTerminal(testState, []);
+    expect(r.kind).toBe('stalemate');
+    if (r.kind === 'stalemate') expect(r.loser).toBe('white');
+  });
+
+  it('returns ongoing when the game continues', () => {
+    const state = gsfenState(MARSHAL_ALONE_BATTLE);
+    const r = checkTerminal(state, []);
+    expect(r.kind).toBe('ongoing');
+  });
+
+  it('returns ongoing when Marshal is trapped but another piece can move', () => {
+    // MARSHAL_BLOCKED_GENERAL_FREE:
+    //   Black turn. Black Marshal at (5,1) has reachable squares geometrically
+    //   (F=(5,2), L=(6,1), R=(4,1)) but ALL cause Self Check: Pawn-stacks at
+    //   (6,2)/(4,2) cover the lateral escapes via B step, and Lieutenant at
+    //   (5,3) covers (5,2) via F step. The diagonal Pawn-squares (6,2)/(4,2)
+    //   are size-2 stacks, blocked by BR-MOVE-005 (source 1 < target 2).
+    //   So while getLegalDestinations returns moves, hasLegalPlays rejects
+    //   them via Self Check filtering.
+    //
+    //   However, Black General at (1,4) CAN move safely (e.g., step BR to (2,3)
+    //   or range F to (1,5) — all empty and unattacked). So hasLegalPlays
+    //   returns true, and checkTerminal returns ongoing — NOT stalemate.
+    const state = gsfenState(MARSHAL_BLOCKED_GENERAL_FREE);
+
+    // Marshal has 3 reachable squares geometrically
+    const marshalMoves = getLegalDestinations(state.position, { col: 5 as any, row: 1 as any }, 'black');
+    expect(marshalMoves.length).toBe(3);
+
+    // General has many legal destinations (18 in this position)
+    const generalMoves = getLegalDestinations(state.position, { col: 1 as any, row: 4 as any }, 'black');
+    expect(generalMoves.length).toBeGreaterThan(0);
+
+    // hasLegalPlays scans ALL pieces — finds the General's safe move
+    expect(hasLegalPlays(state)).toBe(true);
+
+    // checkTerminal: not stalemate, game continues
+    const r = checkTerminal(state, []);
     expect(r.kind).toBe('ongoing');
   });
 });
