@@ -56,6 +56,30 @@ These documents, in the project root, collectively define the Gungi specificatio
 | `REFINING.md` | Active refinement queue (problems found in code review) |
 | `ORACLE.md` | Build plan for the TypeScript reference implementation |
 
+## Build Status
+
+The TypeScript Oracle (reference implementation) is built incrementally per the ORACLE.md plan:
+
+| Step | Description | Status |
+|---|---|---|
+| 0 | Docker toolchain | ✅ |
+| 1 | Project scaffold + domain types | ✅ |
+| 2 | GSFEN parser | ✅ |
+| 3 | GSFEN serializer | ✅ |
+| 4 | GAN parser | ✅ |
+| 5 | GAN serializer | ✅ |
+| 6 | Movement rules engine | ✅ |
+| 7 | Attack & check detection | ✅ |
+| 8 | Action validation (Move, Arata, Placement) | ✅ |
+| 9 | Deploy phase logic | ✅ |
+| 10 | Battle phase engine (Turncoat, turn mgmt) | ✅ |
+| 11 | Terminal conditions (Checkmate, Stalemate, Repetition) | ✅ |
+| 12 | Public API (`Game` class) | ✅ |
+| 13 | Property tests & Gherkin step defs | 🔜 |
+| 14 | Action visualizer | 🔜 |
+
+**790 tests** across **16 test files** — all passing.
+
 ## GSFEN Traps (common agent errors)
 
 - **Columns 9→1, not 1→9.** GSFEN rows itemize columns left-to-right from column 9 to column 1. The rightmost square in a row is column 1.
@@ -70,16 +94,16 @@ These documents, in the project root, collectively define the Gungi specificatio
 
 1. **Never hand-write a GSFEN string without validating it.** Use the CLI (`npm run gsfen -- check "<string>"`) to confirm correctness before using any GSFEN in code or tests. A string that "looks right" is very often wrong in at least one of the traps above.
 2. **No inline GSFEN strings in source or test code.** Every GSFEN string must live in a `.gsfen` fixture file under `oracle/fixtures/valid/` or `oracle/fixtures/invalid/` and be imported via the constants barrel (`oracle/src/gsfen/fixtures.ts`). Exceptions require a documented rationale in the commit message. A CI check (via `gsfen-find.sh`) enforces this after Phase 0 of the tooling plan (see `oracle/TOOLING.md`).
-3. **Prefer an existing fixture over writing a new GSFEN string.** The `oracle/fixtures/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to an existing fixture state.
-4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. Every fixture lives in a `.gsfen` file and is exported as a named constant from `oracle/src/gsfen/fixtures.ts`. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Apply GAN actions via `applyMove`/`applyArata`/`validatePlacement` to derive new states.
+3. **Prefer an existing fixture over writing a new GSFEN string.** The `oracle/fixtures/` directory contains curated fixtures. Derive or mutate from one of them rather than authoring from scratch. If you need a different state, use the `Game` class (`new Game(gsfen)`) to play GAN actions via `game.applyAction(parseGAN(ganString))`.
+4. **Use existing fixtures.** The `oracle/fixtures/` directory contains curated `.gsfen` fixture files. Every fixture lives in a `.gsfen` file and is exported as a named constant from `oracle/src/gsfen/fixtures.ts`. If you need a custom state, parse a fixture and mutate it rather than authoring GSFEN from scratch. Use `Game` (`new Game(fixtureConstant)`) to apply actions programmatically.
 5. **Learn from rule codes.** A `BR-GSFEN-CANON-*` code is a canonical-form error — fix the string format. A `BR-GSFEN-VALID-*` code is a semantic error — fix the position/hands/turn arrangement. A `BR-GAN-GRAMMAR-*` code is a grammar error (string doesn't match ABNF). A `BR-GAN-CANON-*` code is a canonicity error (optional token misused). A `BR-GAN-VALID-*` code is a semantic validation error. A `BR-xxx` code is a business rule violation.
-6. **Honour step-awareness markers.** Code marked `@internal`, `@step N`, or guarded by `throwIfNotImplemented` is scaffolding — it works for its limited purpose but will be replaced. Do not build on top of it. Tests using `it.fails` document behaviour that is known to be incomplete.
+6. **Honour step-awareness markers.** Code marked `@internal` or guarded by `throwIfNotImplemented` is scaffolding — it works for its limited purpose but will be replaced. Do not build on top of it. Tests using `it.fails` document behaviour that is known to be incomplete.
 
 ## Fixture Library
 
-The **55 `.gsfen` files** across two directories cover the major state shapes:
+The **56 `.gsfen` files** across two directories cover the major state shapes:
 
-**`oracle/fixtures/valid/`** — 47 states that pass `validateState()`.
+**`oracle/fixtures/valid/`** — 48 states that pass `validateState()`.
 
 | Fixture | Description |
 |---|---|
@@ -101,6 +125,7 @@ The **55 `.gsfen` files** across two directories cover the major state shapes:
 | `forced-capture` / `arata-zone-test` | Arata/Move edge cases |
 | `mp-stack-deploy-ctr3` / `deploy-black-marshal-placed` / `deploy-both-marshals-pawn` | Deploy-phase scenarios |
 | `example4-mixed-stack` | Mixed-ownership stack in battle |
+| `marshal-blocked-general-free` | Black Marshal trapped by Self Check; Black General still free to move |
 | `white-done-multi-count-hand` | Hand with count ≥ 2 |
 
 **`oracle/fixtures/invalid/parse/`** — 8 states that fail parse-level validation (C1-C7 errors).
