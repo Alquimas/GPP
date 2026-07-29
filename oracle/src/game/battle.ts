@@ -211,6 +211,17 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     };
   }
 
+  // BR-STACK-003: Cannot land on a friendly stack at max size (3)
+  if (targetStack !== null && stackSize(targetStack) >= 3 && topPiece(targetStack).owner === player) {
+    return {
+      ok: false,
+      error: new GameError(
+        'Cannot land on a friendly stack that is already at maximum size (3)',
+        'BR-STACK-003',
+      ),
+    };
+  }
+
   // 3. BR-MOVE-003: Destination must be reachable
   const legalMoves = getLegalDestinations(state.position, origin, player);
   const matchingMove = legalMoves.find((m) => m.dest.col === dest.col && m.dest.row === dest.row);

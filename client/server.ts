@@ -68,7 +68,13 @@ startNewGame();
 function doAction(action: Action): { ok: true } | { ok: false; error: string } {
   const beforeGsfen = game.toGsfen();
 
-  const applyResult = game.applyAction(action);
+  let applyResult;
+  try {
+    applyResult = game.applyAction(action);
+  } catch (e: any) {
+    console.error('ORACLE THREW:', e.message ?? e);
+    return { ok: false, error: 'ORACLE ERROR: ' + (e.message ?? String(e)) };
+  }
   const afterGsfen = game.toGsfen();
 
   // Validity check: Game.applyAction returns the new state on success,
@@ -311,8 +317,26 @@ const server = http.createServer(async (req, res) => {
       if (!body?.action) { json(res, 400, { error: 'Missing action' }); return; }
       const action = buildActionFromDTO(body.action);
       if (!action) { json(res, 400, { error: 'Invalid action' }); return; }
-      const result = doAction(action);
-      if (!result.ok) { json(res, 422, { error: result.error, state: buildStateResponse() }); return; }
+      let result;
+      try {
+        result = doAction(action);
+      } catch (e: any) {
+        console.error('doAction threw:', e);
+        json(res, 500, { error: 'doAction threw: ' + (e.message ?? String(e)) });
+        return;
+      }
+      if (!result.ok) {
+        let stateResp;
+        try {
+          stateResp = buildStateResponse();
+        } catch (e2: any) {
+          console.error('buildStateResponse threw:', e2);
+          json(res, 500, { error: 'buildStateResponse threw: ' + (e2.message ?? String(e2)) });
+          return;
+        }
+        json(res, 422, { error: result.error, state: stateResp });
+        return;
+      }
       json(res, 200, buildStateResponse());
       return;
     }

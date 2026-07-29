@@ -63,6 +63,7 @@ export const DEPLOY_MARSHAL_COL1 = readValid('deploy-marshal-col1');
 export const DEPLOY_MARSHAL_COL9 = readValid('deploy-marshal-col9');
 export const DEPLOY_MARSHAL_ON_TOP = readValid('deploy-marshal-on-top');
 export const DEPLOY_NEAR_END = readValid('deploy-near-end');
+export const DEPLOY_NEAR_END_BLACK = readValid('deploy-near-end-black');
 export const DEPLOY_PHASE_CTR1 = readValid('deploy-phase-ctr1');
 export const DEPLOY_PHASE_CTR3 = readValid('deploy-phase-ctr3');
 export const DEPLOY_STACKS_IN_ZONES = readValid('deploy-stacks-in-zones');
@@ -135,6 +136,7 @@ export const FIXTURES: Record<string, string> = {
   'deploy-marshal-col9': DEPLOY_MARSHAL_COL9,
   'deploy-marshal-on-top': DEPLOY_MARSHAL_ON_TOP,
   'deploy-near-end': DEPLOY_NEAR_END,
+  'deploy-near-end-black': DEPLOY_NEAR_END_BLACK,
   'deploy-phase-ctr1': DEPLOY_PHASE_CTR1,
   'deploy-phase-ctr3': DEPLOY_PHASE_CTR3,
   'deploy-stacks-in-zones': DEPLOY_STACKS_IN_ZONES,

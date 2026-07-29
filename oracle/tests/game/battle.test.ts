@@ -24,11 +24,13 @@ import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { validateMove, validateArata, validatePlay } from '../../src/game/battle.js';
 import { getStack, setStack, createStack, stackSize, topPiece } from '../../src/board/board.js';
+import { Game } from '../../src/game/game.js';
 import {
   ARATA_ZONE_TEST,
   BATTLE_MID_VARIANT,
   BLACK_TURN_MARSHAL_ONLY,
   CHOICE_POS,
+  DEPLOY_NEAR_END_BLACK,
   DEPLOY_PHASE_CTR1,
   ENEMY_MARSHAL_STACK_TEST,
   FORCED_CAPTURE,
@@ -768,6 +770,81 @@ describe('validatePlay', () => {
         expect(r.speculativeState.turn.phase).toBe('battle');
         expect(r.speculativeState.turn.done).toBeNull();
       }
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  Regression: BR-STACK-003 — friendly 3-stack landing rejection      */
+  /* ------------------------------------------------------------------ */
+
+  describe('BR-STACK-003 — friendly stack of 3', () => {
+    it('rejects a move landing on a friendly stack already at size 3', () => {
+      const state = gsfenState(MARSHAL_ALONE_BATTLE);
+      // Place a 3-deep friendly White stack at 5-8 (one square forward of
+      // the Marshal at 5-9), and boost the Marshal's stack to size 3 so
+      // that BR-MOVE-005 (source >= target) passes.
+      const modified: GameState = {
+        ...state,
+        position: setStack(
+          setStack(
+            state.position,
+            { col: 5, row: 9 },
+            createStack([
+              { type: 'P', owner: 'white' },
+              { type: 'P', owner: 'white' },
+              { type: 'M', owner: 'white' },
+            ]),
+          ),
+          { col: 5, row: 8 },
+          createStack([
+            { type: 'P', owner: 'white' },
+            { type: 'P', owner: 'white' },
+            { type: 'P', owner: 'white' },
+          ]),
+        ),
+      };
+
+      // Marshal at 5-9 (size 3) tries to move to 5-8 (friendly size 3).
+      const r = validateMove(modified, {
+        kind: 'move',
+        origin: { col: 5, row: 9 },
+        dest: { col: 5, row: 8 },
+        outcome: null,
+        turncoat: [],
+      });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-003');
+    });
+
+    it('legalActions does not crash when a deploy transition creates a battle state with 3-deep stacks', () => {
+      // Regression: the GSFEN "deploy-near-end-black" has 3-deep stacks in both
+      // players' deploy zones.  When the last piece is placed, the game
+      // transitions to battle and #legalPlays enumerates every candidate move.
+      // The bug was that some candidates targeted friendly 3-stacks, which
+      // passed validation but caused applyMove (called for Self Check) to
+      // throw "Stack must have 1–3 pieces, got 4".
+      const game = new Game(DEPLOY_NEAR_END_BLACK);
+      expect(game.state.turn.phase).toBe('deploy');
+      expect(game.state.turn.activePlayer).toBe('black');
+
+      // Place the last Black spy at an empty square in the deploy zone,
+      // without declaring Done (the hand will be empty after placement,
+      // which auto-ends the deploy phase → transitions to battle).
+      const placeSpy: Action = {
+        kind: 'placement',
+        piece: 'Y',
+        dest: { col: 3, row: 1 },
+        done: false,
+      };
+      const { result } = game.applyAction(placeSpy);
+      expect(result.kind).toBe('ongoing');
+      expect(game.state.turn.phase).toBe('battle');
+
+      // The bug: legalActions threw "Stack must have 1–3 pieces, got 4".
+      // Now it must return a valid list without throwing.
+      let actions: Action[];
+      expect(() => { actions = game.legalActions; }).not.toThrow();
+      expect(actions!.length).toBeGreaterThan(0);
     });
   });
 });
