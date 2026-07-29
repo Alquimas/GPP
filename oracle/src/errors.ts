@@ -27,6 +27,7 @@ export type GameRule =
   | 'BR-MOVE-005'
   | 'BR-PLAY-002'
   | 'BR-STACK-002'
+  | 'BR-STACK-003'
   | 'BR-STACK-004'
   | 'BR-STACK-006'
   // Business rules — Deploy Phase

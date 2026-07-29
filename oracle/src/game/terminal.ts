@@ -115,11 +115,8 @@ function isMoveSafe(position: Position, origin: Square, dest: Square, player: Pl
     // Empty target: piece sits alone
     newPos = setStack(newPos, dest, createStack([movingPiece]));
   } else {
-    // Target has pieces — the Simulation always stacks the moving piece
-    // on top (regardless of ownership). For Self Check, the exact stack
-    // composition after stacking vs. capture matters only insofar as it
-    // affects attack lines. The capture branch is checked separately
-    // via isCaptureSafe. Here we just stack.
+    // Cannot stack on a full stack (BR-STACK-003)
+    if (targetStack.length >= 3) return false;
     const pieces = [...targetStack, movingPiece];
     newPos = setStack(newPos, dest, createStack(pieces));
   }
@@ -191,13 +188,13 @@ export function hasLegalPlays(state: GameState): boolean {
       const origin = squareFromIndex(r, c);
       const moves = getLegalDestinations(state.position, origin, player);
       for (const move of moves) {
-        // Simulate the move and check Self Check
-        if (isMoveSafe(state.position, origin, move.dest, player)) return true;
-        // If the movement engine says choice exists (outcome='stack'), also
-        // check the capture branch for Self Check
-        if (move.outcome === 'stack') {
-          // Simulate as capture
+        if (move.outcome === 'capture') {
           if (isCaptureSafe(state.position, origin, move.dest, player)) return true;
+        } else {
+          if (isMoveSafe(state.position, origin, move.dest, player)) return true;
+          if (move.outcome === 'stack') {
+            if (isCaptureSafe(state.position, origin, move.dest, player)) return true;
+          }
         }
       }
     }

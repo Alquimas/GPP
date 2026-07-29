@@ -72,6 +72,7 @@ export const ENEMY_MARSHAL_STACK_TEST = readValid('enemy-marshal-stack-test');
 export const EXAMPLE4_MIXED_STACK = readValid('example4-mixed-stack');
 export const FORCED_CAPTURE = readValid('forced-capture');
 export const FRIENDLY_STACK_TEST = readValid('friendly-stack-test');
+export const FUZZER_CRASH_145 = readValid('fuzzer-crash-145');
 export const FRIENDLY_STACK_WITH_HANDS = readValid('friendly-stack-with-hands');
 export const MARSHAL_ALONE_BATTLE = readValid('marshal-alone-battle');
 export const MARSHAL_BLOCKED_GENERAL_FREE = readValid('marshal-blocked-general-free');
@@ -145,6 +146,7 @@ export const FIXTURES: Record<string, string> = {
   'example4-mixed-stack': EXAMPLE4_MIXED_STACK,
   'forced-capture': FORCED_CAPTURE,
   'friendly-stack-test': FRIENDLY_STACK_TEST,
+  'fuzzer-crash-145': FUZZER_CRASH_145,
   'friendly-stack-with-hands': FRIENDLY_STACK_WITH_HANDS,
   'marshal-alone-battle': MARSHAL_ALONE_BATTLE,
   'mp-stack-deploy-ctr3': MP_STACK_DEPLOY_CTR3,

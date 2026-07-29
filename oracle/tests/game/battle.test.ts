@@ -25,6 +25,7 @@ import { validateState } from '../../src/gsfen/validate.js';
 import { validateMove, validateArata, validatePlay } from '../../src/game/battle.js';
 import { getStack, setStack, createStack, stackSize, topPiece } from '../../src/board/board.js';
 import { Game } from '../../src/game/game.js';
+import { hasLegalPlays } from '../../src/game/terminal.js';
 import {
   ARATA_ZONE_TEST,
   BATTLE_MID_VARIANT,
@@ -36,6 +37,7 @@ import {
   FORCED_CAPTURE,
   FRIENDLY_STACK_TEST,
   FRIENDLY_STACK_WITH_HANDS,
+  FUZZER_CRASH_145,
   MARSHAL_ALONE_BATTLE,
   SELF_CHECK_POS,
   SELF_CHECK_SIZE3_CAPTURE,
@@ -845,6 +847,31 @@ describe('validatePlay', () => {
       let actions: Action[];
       expect(() => { actions = game.legalActions; }).not.toThrow();
       expect(actions!.length).toBeGreaterThan(0);
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  Regression: fuzzer crash applying action on battle state            */
+  /* ------------------------------------------------------------------ */
+
+  describe('fuzzer regression — fuzzer-crash-145', () => {
+    it('hasLegalPlays does not crash when a battle state has 3-deep stacks being targeted by size-3 sources', () => {
+      // The fuzzer reached a battle state where White has no hands and Black
+      // has size-3 pieces that can target friendly size-3 stacks. The call
+      // to hasLegalPlays → isMoveSafe crashed by trying to create a 4-piece
+      // stack. The fix: isMoveSafe must check that the target isn't already
+      // at max stack size (3) before stacking.
+      const base = gsfenState(FUZZER_CRASH_145);
+      // The GSFEN is White's turn — flip to Black so the scan iterates
+      // over Black's pieces (which include size-3 stacks targeting
+      // friendly size-3 stacks).
+      const blackState: GameState = {
+        ...base,
+        turn: { ...base.turn, activePlayer: 'black' },
+      };
+      let hasLegal: boolean;
+      expect(() => { hasLegal = hasLegalPlays(blackState); }).not.toThrow();
+      expect(hasLegal!).toBe(true);
     });
   });
 });
