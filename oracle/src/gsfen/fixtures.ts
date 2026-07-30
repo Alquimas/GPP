@@ -48,6 +48,7 @@ export const BOTH_MARSHALS_BATTLE_NOHANDS = readValid('both-marshals-battle-noha
 export const BOTH_MARSHALS_DEPLOY_CTR2 = readValid('both-marshals-deploy-ctr2');
 export const BOTH_MARSHALS_PLACED = readValid('both-marshals-placed');
 export const CAPTURE_AFTERMATH = readValid('capture-aftermath');
+export const CHECKMATE_AFTER_CAPTURE = readValid('checkmate-after-capture');
 export const CHOICE_POS = readValid('choice-pos');
 export const DEEP_CAPTURE_EXCHANGE = readValid('deep-capture-exchange');
 export const DENSE_ENGAGEMENT = readValid('dense-engagement');
@@ -122,6 +123,7 @@ export const FIXTURES: Record<string, string> = {
   'both-marshals-deploy-ctr2': BOTH_MARSHALS_DEPLOY_CTR2,
   'both-marshals-placed': BOTH_MARSHALS_PLACED,
   'capture-aftermath': CAPTURE_AFTERMATH,
+  'checkmate-after-capture': CHECKMATE_AFTER_CAPTURE,
   'choice-pos': CHOICE_POS,
   'deep-capture-exchange': DEEP_CAPTURE_EXCHANGE,
   'dense-engagement': DENSE_ENGAGEMENT,

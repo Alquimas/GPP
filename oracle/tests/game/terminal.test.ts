@@ -22,10 +22,13 @@ import {
 import { emptyPosition, setStack, createStack } from '../../src/board/board.js';
 import { getLegalDestinations } from '../../src/board/movement.js';
 import { isInCheck } from '../../src/board/attack.js';
+import { Game } from '../../src/game/game.js';
+import { parseGAN } from '../../src/gan/parse.js';
 import {
   BOTH_MARSHALS_BATTLE_NOHANDS,
   BOTH_MARSHALS_PLACED,
   BLACK_TURN_MARSHAL_ONLY,
+  CHECKMATE_AFTER_CAPTURE,
   DEPLOY_BLACK_MARSHAL_PLACED,
   DEPLOY_PHASE_CTR1,
   MARSHAL_ALONE_BATTLE,
@@ -458,5 +461,44 @@ describe('checkTerminal', () => {
     const state = gsfenState(BLACK_TURN_MARSHAL_ONLY);
     const r = checkTerminal(state, []);
     expect(r.kind).toBe('insufficient-material');
+  });
+
+  it('detects checkmate after a capture leaves the opponent with no legal plays', () => {
+    // Fixture: Black's turn, Black can capture at (8,7) with a Lieutenant
+    // moving from (5,4). After the capture, White is in check but every
+    // possible move would leave White's Marshal in check or stack on the
+    // Marshal (BR-STACK-004), which is forbidden.
+    //
+    // The bug: hasLegalPlaces was missing the BR-STACK-004 check in its
+    // inline Self Check simulation for Moves (isMoveSafe/isCaptureSafe),
+    // so it incorrectly thought stacking a piece on the Marshal was a
+    // legal escape, causing checkTerminal to return 'ongoing'.
+    const game = new Game(CHECKMATE_AFTER_CAPTURE);
+
+    // Before the move — Black's turn, ongoing
+    expect(game.state.turn.activePlayer).toBe('black');
+    expect(game.result.kind).toBe('ongoing');
+
+    // Apply the capture move: Lieutenant moves from (5,4) to (8,7)
+    const gan = parseGAN('5-4>8-7x');
+    expect(gan.ok).toBe(true);
+    if (!gan.ok) return;
+    const result = game.applyAction(gan.action);
+
+    // After the move — White's turn, no legal plays, White is in check
+    expect(result.state.turn.activePlayer).toBe('white');
+    expect(isInCheck(result.state.position, 'white')).toBe(true);
+
+    // hasLegalPlays must return false — no escape from check
+    expect(hasLegalPlays(result.state)).toBe(false);
+
+    // checkTerminal must detect checkmate
+    const terminal = checkTerminal(result.state, []);
+    expect(terminal.kind).toBe('checkmate');
+    if (terminal.kind === 'checkmate') expect(terminal.loser).toBe('white');
+
+    // Game.result should also reflect checkmate
+    expect(game.result.kind).toBe('checkmate');
+    if (game.result.kind === 'checkmate') expect(game.result.loser).toBe('white');
   });
 });

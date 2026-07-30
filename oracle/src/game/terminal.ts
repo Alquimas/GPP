@@ -115,8 +115,10 @@ function isMoveSafe(position: Position, origin: Square, dest: Square, player: Pl
     // Empty target: piece sits alone
     newPos = setStack(newPos, dest, createStack([movingPiece]));
   } else {
-    // Cannot stack on a full stack (BR-STACK-003)
+    // BR-STACK-003: Cannot stack on a full stack
     if (targetStack.length >= 3) return false;
+    // BR-STACK-004: No stacking on a Marshal (friendly or enemy)
+    if (topPiece(targetStack).type === 'M') return false;
     const pieces = [...targetStack, movingPiece];
     newPos = setStack(newPos, dest, createStack(pieces));
   }
@@ -146,6 +148,9 @@ function isCaptureSafe(position: Position, origin: Square, dest: Square, player:
   // Resolve as Capture: remove all enemy pieces, keep friendly
   const targetStack = getStack(position, dest);
   if (targetStack === null) return false; // nothing to capture — shouldn't happen
+
+  // BR-STACK-004: No stacking on a Marshal (friendly or enemy)
+  if (topPiece(targetStack).type === 'M') return false;
 
   const remaining = targetStack.filter((p) => p.owner === player);
   if (remaining.length === 0) {
