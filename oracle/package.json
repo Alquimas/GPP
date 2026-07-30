@@ -12,6 +12,7 @@
     "gsfen": "npx tsx script/gsfen.ts",
     "gsfen:gen": "npx tsx script/gsfen-gen.ts",
     "lint": "eslint src tests",
+    "moves": "npx tsx script/moves.ts",
     "fuzzer": "npx tsx script/fuzzer.ts",
     "test": "vitest run"
   },
