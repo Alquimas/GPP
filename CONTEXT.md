@@ -53,12 +53,12 @@ These documents, in the project root, collectively define the Gungi specificatio
 | `GSFEN.md` | GSFEN state serialization format — grammar, canonical-form rules (BR-GSFEN-CANON-*), semantic validity rules (BR-GSFEN-VALID-*) |
 | `GAN.md` | GAN action notation — grammar (BR-GAN-GRAMMAR-*), canonical form (BR-GAN-CANON-*), and semantic validity (BR-GAN-VALID-*) |
 | `TEST.md` | Testing strategy and conventions |
+| `REFINING-PLAN.md` | Active refinement plan for the reference implementation |
 | `REFINING.md` | Active refinement queue (problems found in code review) |
-| `ORACLE.md` | Build plan for the TypeScript reference implementation |
 
 ## Build Status
 
-The TypeScript Oracle (reference implementation) is built incrementally per the ORACLE.md plan:
+The TypeScript Oracle (reference implementation) is fully built — all steps complete:
 
 | Step | Description | Status |
 |---|---|---|
