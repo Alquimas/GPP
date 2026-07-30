@@ -176,6 +176,48 @@ The script validates the result via `parseGSFEN` + `validateState` before writin
 
 Run from the `oracle/` directory (the CWD that `npm run` sets).
 
+## Legal Moves
+
+`oracle/script/moves.ts` — enumerate all legal actions from a GSFEN position. Delegates to the `Game.legalActions` getter (`game/game.ts`), which validates every candidate action (Move, Arata, or Placement) against all business rules including Self Check and Turncoat.
+
+### Usage
+
+```bash
+# From a GSFEN string
+npm run moves -- "startpos"
+npm run moves -- "4,m,4/9/9/9/9/9/9/9/4,M,4 w - 1"
+
+# From a .gsfen fixture file
+npm run moves -- --file fixtures/valid/battle-midgame.gsfen
+
+# Run directly via tsx
+npx tsx script/moves.ts --file fixtures/valid/battle-minimal.gsfen
+```
+
+### Output
+
+The script prints:
+
+1. **Board** — visual 9×9 layout (same format as `gsfen show`)
+2. **Hands** and **turn state**
+3. **Legal actions** grouped by kind (Placements / Moves / Aratas), each with its canonical GAN string and a human-readable description
+4. **Total count**
+
+Example output (from `battle-minimal.gsfen`):
+
+```
+Moves (3):
+  5-2>5-3           W Marshal 5-2>5-3
+  5-2>6-3           W Marshal 5-2>6-3
+  5-2>4-3           W Marshal 5-2>4-3
+
+Total: 3 legal actions.
+```
+
+### Requirements
+
+Run from the `oracle/` directory (the CWD that `npm run` sets).
+
 ## Rule Browser
 
 `oracle/script/browse-rule.sh` — browse rule definitions, source files,
