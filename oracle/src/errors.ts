@@ -20,6 +20,7 @@ export type GameRule =
   // Business rules — Battle Phase actions
   | 'BR-ACTION-001'
   | 'BR-ACTION-002'
+  | 'BR-GAME-003'
   | 'BR-CAPTURE-002'
   | 'BR-MOVE-002'
   | 'BR-MOVE-003'

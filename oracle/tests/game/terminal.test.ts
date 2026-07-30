@@ -34,7 +34,7 @@ import {
   MARSHAL_ALONE_BATTLE,
   MARSHAL_BLOCKED_GENERAL_FREE,
   WHITE_MARSHAL_AT_5_9,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */

@@ -11,7 +11,7 @@ import type { GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { checkTerminal } from '../../src/game/terminal.js';
-import { MARSHAL_ALONE_BATTLE } from '../../src/gsfen/fixtures.js';
+import { MARSHAL_ALONE_BATTLE } from '../support/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */

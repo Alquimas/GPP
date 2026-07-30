@@ -315,7 +315,7 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
   }
 
   // 7. BR-ACTION-002: Self Check — apply the move and check
-  const { state: postMoveState } = applyMove(state, action);
+  const postMoveState = applyMove(state, action);
   if (isInCheck(postMoveState.position, player)) {
     return {
       ok: false,
@@ -469,7 +469,7 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
   }
 
   // 6. BR-ACTION-002: Self Check
-  const { state: postArataState } = applyArata(state, action);
+  const postArataState = applyArata(state, action);
   if (isInCheck(postArataState.position, player)) {
     return {
       ok: false,

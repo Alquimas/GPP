@@ -42,7 +42,7 @@ import {
   SELF_CHECK_POS,
   SELF_CHECK_SIZE3_CAPTURE,
   SIZE_MISMATCH_AFG,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */

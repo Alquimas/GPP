@@ -1,5 +1,5 @@
 /**
- * Fixture barrel — loads every .gsfen fixture file and exports it as a named
+ * Test fixture barrel — loads every .gsfen fixture file and exports it as a named
  * constant. All fixture names are the file stem (without extension) converted
  * to SCREAMING_SNAKE_CASE.
  *
@@ -7,12 +7,8 @@
  *   `valid/`         — states that pass parseGSFEN + validateState
  *   `invalid/parse/` — states that fail parse-level validation (BR-GSFEN-CANON-* errors)
  *
- * (Module-init validation via validateState() is not done here due to a
- * circular dependency: parse → constants → fixtures. Valid fixtures are
- * confirmed at curation time via the GSFEN CLI and the fixture report.)
- *
  * Usage:
- *   import { STARTPOS_EXPANDED, BATTLE_START } from './gsfen/fixtures.js';
+ *   import { STARTPOS_EXPANDED, BATTLE_START } from './support/fixtures.js';
  */
 
 import { readFileSync } from 'node:fs';

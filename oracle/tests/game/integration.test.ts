@@ -16,7 +16,7 @@ import { validateState } from '../../src/gsfen/validate.js';
 import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { getStack, topPiece } from '../../src/board/board.js';
 import type { Action, GameState } from '../../src/types.js';
-import { BOTH_MARSHALS_PLACED } from '../../src/gsfen/fixtures.js';
+import { BOTH_MARSHALS_PLACED } from '../support/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -129,12 +129,16 @@ describe('full game: deploy → battle', () => {
     // Illegal: placing Pawn before Marshal
     const beforeState = game.state;
     const r = game.applyAction(ganAction('P5-9'));
-    expect(r.state).toBe(beforeState); // same reference → unchanged
-    expect(game.state).toBe(beforeState);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.error.rule).toBe('BR-DEPLOY-003');
+    expect(r.state).toStrictEqual(beforeState);
+    expect(game.state).toStrictEqual(beforeState);
 
     // Now place Marshal legally — should work
-    game.applyAction(ganAction('M5-9'));
-    expect(game.state).not.toBe(beforeState); // changed
+    const accepted = game.applyAction(ganAction('M5-9'));
+    expect(accepted.ok).toBe(true);
+    expect(game.state).not.toStrictEqual(beforeState);
   });
 });
 
@@ -218,12 +222,10 @@ describe('history and terminal', () => {
 
     expect(game.state.turn.phase).toBe('battle');
 
-    // Before any battle move, history should be empty of battle states
-    // (the initial battle state was recorded by the deploy→battle transition)
-    // Actually, let's check: after both Done, the initial battle state
-    // should be in history.
+    // The current state counts as the first repetition occurrence, so it is
+    // only copied into history immediately before its first battle action.
     const histBefore = game.history;
-    expect(histBefore.length).toBeGreaterThanOrEqual(1);
+    expect(histBefore).toHaveLength(0);
 
     // Make a few moves
     game.applyAction(ganAction('5-9>4-9')); // White moves

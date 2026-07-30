@@ -6,37 +6,37 @@
  * history navigation, undo, and state inspection.
  */
 
-import http from 'node:http';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import http from "node:http";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ── Oracle imports ──────────────────────────────────────────────────
-import { Game } from '../oracle/src/game/game.js';
-import type { Action } from '../oracle/src/types.js';
-import { PIECE_NAMES } from '../oracle/src/constants.js';
-import { serializeGAN } from '../oracle/src/gan/serialize.js';
+import { Game } from "../oracle/src/game/game.js";
+import type { Action } from "../oracle/src/types.js";
+import { PIECE_NAMES } from "../oracle/src/constants.js";
+import { serializeGAN } from "../oracle/src/gan/serialize.js";
 
 // ── Paths ───────────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '..');
-const ASSETS_DIR = path.join(ROOT, 'assets');
-const INDEX_HTML = path.join(__dirname, 'index.html');
-const PORT = parseInt(process.env.PORT ?? '') || 3030;
+const ROOT = path.resolve(__dirname, "..");
+const ASSETS_DIR = path.join(ROOT, "assets");
+const INDEX_HTML = path.join(__dirname, "index.html");
+const PORT = parseInt(process.env.PORT ?? "") || 3030;
 
 // ── MIME types ──────────────────────────────────────────────────────
 const MIME: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8',
-  '.css':  'text/css; charset=utf-8',
-  '.js':   'application/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.png':  'image/png',
-  '.svg':  'image/svg+xml',
-  '.ico':  'image/x-icon',
+  ".html": "text/html; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
 };
 
 function mimeType(p: string): string {
-  return MIME[path.extname(p).toLowerCase()] ?? 'application/octet-stream';
+  return MIME[path.extname(p).toLowerCase()] ?? "application/octet-stream";
 }
 
 // ── Game session state ──────────────────────────────────────────────
@@ -66,25 +66,23 @@ startNewGame();
 
 /** Apply an action. Returns the new result on success. */
 function doAction(action: Action): { ok: true } | { ok: false; error: string } {
-  const beforeGsfen = game.toGsfen();
-
   let applyResult;
   try {
     applyResult = game.applyAction(action);
   } catch (e: any) {
-    console.error('ORACLE THREW:', e.message ?? e);
-    return { ok: false, error: 'ORACLE ERROR: ' + (e.message ?? String(e)) };
+    console.error("ORACLE THREW:", e.message ?? e);
+    return { ok: false, error: "ORACLE ERROR: " + (e.message ?? String(e)) };
   }
-  const afterGsfen = game.toGsfen();
 
-  // Validity check: Game.applyAction returns the new state on success,
-  // and the unchanged state on validation failure. Comparing serialized
-  // GSFEN is the most reliable way to detect a change.
-  if (afterGsfen === beforeGsfen && game.result.kind === 'ongoing') {
-    return { ok: false, error: 'Action rejected by game engine' };
+  if (!applyResult.ok) {
+    return {
+      ok: false,
+      error: `${applyResult.error.rule}: ${applyResult.error.message}`,
+    };
   }
 
   // Action succeeded
+  const afterGsfen = game.toGsfen();
   const ganStr = serializeGAN(action);
   const pn = actionLabel(action);
   fullHistory = fullHistory.slice(0, currentGameIndex + 1);
@@ -133,26 +131,26 @@ function rebuildGameAtCurrentIndex(): void {
 
 function actionLabel(action: Action): string {
   switch (action.kind) {
-    case 'placement': {
+    case "placement": {
       const pn = PIECE_NAMES[action.piece] ?? action.piece;
-      return `Place ${pn} ${action.dest.col}-${action.dest.row}${action.done ? ' ✓' : ''}`;
+      return `Place ${pn} ${action.dest.col}-${action.dest.row}${action.done ? " ✓" : ""}`;
     }
-    case 'move': {
+    case "move": {
       let label = `Move ${action.origin.col}-${action.origin.row}→${action.dest.col}-${action.dest.row}`;
       // outcome: null = forced (auto-stack or forced-capture), 'stack' = choice, 'capture' = choice
-      if (action.outcome === 'stack') label += ' (stack)';
-      else if (action.outcome === 'capture') label += ' (capture)';
+      if (action.outcome === "stack") label += " (stack)";
+      else if (action.outcome === "capture") label += " (capture)";
       if (action.turncoat.length > 0) label += ` TC[${action.turncoat}]`;
       return label;
     }
-    case 'arata': {
+    case "arata": {
       const pn = PIECE_NAMES[action.piece] ?? action.piece;
       let label = `Arata ${pn} ${action.dest.col}-${action.dest.row}`;
       if (action.turncoat.length > 0) label += ` TC[${action.turncoat}]`;
       return label;
     }
     default:
-      return 'Unknown action';
+      return "Unknown action";
   }
 }
 
@@ -178,7 +176,10 @@ interface ActionDTO {
 function actionToDTO(action: Action): ActionDTO {
   return {
     ...action,
-    turncoat: 'turncoat' in action && Array.isArray((action as any).turncoat) ? (action as any).turncoat : [],
+    turncoat:
+      "turncoat" in action && Array.isArray((action as any).turncoat)
+        ? (action as any).turncoat
+        : [],
     display: actionLabel(action),
   };
 }
@@ -203,7 +204,11 @@ function buildStateResponse(): object {
         row.push({
           col: c + 1,
           row: r + 1,
-          stack: stack.map((p, i) => ({ type: p.type, owner: p.owner, level: i + 1 })),
+          stack: stack.map((p, i) => ({
+            type: p.type,
+            owner: p.owner,
+            level: i + 1,
+          })),
         });
       }
     }
@@ -211,10 +216,11 @@ function buildStateResponse(): object {
   }
 
   const turn = state.turn;
-  const playerLabel = turn.activePlayer === 'white' ? 'White' : 'Black';
-  const turnDesc = turn.phase === 'deploy'
-    ? `${playerLabel} to place`
-    : `${playerLabel} to play`;
+  const playerLabel = turn.activePlayer === "white" ? "White" : "Black";
+  const turnDesc =
+    turn.phase === "deploy"
+      ? `${playerLabel} to place`
+      : `${playerLabel} to play`;
 
   const historyEntries = fullHistory.map((entry, i) => ({
     index: i,
@@ -227,14 +233,14 @@ function buildStateResponse(): object {
   return {
     gsfen: game.toGsfen(),
     phase: turn.phase,
-    phaseDesc: turn.phase === 'deploy' ? 'Deploy Phase' : 'Battle Phase',
+    phaseDesc: turn.phase === "deploy" ? "Deploy Phase" : "Battle Phase",
     activePlayer: turn.activePlayer,
     playerLabel,
     turnDesc,
     done: turn.done,
     counter: turn.counter,
     result,
-    isTerminal: result.kind !== 'ongoing',
+    isTerminal: result.kind !== "ongoing",
     resultLabel: resultLabel(result),
     board,
     hands: {
@@ -251,13 +257,20 @@ function buildStateResponse(): object {
 
 function resultLabel(result: { kind: string; loser?: string }): string {
   switch (result.kind) {
-    case 'ongoing': return 'Game in progress';
-    case 'checkmate': return `Checkmate — ${result.loser} loses`;
-    case 'stalemate': return `Stalemate — ${result.loser} loses`;
-    case 'exposure': return `Exposure — ${result.loser} loses`;
-    case 'exposure-draw': return `Exposure — Draw`;
-    case 'repetition': return `Repetition — Draw`;
-    default: return result.kind;
+    case "ongoing":
+      return "Game in progress";
+    case "checkmate":
+      return `Checkmate — ${result.loser} loses`;
+    case "stalemate":
+      return `Stalemate — ${result.loser} loses`;
+    case "exposure":
+      return `Exposure — ${result.loser} loses`;
+    case "exposure-draw":
+      return `Exposure — Draw`;
+    case "repetition":
+      return `Repetition — Draw`;
+    default:
+      return result.kind;
   }
 }
 
@@ -266,8 +279,8 @@ function resultLabel(result: { kind: string; loser?: string }): string {
 function parseBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
-    req.on('end', () => {
+    req.on("data", (c: Buffer) => chunks.push(c));
+    req.on("end", () => {
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString()));
       } catch {
@@ -280,49 +293,66 @@ function parseBody(req: http.IncomingMessage): Promise<any> {
 // ── HTTP Router ─────────────────────────────────────────────────────
 
 function json(res: http.ServerResponse, status: number, data: any): void {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(data));
 }
 
 function text(res: http.ServerResponse, status: number, body: string): void {
-  res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8' });
+  res.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
   res.end(body);
 }
 
-function binary(res: http.ServerResponse, status: number, ct: string, data: Buffer): void {
-  res.writeHead(status, { 'Content-Type': ct });
+function binary(
+  res: http.ServerResponse,
+  status: number,
+  ct: string,
+  data: Buffer,
+): void {
+  res.writeHead(status, { "Content-Type": ct });
   res.end(data);
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
-  const method = req.method ?? 'GET';
+  const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
+  const method = req.method ?? "GET";
 
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   try {
     // ── API ──────────────────────────────────────────────────────
 
-    if (url.pathname === '/api/state' && method === 'GET') {
+    if (url.pathname === "/api/state" && method === "GET") {
       json(res, 200, buildStateResponse());
       return;
     }
 
-    if (url.pathname === '/api/action' && method === 'POST') {
+    if (url.pathname === "/api/action" && method === "POST") {
       const body = await parseBody(req);
-      if (!body?.action) { json(res, 400, { error: 'Missing action' }); return; }
+      if (!body?.action) {
+        json(res, 400, { error: "Missing action" });
+        return;
+      }
       const action = buildActionFromDTO(body.action);
-      if (!action) { json(res, 400, { error: 'Invalid action' }); return; }
+      if (!action) {
+        json(res, 400, { error: "Invalid action" });
+        return;
+      }
       let result;
       try {
         result = doAction(action);
       } catch (e: any) {
-        console.error('doAction threw:', e);
-        json(res, 500, { error: 'doAction threw: ' + (e.message ?? String(e)) });
+        console.error("doAction threw:", e);
+        json(res, 500, {
+          error: "doAction threw: " + (e.message ?? String(e)),
+        });
         return;
       }
       if (!result.ok) {
@@ -330,8 +360,10 @@ const server = http.createServer(async (req, res) => {
         try {
           stateResp = buildStateResponse();
         } catch (e2: any) {
-          console.error('buildStateResponse threw:', e2);
-          json(res, 500, { error: 'buildStateResponse threw: ' + (e2.message ?? String(e2)) });
+          console.error("buildStateResponse threw:", e2);
+          json(res, 500, {
+            error: "buildStateResponse threw: " + (e2.message ?? String(e2)),
+          });
           return;
         }
         json(res, 422, { error: result.error, state: stateResp });
@@ -341,40 +373,43 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (url.pathname === '/api/undo' && method === 'POST') {
-      if (!doUndo()) { json(res, 422, { error: 'Nothing to undo' }); return; }
-      json(res, 200, buildStateResponse());
-      return;
-    }
-
-    if (url.pathname === '/api/goto' && method === 'POST') {
-      const body = await parseBody(req);
-      if (typeof body?.index !== 'number' || !doGoto(body.index)) {
-        json(res, 400, { error: 'Invalid index' });
+    if (url.pathname === "/api/undo" && method === "POST") {
+      if (!doUndo()) {
+        json(res, 422, { error: "Nothing to undo" });
         return;
       }
       json(res, 200, buildStateResponse());
       return;
     }
 
-    if (url.pathname === '/api/reset' && method === 'POST') {
+    if (url.pathname === "/api/goto" && method === "POST") {
+      const body = await parseBody(req);
+      if (typeof body?.index !== "number" || !doGoto(body.index)) {
+        json(res, 400, { error: "Invalid index" });
+        return;
+      }
+      json(res, 200, buildStateResponse());
+      return;
+    }
+
+    if (url.pathname === "/api/reset" && method === "POST") {
       const body = await parseBody(req);
       startNewGame(body?.gsfen);
       json(res, 200, buildStateResponse());
       return;
     }
 
-    if (url.pathname === '/api/piece-names' && method === 'GET') {
+    if (url.pathname === "/api/piece-names" && method === "GET") {
       json(res, 200, PIECE_NAMES);
       return;
     }
 
     // ── Serve assets ─────────────────────────────────────────────
-    if (url.pathname.startsWith('/assets/')) {
-      const filename = url.pathname.slice('/assets/'.length);
+    if (url.pathname.startsWith("/assets/")) {
+      const filename = url.pathname.slice("/assets/".length);
       // Prevent path traversal
-      if (filename.includes('..') || filename.includes('~')) {
-        text(res, 403, 'Forbidden');
+      if (filename.includes("..") || filename.includes("~")) {
+        text(res, 403, "Forbidden");
         return;
       }
       const filePath = path.join(ASSETS_DIR, filename);
@@ -393,13 +428,13 @@ const server = http.createServer(async (req, res) => {
             try {
               const svg = missingPieceSVG(filePath);
               if (svg) {
-                res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+                res.writeHead(200, { "Content-Type": "image/svg+xml" });
                 res.end(svg);
               } else {
-                text(res, 404, 'Not found');
+                text(res, 404, "Not found");
               }
             } catch {
-              text(res, 404, 'Not found');
+              text(res, 404, "Not found");
             }
           }
         } else {
@@ -407,13 +442,13 @@ const server = http.createServer(async (req, res) => {
           try {
             const svg = missingPieceSVG(filePath);
             if (svg) {
-              res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+              res.writeHead(200, { "Content-Type": "image/svg+xml" });
               res.end(svg);
             } else {
-              text(res, 404, 'Not found');
+              text(res, 404, "Not found");
             }
           } catch {
-            text(res, 404, 'Not found');
+            text(res, 404, "Not found");
           }
         }
       }
@@ -421,13 +456,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ── Serve index.html ─────────────────────────────────────────
-    const html = await fs.readFile(INDEX_HTML, 'utf-8');
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    const html = await fs.readFile(INDEX_HTML, "utf-8");
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(html);
-
   } catch (err: any) {
-    console.error('Server error:', err);
-    json(res, 500, { error: err.message ?? 'Internal error' });
+    console.error("Server error:", err);
+    json(res, 500, { error: err.message ?? "Internal error" });
   }
 });
 
@@ -451,9 +485,9 @@ function missingPieceSVG(filePath: string): string | null {
   const m = basename.match(/^(White|Black)_(\w+)_(\d+)\.png$/);
   if (!m) return null;
   const [, color, , level] = m;
-  const bg = color === 'White' ? '#3B2A1C' : '#E4D0B4';
-  const fg = color === 'White' ? '#F5E8D8' : '#2A1A0A';
-  const border = color === 'White' ? '#5D3A1A' : '#C4A27A';
+  const bg = color === "White" ? "#3B2A1C" : "#E4D0B4";
+  const fg = color === "White" ? "#F5E8D8" : "#2A1A0A";
+  const border = color === "White" ? "#5D3A1A" : "#C4A27A";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
     <rect width="120" height="120" rx="8" fill="${bg}" stroke="${border}" stroke-width="1.5"/>
     <text x="60" y="72" text-anchor="middle" font-family="Georgia,serif" font-size="42" font-weight="700" fill="${fg}" dominant-baseline="central">?</text>
@@ -466,27 +500,45 @@ function missingPieceSVG(filePath: string): string | null {
 function buildActionFromDTO(dto: any): Action | null {
   try {
     switch (dto.kind) {
-      case 'placement':
-        return { kind: 'placement', piece: dto.piece, dest: dto.dest, done: !!dto.done };
-      case 'move':
-        return { kind: 'move', origin: dto.origin, dest: dto.dest, outcome: dto.outcome ?? null, turncoat: dto.turncoat ?? [] };
-      case 'arata':
-        return { kind: 'arata', piece: dto.piece, dest: dto.dest, turncoat: dto.turncoat ?? [] };
+      case "placement":
+        return {
+          kind: "placement",
+          piece: dto.piece,
+          dest: dto.dest,
+          done: !!dto.done,
+        };
+      case "move":
+        return {
+          kind: "move",
+          origin: dto.origin,
+          dest: dto.dest,
+          outcome: dto.outcome ?? null,
+          turncoat: dto.turncoat ?? [],
+        };
+      case "arata":
+        return {
+          kind: "arata",
+          piece: dto.piece,
+          dest: dto.dest,
+          turncoat: dto.turncoat ?? [],
+        };
       default:
         return null;
     }
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 // ── Bootstrap ────────────────────────────────────────────────────────
 
 async function main() {
   try {
-    const mod = await import('../oracle/src/gan/parse.js');
+    const mod = await import("../oracle/src/gan/parse.js");
     _parseGAN = (s: string) => mod.parseGAN(s);
-    console.log('GAN parser ready');
+    console.log("GAN parser ready");
   } catch (err) {
-    console.warn('GAN parser not available:', err);
+    console.warn("GAN parser not available:", err);
   }
 
   server.listen(PORT, () => {

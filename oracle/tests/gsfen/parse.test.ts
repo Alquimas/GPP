@@ -20,7 +20,7 @@ import {
   ROW_WITH_P_AND_T,
   STACK_OF_FOUR,
   WHITE_MARSHAL_AT_5_9,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

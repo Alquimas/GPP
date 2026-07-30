@@ -20,7 +20,7 @@ import {
   FIXTURES,
   WHITE_DONE_MULTI_COUNT_HAND,
   WHITE_MARSHAL_AT_5_9,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Helpers

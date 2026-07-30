@@ -7,7 +7,7 @@ import {
   EXAMPLE4_MIXED_STACK,
   FIXTURES,
   WHITE_MARSHAL_AT_5_9,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 import type { GameState, Position, TurnState, Stack, PieceType } from '../../src/types.js';
 
 // ---------------------------------------------------------------------------

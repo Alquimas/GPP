@@ -11,7 +11,7 @@ import {
   DEPLOY_FULL_STACK_PAWNS,
   MARSHAL_ALONE_BATTLE,
   CHOICE_POS,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 import { validateState } from '../../src/gsfen/validate.js';
 
 // ---------------------------------------------------------------------------
@@ -52,14 +52,14 @@ describe('BR-GAN-VALID-001 — Phase match', () => {
   it('accepts placement in deploy phase', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState();
-    const result = validateAction('M5-9', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 
   it('rejects placement in battle phase', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = battleState();
-    const result = validateAction('M5-9', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-GAN-VALID-001');
@@ -76,7 +76,7 @@ describe('BR-GAN-VALID-001 — Phase match', () => {
       outcome: null,
       turncoat: [],
     };
-    const result = validateAction('5-9>4-9', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe('BR-GAN-VALID-001 — Phase match', () => {
       turncoat: [],
     };
     const state = deployState();
-    const result = validateAction('2-7>2-6', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-GAN-VALID-001');
@@ -100,14 +100,14 @@ describe('BR-GAN-VALID-001 — Phase match', () => {
     const state = parseGSFEN(BATTLE_MID_VARIANT);
     if (!state.ok) throw new Error('parse failed');
     const action: Action = { kind: 'arata', piece: 'P', dest: { col: 5, row: 7 }, turncoat: [] };
-    const result = validateAction('P*5-7', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(true);
   });
 
   it('rejects arata in deploy phase', () => {
     const action: Action = { kind: 'arata', piece: 'T', dest: { col: 5, row: 6 }, turncoat: [] };
     const state = deployState();
-    const result = validateAction('T*5-6', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-GAN-VALID-001');
@@ -122,7 +122,7 @@ describe('BR-GAN-VALID-002 — Placement legality', () => {
   it('accepts a valid Marshal placement in deploy zone', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState('white');
-    const result = validateAction('M5-9', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 
@@ -131,7 +131,7 @@ describe('BR-GAN-VALID-002 — Placement legality', () => {
     const state = deployState('white');
     // Remove Marshal from White's hand to simulate it's already placed
     state.hands.white.M = 0;
-    const result = validateAction('M5-9', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-DEPLOY-002');
@@ -140,7 +140,7 @@ describe('BR-GAN-VALID-002 — Placement legality', () => {
   it('rejects placement outside deploy zone', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 5 }, done: false };
     const state = deployState('white');
-    const result = validateAction('M5-5', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-DEPLOY-004');
@@ -152,7 +152,7 @@ describe('BR-GAN-VALID-002 — Placement legality', () => {
     const state = parseGSFEN(DEPLOY_FULL_STACK_PAWNS);
     if (!state.ok) throw new Error('parse failed');
     const action: Action = { kind: 'placement', piece: 'G', dest: { col: 5, row: 9 }, done: false };
-    const result = validateAction('G5-9', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-DEPLOY-005');
@@ -164,18 +164,14 @@ describe('BR-GAN-VALID-002 — Placement legality', () => {
 // ---------------------------------------------------------------------------
 
 describe('BR-GAN-VALID-005 — Turncoat legality', () => {
-  // The game-layer validators reject ALL non-empty turncoat as unimplemented
-  // (BR-STACK-006: "Turncoat validation is not yet implemented (Step 10)").
-  // These tests verify that turncoat actions are rejected at the game layer.
-
-  it('rejects arata with Captain and turncoat (Turncoat not yet implemented)', () => {
+  it('rejects Captain turncoat when the selected level is friendly', () => {
     // ARATA_ZONE_TEST: White has Captain (T) in hand, General at (5,6).
     // T*5-6+1: arata onto friendly General (size 1 < 3, in zone rows 6-9).
-    // This would be valid if turncoat were implemented, but it's not.
+    // Level 1 contains a friendly General, so it cannot be replaced.
     const state = parseGSFEN(ARATA_ZONE_TEST);
     if (!state.ok) throw new Error('parse failed');
     const action: Action = { kind: 'arata', piece: 'T', dest: { col: 5, row: 6 }, turncoat: [1] };
-    const result = validateAction('T*5-6+1', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-STACK-006');
@@ -183,19 +179,19 @@ describe('BR-GAN-VALID-005 — Turncoat legality', () => {
 
   it('rejects turncoat on non-Captain arata', () => {
     // ARATA_ZONE_TEST: White has Pawn in hand, (5,6) has friendly General.
-    // P*5-6+1: arata would be valid except turncoat is unimplemented.
+    // P*5-6+1: only a Captain may trigger Turncoat.
     const state = parseGSFEN(ARATA_ZONE_TEST);
     if (!state.ok) throw new Error('parse failed');
     const action: Action = { kind: 'arata', piece: 'P', dest: { col: 5, row: 6 }, turncoat: [1] };
-    const result = validateAction('P*5-6+1', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-STACK-006');
   });
 
-  it('rejects move with stack outcome and turncoat (Turncoat not yet implemented)', () => {
+  it('rejects move turncoat when the moving piece is not a Captain', () => {
     // CHOICE_POS: White GG (size 2) at (5,9), Black p (size 1) at (5,8).
-    // A move 5-9>5-8 with outcome=stack would be valid, but turncoat= is rejected.
+    // A General cannot trigger Turncoat.
     const state = parseGSFEN(CHOICE_POS);
     if (!state.ok) throw new Error('parse failed');
     const action: Action = {
@@ -205,7 +201,7 @@ describe('BR-GAN-VALID-005 — Turncoat legality', () => {
       outcome: 'stack',
       turncoat: [2],
     };
-    const result = validateAction('5-9>5-8=+2', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-STACK-006');
@@ -223,7 +219,7 @@ describe('BR-GAN-VALID-005 — Turncoat legality', () => {
       outcome: 'capture',
       turncoat: [1],
     };
-    const result = validateAction('5-9>5-8x+1', action, state.state);
+    const result = validateAction(action, state.state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error.rule).toBe('BR-STACK-006');
@@ -247,14 +243,14 @@ describe('BR-GAN-VALID-006 — Done legality', () => {
     state.hands.black.M = 0; // Marshal no longer in hand
     state.hands.black.G = 1; // General still in hand
     const action: Action = { kind: 'placement', piece: 'G', dest: { col: 5, row: 1 }, done: true };
-    const result = validateAction('G5-1!', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 
   it('accepts placement with done=false', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState('white');
-    const result = validateAction('M5-9', action, state);
+    const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 });
@@ -273,7 +269,7 @@ describe('parse + validate integration', () => {
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;
 
-    const validation = validateAction('M5-9', parseResult.action, state);
+    const validation = validateAction(parseResult.action, state);
     expect(validation.ok).toBe(true);
   });
 
@@ -285,7 +281,7 @@ describe('parse + validate integration', () => {
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;
 
-    const validation = validateAction('5-9>4-9', parseResult.action, state.state);
+    const validation = validateAction(parseResult.action, state.state);
     expect(validation.ok).toBe(true);
   });
 
@@ -297,7 +293,7 @@ describe('parse + validate integration', () => {
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;
 
-    const validation = validateAction('P*5-7', parseResult.action, state.state);
+    const validation = validateAction(parseResult.action, state.state);
     expect(validation.ok).toBe(true);
   });
 
@@ -309,7 +305,7 @@ describe('parse + validate integration', () => {
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;
 
-    const validation = validateAction('5-9>5-6', parseResult.action, state.state);
+    const validation = validateAction(parseResult.action, state.state);
     expect(validation.ok).toBe(false);
     if (validation.ok) return;
     expect(validation.error.rule).toBe('BR-MOVE-003');
@@ -323,7 +319,7 @@ describe('parse + validate integration', () => {
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;
 
-    const validation = validateAction('P*5-9', parseResult.action, state.state);
+    const validation = validateAction(parseResult.action, state.state);
     expect(validation.ok).toBe(false);
     if (validation.ok) return;
     expect(validation.error.rule).toBe('BR-ARATA-007');

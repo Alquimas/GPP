@@ -88,7 +88,7 @@ export function playGame(
       console.log(`${startingGsfen} | ${ganAction}`);
     }
 
-    let applyResult: { state: any; result: any };
+    let applyResult;
     try {
       applyResult = game.applyAction(action);
     } catch (e) {
@@ -100,6 +100,14 @@ export function playGame(
       crashes++;
       resultStr = 'crash:applyAction';
       break;
+    }
+
+    if (!applyResult.ok) {
+      logger.appendLine(
+        `${startingGsfen} | ${ganAction} | error:${applyResult.error.rule}:${applyResult.error.message}`,
+      );
+      errors++;
+      continue;
     }
 
     const resultingGsfen = game.toGsfen();
@@ -115,12 +123,6 @@ export function playGame(
       logger.appendLine(`${resultingGsfen} | ${resultStr}`);
       totalMoves++;
       break;
-    }
-
-    if (resultingGsfen === startingGsfen) {
-      logger.appendLine(`${startingGsfen} | ${ganAction} | error:validation-failure`);
-      errors++;
-      continue;
     }
 
     logger.append({ gsfen: startingGsfen, action: ganAction });
@@ -146,7 +148,9 @@ export function playGame(
   logger.summary(runResult);
 
   if (config.verbose) {
-    console.log(`Game ${gameIndex}: ${totalMoves} moves, result: ${resultStr}, duration: ${duration}ms`);
+    console.log(
+      `Game ${gameIndex}: ${totalMoves} moves, result: ${resultStr}, duration: ${duration}ms`,
+    );
   }
 
   return runResult;

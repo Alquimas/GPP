@@ -51,22 +51,6 @@ function isPieceType(ch: string): ch is PieceType {
   return VALID_PIECE_SET.has(ch);
 }
 
-/** Check if a character is an uppercase piece letter — also narrows to PieceType. */
-function isWhitePieceChar(ch: string): ch is PieceType {
-  return ch >= 'A' && ch <= 'Z' && VALID_PIECE_SET.has(ch);
-}
-
-/** Check if a character is a lowercase piece letter. */
-function isBlackPieceChar(ch: string): boolean {
-  if (ch < 'a' || ch > 'z') return false;
-  return VALID_PIECE_SET.has(ch.toUpperCase());
-}
-
-/** Convert a lowercase piece letter to a PieceType. Caller must validate via isBlackPieceChar first. */
-function toUpperPieceType(ch: string): PieceType {
-  return ch.toUpperCase() as PieceType;
-}
-
 /** Check if a character is a valid count digit (2–4). */
 function isCountDigit(ch: string): boolean {
   return ch >= '2' && ch <= '4';
@@ -308,17 +292,15 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
  *   - BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR — no stray characters
  */
 function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }> {
-  // BR-GSFEN-CANON-HANDS-EMPTY-MARKER: `-` when both empty
   if (handsStr === '-') {
     return { ok: true, value: { white: EMPTY_HAND, black: EMPTY_HAND } };
   }
 
-  // Reject empty string (should use `-`)
   if (handsStr === '') {
     return {
       ok: false,
       error: new GameError(
-        'Hands field is empty; use "-" for both empty hands (BR-GSFEN-CANON-HANDS-EMPTY-MARKER)',
+        'Hands field is empty; use "-" when both hands are empty',
         'BR-GSFEN-CANON-HANDS-EMPTY-MARKER',
       ),
     };
@@ -326,172 +308,76 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
 
   const white: Hand = { ...EMPTY_HAND };
   const black: Hand = { ...EMPTY_HAND };
-  const len = handsStr.length;
   let i = 0;
+  let blackSectionStarted = false;
+  const lastLetter: Record<Player, string> = { white: '', black: '' };
 
-  // --- White section (uppercase letters, alphabetical) ---
-  let lastWhiteLetter = '';
-  while (i < len) {
-    const ch = handsStr[i];
-
-    if (isWhitePieceChar(ch)) {
-      // BR-GSFEN-CANON-HANDS-DUPLICATE: each letter at most once (check before alphabetical)
-      if (white[ch] > 0) {
+  while (i < handsStr.length) {
+    let count = 1;
+    const countChar = handsStr[i];
+    if (/^\d$/.test(countChar)) {
+      if (!isCountDigit(countChar) || i + 1 >= handsStr.length) {
         return {
           ok: false,
           error: new GameError(
-            `Hands: duplicate white piece letter "${ch}" (BR-GSFEN-CANON-HANDS-DUPLICATE) — each letter appears at most once`,
-            'BR-GSFEN-CANON-HANDS-DUPLICATE',
-          ),
-        };
-      }
-      // BR-GSFEN-CANON-HANDS-ALPHABETICAL: letters in alphabetical order
-      if (lastWhiteLetter !== '' && ch <= lastWhiteLetter) {
-        return {
-          ok: false,
-          error: new GameError(
-            `Hands: white pieces not in alphabetical order ("${ch}" after "${lastWhiteLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL) — alphabetical order is A C E F G J L M N P S T U Y`,
-            'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
-          ),
-        };
-      }
-      white[ch] = 1;
-      lastWhiteLetter = ch;
-      i++;
-    } else if (isCountDigit(ch)) {
-      // BR-GSFEN-CANON-HANDS-COUNT-FORMAT: count must be followed by a piece letter
-      if (i + 1 >= len) {
-        return {
-          ok: false,
-          error: new GameError(
-            'Hands: expected piece letter after count at end of string (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)',
+            `Invalid hand count at position ${i}; counts must be 2-4 and precede a piece`,
             'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
           ),
         };
       }
-      const next = handsStr[i + 1];
-      if (isWhitePieceChar(next)) {
-        const count = parseInt(ch, 10);
-        // BR-GSFEN-CANON-HANDS-DUPLICATE (check before alphabetical)
-        if (white[next] > 0) {
-          return {
-            ok: false,
-            error: new GameError(
-              `Hands: duplicate white piece letter "${next}" (BR-GSFEN-CANON-HANDS-DUPLICATE)`,
-              'BR-GSFEN-CANON-HANDS-DUPLICATE',
-            ),
-          };
-        }
-        // BR-GSFEN-CANON-HANDS-ALPHABETICAL
-        if (lastWhiteLetter !== '' && next <= lastWhiteLetter) {
-          return {
-            ok: false,
-            error: new GameError(
-              `Hands: white pieces not in alphabetical order ("${next}" after "${lastWhiteLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL)`,
-              'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
-            ),
-          };
-        }
-        white[next] = count;
-        lastWhiteLetter = next;
-        i += 2;
-      } else {
-        // Next char is not uppercase → end of white section
-        break;
-      }
-    } else {
-      // Not uppercase or digit → end of white section
-      break;
+      count = Number(countChar);
+      i++;
     }
-  }
 
-  // --- Black section (lowercase letters, alphabetical) ---
-  let lastBlackLetter = '';
-  while (i < len) {
-    const ch = handsStr[i];
-
-    if (isBlackPieceChar(ch)) {
-      const upper = toUpperPieceType(ch);
-      // BR-GSFEN-CANON-HANDS-DUPLICATE (check before alphabetical)
-      if (black[upper] > 0) {
-        return {
-          ok: false,
-          error: new GameError(
-            `Hands: black duplicate piece letter "${ch}" (BR-GSFEN-CANON-HANDS-DUPLICATE) — each letter appears at most once`,
-            'BR-GSFEN-CANON-HANDS-DUPLICATE',
-          ),
-        };
-      }
-      // BR-GSFEN-CANON-HANDS-ALPHABETICAL
-      if (lastBlackLetter !== '' && ch <= lastBlackLetter) {
-        return {
-          ok: false,
-          error: new GameError(
-            `Hands: black pieces not in alphabetical order ("${ch}" after "${lastBlackLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL) — alphabetical order is a c e f g j l m n p s t u y`,
-            'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
-          ),
-        };
-      }
-      black[upper] = 1;
-      lastBlackLetter = ch;
-      i++;
-    } else if (isCountDigit(ch)) {
-      // BR-GSFEN-CANON-HANDS-COUNT-FORMAT
-      if (i + 1 >= len) {
-        return {
-          ok: false,
-          error: new GameError(
-            'Hands: expected piece letter after count at end of string (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)',
-            'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
-          ),
-        };
-      }
-      const next = handsStr[i + 1];
-      if (isBlackPieceChar(next)) {
-        const count = parseInt(ch, 10);
-        const upper = toUpperPieceType(next);
-        // BR-GSFEN-CANON-HANDS-DUPLICATE (check before alphabetical)
-        if (black[upper] > 0) {
-          return {
-            ok: false,
-            error: new GameError(
-              `Hands: duplicate black piece letter "${next}" (BR-GSFEN-CANON-HANDS-DUPLICATE)`,
-              'BR-GSFEN-CANON-HANDS-DUPLICATE',
-            ),
-          };
-        }
-        // BR-GSFEN-CANON-HANDS-ALPHABETICAL
-        if (lastBlackLetter !== '' && next <= lastBlackLetter) {
-          return {
-            ok: false,
-            error: new GameError(
-              `Hands: black pieces not in alphabetical order ("${next}" after "${lastBlackLetter}") (BR-GSFEN-CANON-HANDS-ALPHABETICAL)`,
-              'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
-            ),
-          };
-        }
-        black[upper] = count;
-        lastBlackLetter = next;
-        i += 2;
-      } else {
-        return {
-          ok: false,
-          error: new GameError(
-            `Hands: expected lowercase piece letter after count, got "${next}" (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)`,
-            'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
-          ),
-        };
-      }
-    } else {
-      // BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR
+    const letter = handsStr[i];
+    const upper = letter?.toUpperCase() ?? '';
+    if (!isPieceType(upper)) {
       return {
         ok: false,
         error: new GameError(
-          `Hands: unexpected character "${ch}" at position ${i} (BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR)`,
+          `Unexpected hand character "${letter ?? ''}" at position ${i}`,
           'BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR',
         ),
       };
     }
+
+    const player: Player = letter === upper ? 'white' : 'black';
+    if (player === 'black') blackSectionStarted = true;
+    if (player === 'white' && blackSectionStarted) {
+      return {
+        ok: false,
+        error: new GameError(
+          'White hand pieces must appear before Black hand pieces',
+          'BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR',
+        ),
+      };
+    }
+
+    const type = upper;
+    const hand = player === 'white' ? white : black;
+    if (hand[type] > 0) {
+      return {
+        ok: false,
+        error: new GameError(
+          `Duplicate ${player} hand piece "${letter}"`,
+          'BR-GSFEN-CANON-HANDS-DUPLICATE',
+        ),
+      };
+    }
+
+    if (lastLetter[player] !== '' && upper <= lastLetter[player]) {
+      return {
+        ok: false,
+        error: new GameError(
+          `${player} hand pieces are not in alphabetical order`,
+          'BR-GSFEN-CANON-HANDS-ALPHABETICAL',
+        ),
+      };
+    }
+
+    hand[type] = count;
+    lastLetter[player] = upper;
+    i++;
   }
 
   return { ok: true, value: { white, black } };

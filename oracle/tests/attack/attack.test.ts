@@ -21,7 +21,7 @@ import {
   BOTH_MARSHALS_DEPLOY_CTR2,
   BOTH_MARSHALS_PLACED,
   DENSE_ENGAGEMENT,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */

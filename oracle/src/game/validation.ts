@@ -36,8 +36,8 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
  *   - Terminal-condition evaluation (Checkmate, Stalemate, Repetition)
  *   - History recording for Repetition detection
  *
- * Consumers (Game.applyAction in Step 12) can use `speculativeState` directly
- * as the next GameState after a successful Play.
+ * The pure engine uses `speculativeState` directly as the next GameState
+ * after a successful Play.
  */
 export type PlayValidation =
   { ok: true; speculativeState: GameState } | { ok: false; error: GameError };

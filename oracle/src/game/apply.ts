@@ -1,16 +1,14 @@
 /**
  * Action application functions for the Gungi game engine.
  *
- * Step 9  (Deploy Phase): applyPlacement — full placement with turn management.
- * Step 10 (Battle Phase): applyMove, applyArata — full state transitions with
- *   Turncoat swaps, active player flip, and turn counter increment.
+ * These functions assume their Action has already been validated.
+ * They are deliberately unaware of history and terminal conditions.
  *
  * @module
  */
 
 import type {
   Action,
-  GameResult,
   GameState,
   Hand,
   Piece,
@@ -21,18 +19,9 @@ import type {
 } from '../types.js';
 import { createStack, getStack, setStack, topPiece } from '../board/board.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
-import { evaluateExposure } from './terminal.js';
 
-/* ------------------------------------------------------------------ */
-/*  ApplyResult — return type for state-mutating apply functions       */
-/* ------------------------------------------------------------------ */
-
-/**
- * The result of applying an action to a GameState.
- * - `state`: the resulting GameState after the action.
- * - `result`: the GameResult (ongoing, or terminal if the action ended the game).
- */
-export type ApplyResult = { state: GameState; result: GameResult };
+/** Placement transition plus a signal that both players are Done. */
+export type PlacementResult = { state: GameState; deployEnded: boolean };
 
 /* ------------------------------------------------------------------ */
 /*  Type aliases (using Extract for clarity over intersection types)   */
@@ -113,18 +102,18 @@ function isHandEmpty(hand: Hand): boolean {
  * 3. Advance turn counter
  * 4. Handle Done declaration (BR-DEPLOY-007/008):
  *    - If current player declares Done, set their done flag
- *    - If both players Done → end Deploy Phase → evaluate Exposure (BR-DEPLOY-012)
+ *    - If both players Done → signal the Deploy Phase boundary
  *    - Otherwise, swap active player (BR-DEPLOY-002)
  * 5. If a player's hand becomes empty after placement, they are automatically Done
  *
- * Marshal-first enforcement is handled by validatePlacement (Step 8) and
+ * Marshal-first enforcement is handled by validatePlacement and
  * is not re-checked here.
  *
  * @param state - The current GameState (must be Deploy Phase).
  * @param action - A validated Placement action.
- * @returns ApplyResult with the new state and game result.
+ * @returns The new state and whether both players are Done.
  */
-export function applyPlacement(state: GameState, action: PlacementAction): ApplyResult {
+export function applyPlacement(state: GameState, action: PlacementAction): PlacementResult {
   const newState: GameState = cloneState(state);
   const { piece, dest, done: declaredDone } = action;
   const player = newState.turn.activePlayer;
@@ -138,7 +127,7 @@ export function applyPlacement(state: GameState, action: PlacementAction): Apply
   if (targetStack === null) {
     newState.position = setStack(newState.position, dest, createStack([pieceObj]));
   } else {
-    // Friendly stack (already validated in Step 8), append to top
+    // Friendly stack (already validated), append to top
     const pieces = [...targetStack, pieceObj];
     newState.position = setStack(newState.position, dest, createStack(pieces));
   }
@@ -152,19 +141,9 @@ export function applyPlacement(state: GameState, action: PlacementAction): Apply
   if (playerDone) {
     // Current player is done — check if opponent is already done
     if (newState.turn.done !== null) {
-      // Opponent already done → both done → Deploy Phase ends
-      const result = evaluateExposure(newState.position);
-      if (result.kind === 'ongoing') {
-        // No exposure — transition to Battle Phase (BR-DEPLOY-010)
-        newState.turn = {
-          phase: 'battle',
-          activePlayer: 'white',
-          done: null,
-          counter: 1,
-        };
-      }
-      // If exposure triggered, state stays as deploy-final snapshot; result carries the terminal
-      return { state: newState, result };
+      // Opponent already done → both done. The engine evaluates Exposure
+      // before deciding whether the Battle Phase starts.
+      return { state: newState, deployEnded: true };
     }
 
     // Opponent not done yet — mark current player done, give turn to opponent
@@ -181,7 +160,7 @@ export function applyPlacement(state: GameState, action: PlacementAction): Apply
     }
   }
 
-  return { state: newState, result: { kind: 'ongoing' as const } };
+  return { state: newState, deployEnded: false };
 }
 
 /* ------------------------------------------------------------------ */
@@ -249,20 +228,22 @@ function applyTurncoatSwaps(
  * 5. Increment turn counter.
  *
  * Terminal-condition evaluation and history recording are handled by
- * the Game engine (Step 11–12), not here.
+ * the pure game engine, not here.
  *
  * @param state  - The current GameState (pre-validated).
  * @param action - The validated Move action.
- * @returns ApplyResult with the new state and result (always 'ongoing').
+ * @returns The new GameState.
  */
-export function applyMove(state: GameState, action: MoveAction): ApplyResult {
+export function applyMove(state: GameState, action: MoveAction): GameState {
   const newState = cloneState(state);
   const { origin, dest, outcome } = action;
   const player = newState.turn.activePlayer;
 
   // 1. Detach top piece from origin
   const originStack = getStack(newState.position, origin);
-  if (!originStack) return { state: newState, result: { kind: 'ongoing' } };
+  if (!originStack) {
+    throw new Error('applyMove requires a validated action with an occupied origin');
+  }
   const { newStack: updatedOrigin, piece: movingPiece } = detachTop(originStack);
   newState.position = setStack(newState.position, origin, updatedOrigin);
 
@@ -313,7 +294,7 @@ export function applyMove(state: GameState, action: MoveAction): ApplyResult {
   // 5. Increment turn counter
   newState.turn.counter++;
 
-  return { state: newState, result: { kind: 'ongoing' as const } };
+  return newState;
 }
 
 /* ------------------------------------------------------------------ */
@@ -332,9 +313,9 @@ export function applyMove(state: GameState, action: MoveAction): ApplyResult {
  *
  * @param state  - The current GameState (pre-validated).
  * @param action - The validated Arata action.
- * @returns ApplyResult with the new state and result (always 'ongoing').
+ * @returns The new GameState.
  */
-export function applyArata(state: GameState, action: ArataAction): ApplyResult {
+export function applyArata(state: GameState, action: ArataAction): GameState {
   const newState = cloneState(state);
   const { piece, dest } = action;
   const player = newState.turn.activePlayer;
@@ -375,5 +356,5 @@ export function applyArata(state: GameState, action: ArataAction): ApplyResult {
   // 5. Increment turn counter
   newState.turn.counter++;
 
-  return { state: newState, result: { kind: 'ongoing' as const } };
+  return newState;
 }

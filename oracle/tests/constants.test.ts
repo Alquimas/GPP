@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PIECE_NAMES, INITIAL_COUNTS, PIECE_MOVEMENT, START_GSFEN } from '../src/constants.js';
 import type { PieceType } from '../src/types.js';
-import { STARTPOS_EXPANDED } from '../src/gsfen/fixtures.js';
+import { STARTPOS_EXPANDED } from './support/fixtures.js';
 
 const ALL_TYPES: PieceType[] = [
   'A',

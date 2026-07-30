@@ -13,6 +13,7 @@ import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { validatePlacement } from '../../src/game/deploy.js';
 import { applyPlacement } from '../../src/game/apply.js';
+import { step } from '../../src/game/engine.js';
 import { getStack, topPiece } from '../../src/board/board.js';
 import {
   BOTH_MARSHALS_BATTLE_NOHANDS,
@@ -25,7 +26,7 @@ import {
   DEPLOY_PHASE_CTR3,
   MP_STACK_DEPLOY_CTR3,
   STARTPOS_EXPANDED,
-} from '../../src/gsfen/fixtures.js';
+} from '../support/fixtures.js';
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -54,6 +55,15 @@ function placement(
     piece,
     dest: { col: dc as Square['col'], row: dr as Square['row'] },
     done,
+  };
+}
+
+function applyThroughEngine(state: GameState, action: Extract<Action, { kind: 'placement' }>) {
+  const result = step({ current: state, history: [], result: { kind: 'ongoing' } }, action);
+  if (!result.ok) throw result.error;
+  return {
+    state: result.state.current,
+    result: result.state.result,
   };
 }
 
@@ -203,7 +213,7 @@ describe('applyPlacement', () => {
     // Turn: passed to Black
     expect(r.state.turn.activePlayer).toBe('black');
     expect(r.state.turn.counter).toBe(2);
-    expect(r.result.kind).toBe('ongoing');
+    expect(r.deployEnded).toBe(false);
   });
 
   it('alternates turns between players', () => {
@@ -284,19 +294,19 @@ describe('applyPlacement', () => {
     expect(state.turn.activePlayer).toBe('black');
 
     // Black places Pawn at (5,2), declares Done → both done
-    r = applyPlacement(state, placement('P', 5, 2, true));
+    const final = applyThroughEngine(state, placement('P', 5, 2, true));
 
     // No exposure expected (Marshals safely away from enemy pieces)
-    expect(r.result.kind).toBe('ongoing');
-    expect(r.state.turn.phase).toBe('battle');
-    expect(r.state.turn.activePlayer).toBe('white');
-    expect(r.state.turn.counter).toBe(1);
-    expect(r.state.turn.done).toBeNull();
+    expect(final.result.kind).toBe('ongoing');
+    expect(final.state.turn.phase).toBe('battle');
+    expect(final.state.turn.activePlayer).toBe('white');
+    expect(final.state.turn.counter).toBe(1);
+    expect(final.state.turn.done).toBeNull();
 
     // Board should reflect final deploy positions
-    const mPos = getStack(r.state.position, { col: 5, row: 9 });
+    const mPos = getStack(final.state.position, { col: 5, row: 9 });
     expect(mPos).not.toBeNull(); // Marshal+Pawn at White's row
-    const bpPos = getStack(r.state.position, { col: 5, row: 2 });
+    const bpPos = getStack(final.state.position, { col: 5, row: 2 });
     expect(bpPos).not.toBeNull(); // Black Pawn at (5,2)
     expect(topPiece(bpPos!).type).toBe('P');
     expect(topPiece(bpPos!).owner).toBe('black');
@@ -325,7 +335,7 @@ describe('applyPlacement', () => {
     expect(topPiece(stack!).owner).toBe('white');
 
     // Game continues (Black still needs to declare Done)
-    expect(r.result.kind).toBe('ongoing');
+    expect(r.deployEnded).toBe(false);
   });
 
   it('auto-Done with opponent already Done triggers Exposure (BR-DEPLOY-009 + BR-DEPLOY-012)', () => {
@@ -342,7 +352,7 @@ describe('applyPlacement', () => {
     expect(state.turn.done).toBe('black'); // Black already Done
 
     // Place the last Pawn in White's deploy zone (any column besides 1)
-    const r = applyPlacement(state, placement('P', 5, 8));
+    const r = applyThroughEngine(state, placement('P', 5, 8));
 
     // Hand should now be empty
     expect(r.state.hands.white.P).toBe(0);
@@ -374,7 +384,7 @@ describe('applyPlacement', () => {
     expect(state.turn.done).toBe('white'); // White already Done
 
     // Black places a piece at column 2 (avoids cols 1 and 5, within Black's deploy zone)
-    const r = applyPlacement(state, placement('P', 2, 2, true));
+    const r = applyThroughEngine(state, placement('P', 2, 2, true));
 
     // Black's Pawn should be at (2,2)
     const stack = getStack(r.state.position, { col: 2, row: 2 });
@@ -401,7 +411,7 @@ describe('applyPlacement', () => {
     expect(state.hands.black.P).toBe(1); // Black's last piece
 
     // Place at (5,3) — within Black's deploy zone, not on diagonal path
-    const r = applyPlacement(state, placement('P', 5, 3));
+    const r = applyThroughEngine(state, placement('P', 5, 3));
 
     // Black's Pawn should be at (5,3)
     const stack = getStack(r.state.position, { col: 5, row: 3 });
@@ -427,7 +437,7 @@ describe('applyPlacement', () => {
     expect(state.hands.black.P).toBe(1);
 
     // Place at (3,3) — on the diagonal path, blocks the Lieutenant
-    const r = applyPlacement(state, placement('P', 3, 3));
+    const r = applyThroughEngine(state, placement('P', 3, 3));
 
     // Black's Pawn at (3,3)
     const stack = getStack(r.state.position, { col: 3, row: 3 });
@@ -455,7 +465,7 @@ describe('applyPlacement', () => {
     expect(state.hands.black.P).toBe(1);
 
     // Place at (7,3) — on Black Lieutenant's FL path, blocks the attack
-    const r = applyPlacement(state, placement('P', 7, 3));
+    const r = applyThroughEngine(state, placement('P', 7, 3));
 
     // Black's Pawn at (7,3)
     const stack = getStack(r.state.position, { col: 7, row: 3 });
