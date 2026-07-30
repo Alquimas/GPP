@@ -165,11 +165,7 @@ function main(): void {
     const logFilePath = resolve(logDir, logFileName);
     const logger = new Logger(logFilePath);
 
-    const gameConfig: FuzzerConfig = { ...config, seed: gameSeed, gsfen: i === 0 ? config.gsfen : 'startpos' };
-
-    if (i > 0) {
-      gameConfig.gsfen = 'startpos';
-    }
+    const gameConfig: FuzzerConfig = { ...config, seed: gameSeed };
 
     const result: RunResult = playGame(gameConfig, i, logger, gameRng);
 
