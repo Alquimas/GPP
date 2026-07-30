@@ -17,6 +17,8 @@ const PIECE_LABELS = {
 };
 
 const ALL_PIECE_TYPES = ['A','C','E','F','G','J','L','M','N','P','S','T','U','Y'];
+const WHITE_HAND_ORDER = ['M','S','G','Y','L','F','J','C','T','A','E','U','N','P'];
+const BLACK_HAND_ORDER = ['S','M','Y','G','F','L','C','J','A','T','U','E','P','N'];
 
 /* ── State ──────────────────────────────────────────────────────────── */
 
@@ -235,17 +237,15 @@ function renderBoard() {
   let html = '';
 
   // Column headers (col 9 → col 1 left-to-right)
-  html += '<div class="board-label corner"></div>';
   for (let c = 9; c >= 1; c--) {
     html += `<div class="board-label">${c}</div>`;
   }
+  html += '<div class="board-label corner"></div>';
 
   // Rows (row 1 = top)
   for (let r = 0; r < 9; r++) {
     const rowNum = r + 1;
     const rowData = s.board[r];
-
-    html += `<div class="board-label">${rowNum}</div>`;
 
     for (let d = 0; d < 9; d++) {
       const cell = rowData[d];
@@ -324,6 +324,7 @@ function renderBoard() {
 
       html += '</div>';
     }
+    html += `<div class="board-label">${rowNum}</div>`;
   }
 
   boardEl.innerHTML = html;
@@ -614,10 +615,13 @@ function renderHandZone(color) {
   const isActive = color === activePlayer;
   const colorLabel = color === 'white' ? 'White' : 'Black';
 
+  const order = color === 'white' ? WHITE_HAND_ORDER : BLACK_HAND_ORDER;
+
   let html = `<div class="hand-title ${color}"><span class="hand-dot"></span> ${colorLabel}</div>`;
+  html += `<div class="hand-grid">`;
 
   let hasPieces = false;
-  for (const pt of ALL_PIECE_TYPES) {
+  for (const pt of order) {
     const count = hand[pt] || 0;
     if (count === 0) continue;
     hasPieces = true;
@@ -635,6 +639,8 @@ function renderHandZone(color) {
       <span class="hp-count">×${count}</span>
     </div>`;
   }
+
+  html += `</div>`;
 
   if (!hasPieces) {
     html += `<div class="hand-empty">No pieces in hand</div>`;
@@ -759,7 +765,7 @@ function renderMoveList() {
     for (let i = 0; i < history.length; i++) {
       const entry = history[i];
       const isCurrent = i === currentIdx;
-      const actionLabel = entry.action || '(initial)';
+      const actionLabel = entry.actionGAN || (i === 0 ? 'Start' : '—');
 
       const isPlacement = entry.action && entry.action.startsWith('Place');
       const isDeployAction = isPlacement || entry.action === null;
