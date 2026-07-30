@@ -26,10 +26,10 @@
   --border-subtle: #4a2e14;
   --cell-size: 80px;
   --label-size: 32px;
-  --hand-col-width: 230px;
-  --right-col-width: 330px;
+  --hand-col-width: 260px;
+  --right-col-width: 430px;
   --info-height: 52px;
-  --badge-size: 24px;
+  --badge-size: 26px;
   --radius: 6px;
   --radius-lg: 10px;
   --transition: 0.15s ease;
@@ -220,8 +220,8 @@ body {
 }
 
 .hand-piece img {
-  width: 60px;
-  height: 60px;
+  width: 78px;
+  height: 78px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -323,8 +323,8 @@ body {
 
 .piece-wrap {
   position: relative;
-  width: 78px;
-  height: 78px;
+  width: 80px;
+  height: 80px;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -332,8 +332,8 @@ body {
 }
 
 .piece-wrap img {
-  max-width: 76px;
-  max-height: 70px;
+  max-width: 78px;
+  max-height: 74px;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -407,8 +407,8 @@ body {
 
 #right-column .hand-zone {
   width: auto;
-  min-width: 120px;
-  max-width: 170px;
+  min-width: 160px;
+  max-width: 240px;
 }
 
 /* ── Move List ─────────────────────────────────────────────────────── */
@@ -446,58 +446,92 @@ body {
   padding: 4px 0;
 }
 
-.ml-entry {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  font-size: 12px;
+/* ── Two-column turn layout ─────────────────────────────────────────── */
+
+.ml-turn {
+  display: grid;
+  grid-template-columns: 24px 1fr 1fr;
+  gap: 2px;
+  padding: 2px 8px;
+  font-size: 11px;
   cursor: pointer;
   transition: background var(--transition);
   border-left: 3px solid transparent;
+  align-items: center;
 }
 
-.ml-entry:hover {
+.ml-turn:hover {
   background: rgba(255,255,255,0.04);
 }
 
-.ml-entry.current {
+.ml-turn.current {
   background: rgba(90, 158, 111, 0.15);
   border-left-color: var(--bg-cell-selected);
 }
 
-.ml-entry .ml-num {
+.ml-tnum {
   color: var(--color-accent);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  min-width: 28px;
   text-align: right;
-  font-size: 11px;
+  font-size: 10px;
+  font-family: monospace;
 }
 
-.ml-entry .ml-label {
-  flex: 1;
-  color: var(--color-text);
+.ml-move {
+  padding: 2px 6px;
+  border-radius: 3px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: monospace;
+  font-size: 11px;
 }
 
-.ml-entry .ml-turn-badge {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  text-transform: uppercase;
+.ml-move:first-of-type {
+  color: var(--color-white-piece);
 }
 
-.ml-entry .ml-turn-badge.white { background: var(--color-white-piece); color: var(--color-white-text); }
-.ml-entry .ml-turn-badge.black { background: #555; color: var(--color-black-text); }
+.ml-move:last-of-type {
+  color: #bbb;
+}
 
-.ml-entry .ml-deploy-tag {
-  font-size: 9px;
+.ml-move.ml-deploy {
   color: var(--color-text-dim);
   font-style: italic;
+  font-size: 10px;
+}
+
+.ml-move.ml-cur {
+  background: rgba(90, 158, 111, 0.25);
+  border-radius: 3px;
+}
+
+.ml-move[data-hi]:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Phase separator ────────────────────────────────────────────────── */
+
+.ml-sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-accent);
+  opacity: 0.7;
+}
+
+.ml-sep::before,
+.ml-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
 }
 
 .ctrl-btn {
@@ -875,32 +909,32 @@ body {
   :root {
     --cell-size: 64px;
     --label-size: 26px;
-    --hand-col-width: 190px;
-    --right-col-width: 280px;
-    --info-height: 44px;
+    --hand-col-width: 210px;
+    --right-col-width: 340px;
+    --info-height: 46px;
   }
-  .piece-wrap { width: 62px; height: 62px; }
-  .piece-wrap img { max-width: 60px; max-height: 54px; }
-  .hand-piece img { width: 48px; height: 48px; }
+  .piece-wrap { width: 64px; height: 64px; }
+  .piece-wrap img { max-width: 62px; max-height: 58px; }
+  .hand-piece img { width: 60px; height: 60px; }
 }
 
 @media (max-height: 600px) {
   :root {
     --cell-size: 52px;
     --label-size: 22px;
-    --hand-col-width: 160px;
-    --right-col-width: 240px;
-    --info-height: 38px;
+    --hand-col-width: 180px;
+    --right-col-width: 280px;
+    --info-height: 40px;
   }
-  .piece-wrap { width: 50px; height: 50px; }
-  .piece-wrap img { max-width: 48px; max-height: 44px; }
-  .hand-piece img { width: 40px; height: 40px; }
+  .piece-wrap { width: 52px; height: 52px; }
+  .piece-wrap img { max-width: 50px; max-height: 46px; }
+  .hand-piece img { width: 52px; height: 52px; }
 }
 
 @media (max-width: 900px) {
   :root {
-    --hand-col-width: 120px;
-    --right-col-width: 220px;
+    --hand-col-width: 160px;
+    --right-col-width: 290px;
   }
 }
 

@@ -373,6 +373,27 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/apply-gan" && method === "POST") {
+      const body = await parseBody(req);
+      if (!body?.gan) {
+        json(res, 400, { error: "Missing gan" });
+        return;
+      }
+      const parsed = _parseGAN?.(body.gan);
+      if (!parsed?.ok) {
+        json(res, 400, { error: "Invalid GAN: " + (parsed?.error ?? "parse failed") });
+        return;
+      }
+      const action = parsed.action;
+      const result = doAction(action);
+      if (!result.ok) {
+        json(res, 422, { error: result.error, state: buildStateResponse() });
+        return;
+      }
+      json(res, 200, buildStateResponse());
+      return;
+    }
+
     if (url.pathname === "/api/undo" && method === "POST") {
       if (!doUndo()) {
         json(res, 422, { error: "Nothing to undo" });

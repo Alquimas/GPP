@@ -5,7 +5,7 @@
  * Board rendering, hand zones, move list, controls, and game flow.
  */
 
-import { fetchState as apiFetchState, sendAction, undo as apiUndo, gotoHistory, resetGame as apiReset } from './api.js';
+import { fetchState as apiFetchState, sendAction, undo as apiUndo, gotoHistory, resetGame as apiReset, applyGAN } from './api.js';
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 
@@ -29,6 +29,8 @@ let pendingAction = null;          // action awaiting confirmation (battle phase
 let deployDonePending = false;     // next placement in deploy includes done:true
 let currentViewIndex = -1;         // history index currently viewing
 let statusTimer = null;
+let presenting = false;            // presentation mode active
+let presentAbort = null;           // abort function for presentation
 
 /* ── DOM refs ───────────────────────────────────────────────────────── */
 
@@ -215,8 +217,8 @@ function renderBoard() {
   const legalArataDests = new Set();
   const legalPlacementDests = new Set();
 
-  if (pendingAction) {
-    // Show pending state — no highlights
+  if (pendingAction || presenting) {
+    // Show pending/presenting state — no highlights
   } else if (selectedCell) {
     for (const a of legalActions) {
       if (a.kind === 'move' && a.origin.col === selectedCell.col && a.origin.row === selectedCell.row) {
@@ -340,7 +342,7 @@ function renderBoard() {
 
 async function onCellClick(el) {
   if (!serverState || serverState.isTerminal) return;
-  if (pendingAction) return; // must confirm or undo first
+  if (pendingAction || presenting) return; // must confirm/undo first, or presentation running
 
   const col = parseInt(el.dataset.col);
   const row = parseInt(el.dataset.row);
@@ -649,7 +651,7 @@ function renderHandZone(color) {
   el.innerHTML = html;
 
   // Click handlers
-  if (!isTerminal && !pendingAction) {
+  if (!isTerminal && !pendingAction && !presenting) {
     el.querySelectorAll('.hand-piece:not(.disabled)').forEach(pieceEl => {
       pieceEl.addEventListener('click', () => {
         onHandPieceClick(pieceEl.dataset.color, pieceEl.dataset.type);
@@ -721,11 +723,67 @@ function onCancelUndo() {
   setStatus('Cancelled');
 }
 
+/* ── Presentation Mode ───────────────────────────────────────────────── */
+
+async function startPresentation() {
+  const input = document.getElementById('present-input');
+  const ganString = input?.value?.trim();
+  if (!ganString) { setStatus('Enter GAN actions separated by |', true); return; }
+
+  const gans = ganString.split('|').map(s => s.trim()).filter(s => s.length > 0);
+  if (gans.length === 0) { setStatus('No GAN actions found', true); return; }
+
+  presenting = true;
+  selectedCell = null;
+  selectedHandPiece = null;
+  pendingAction = null;
+  renderAll();
+  setStatus(`Presenting ${gans.length} actions…`);
+
+  let aborted = false;
+  presentAbort = () => { aborted = true; };
+
+  for (let i = 0; i < gans.length; i++) {
+    if (aborted || serverState?.isTerminal) break;
+
+    setStatus(`Presenting ${i + 1}/${gans.length}: ${gans[i]}`);
+
+    const result = await applyGAN(gans[i]);
+    if (result.error) {
+      setStatus(`Presentation stopped at action ${i + 1}: ${result.error}`, true);
+      break;
+    }
+
+    serverState = result;
+    currentViewIndex = serverState.currentIndex;
+    renderAll();
+
+    if (serverState.isTerminal) {
+      setStatus('Game ended — presentation complete');
+      break;
+    }
+
+    // Wait 3 seconds between actions (skip wait after last)
+    if (i < gans.length - 1 && !aborted) {
+      await new Promise(r => { const t = setTimeout(r, 1000); presentAbort = () => { clearTimeout(t); aborted = true; r(); }; });
+    }
+  }
+
+  presenting = false;
+  presentAbort = null;
+  if (!aborted && !serverState?.isTerminal) setStatus('Presentation complete');
+  renderAll();
+}
+
+function stopPresentation() {
+  if (presentAbort) presentAbort();
+}
+
 /* ── Done button (deploy phase) ──────────────────────────────────────── */
 
 function onDeployDone() {
   if (!serverState || serverState.phase !== 'deploy' || serverState.isTerminal) return;
-  if (pendingAction) return;
+  if (pendingAction || presenting) return;
 
   // Check if this player has already declared done
   if (serverState.done === serverState.activePlayer) return;
@@ -754,35 +812,74 @@ function renderMoveList() {
 
   let html = `<div class="ml-header">
     <span>Moves</span>
-    <span style="font-weight:400;font-size:10px;">${history.length} plies</span>
   </div>`;
 
   html += '<div class="ml-body">';
 
-  if (history.length === 0) {
+  if (history.length <= 1) {
     html += '<div style="color:#666;font-style:italic;padding:12px;text-align:center;font-size:12px;">Game started</div>';
   } else {
-    for (let i = 0; i < history.length; i++) {
+    // Track player turns for deploy phase (battle strictly alternates).
+    // Deploy: players alternate, but if a player has declared done,
+    // their turn is skipped and the other player goes again.
+    let whiteDone = false;
+    let blackDone = false;
+    let isWhiteTurn = true;       // first action is always White
+    let inBattle = false;
+
+    for (let i = 1; i < history.length; i++) {
       const entry = history[i];
-      const isCurrent = i === currentIdx;
-      const actionLabel = entry.actionGAN || (i === 0 ? 'Start' : '—');
-
+      const actionGAN = entry.actionGAN || '';
       const isPlacement = entry.action && entry.action.startsWith('Place');
-      const isDeployAction = isPlacement || entry.action === null;
-      const turnColor = (i % 2 === 0) ? 'white' : 'black';
 
-      let badge = '';
-      if (isPlacement) {
-        badge = '<span class="ml-deploy-tag">place</span>';
-      } else if (!isDeployAction) {
-        badge = `<span class="ml-turn-badge ${turnColor}">${turnColor === 'white' ? 'W' : 'B'}</span>`;
+      // Transition from deploy to battle
+      if (!isPlacement && !inBattle) {
+        inBattle = true;
+        html += '<div class="ml-sep"><span>Battle</span></div>';
+        isWhiteTurn = true; // first battle action is always White
       }
 
-      html += `<div class="ml-entry${isCurrent ? ' current' : ''}" data-hi="${i}">
-        <span class="ml-num">${i}</span>
-        <span class="ml-label">${escapeHtml(actionLabel)}</span>
-        ${badge}
-      </div>`;
+      const isCurrent = i === currentIdx;
+      const isDeploy = isPlacement;
+      const displayLabel = actionGAN || '—';
+      const isDone = actionGAN.endsWith('!');
+
+      if (inBattle) {
+        // Battle: strictly alternate every action.
+        if (isWhiteTurn) {
+          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
+            <span class="ml-tnum">${i}</span>
+            <span class="ml-move${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
+            <span class="ml-move"></span>
+          </div>`;
+        } else {
+          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
+            <span class="ml-tnum">${i}</span>
+            <span class="ml-move"></span>
+            <span class="ml-move${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
+          </div>`;
+        }
+        isWhiteTurn = !isWhiteTurn; // strict alternation in battle
+      } else {
+        // Deploy: skip done players
+        if (isWhiteTurn) {
+          if (isDone) whiteDone = true;
+          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
+            <span class="ml-tnum">${i}</span>
+            <span class="ml-move ml-deploy${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
+            <span class="ml-move"></span>
+          </div>`;
+          isWhiteTurn = blackDone; // next is Black unless Black is done
+        } else {
+          if (isDone) blackDone = true;
+          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
+            <span class="ml-tnum">${i}</span>
+            <span class="ml-move"></span>
+            <span class="ml-move ml-deploy${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
+          </div>`;
+          isWhiteTurn = !whiteDone; // next is White unless White is done
+        }
+      }
     }
   }
 
@@ -791,16 +888,17 @@ function renderMoveList() {
   moveListEl.innerHTML = html;
 
   // Click handlers for history navigation
-  moveListEl.querySelectorAll('.ml-entry').forEach(el => {
+  moveListEl.querySelectorAll('.ml-move[data-hi]').forEach(el => {
     el.addEventListener('click', () => {
+      if (presenting) return;
       const idx = parseInt(el.dataset.hi);
-      if (idx !== currentIdx) navigateToHistory(idx);
+      if (!isNaN(idx) && idx !== currentIdx) navigateToHistory(idx);
     });
   });
 
   // Scroll to current
-  const currentEntry = moveListEl.querySelector('.ml-entry.current');
-  if (currentEntry) currentEntry.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const cur = moveListEl.querySelector('.ml-cur');
+  if (cur) cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 async function navigateToHistory(index) {
@@ -821,7 +919,14 @@ function renderControls() {
   const isViewingPast = currentViewIndex < (s.historySize || s.history.length) - 1;
   let html = '';
 
-  if (pendingAction) {
+  if (presenting) {
+    html = `
+      <div style="display:flex;align-items:center;gap:8px;width:100%;padding:4px">
+        <span style="color:var(--bg-cell-legal);font-size:11px;font-weight:600;">▶ Presenting…</span>
+        <button class="ctrl-btn resign" id="btn-stop-present" style="flex:0;padding:4px 12px;">⏹ Stop</button>
+      </div>
+    `;
+  } else if (pendingAction) {
     // Confirm mode — battle phase pending action
     html = `
       <button class="ctrl-btn confirm" id="btn-confirm">✓ Confirm</button>
@@ -859,6 +964,16 @@ function renderControls() {
     `;
   }
 
+  // Present input row (shown when not presenting/pending/terminal)
+  if (!presenting && !pendingAction && !isTerminal) {
+    html += `
+      <div style="display:flex;gap:4px;width:100%;margin-top:4px;border-top:1px solid var(--border-color);padding-top:6px;">
+        <input type="text" id="present-input" placeholder="GAN actions: M5-8|M5-2|F4-8..." style="flex:1;background:#0d1b2a;border:1px solid var(--border-color);border-radius:var(--radius);padding:6px 8px;color:var(--color-text);font-size:11px;font-family:monospace;outline:none;">
+        <button class="ctrl-btn confirm" id="btn-present" style="flex:0;padding:6px 12px;font-size:11px;">▶ Play</button>
+      </div>
+    `;
+  }
+
   controlsEl.innerHTML = html;
 
   // Bind buttons
@@ -870,7 +985,7 @@ function renderControls() {
   bind('btn-done', onDeployDone);
   bind('btn-cancel-done', onDeployCancelDone);
   bind('btn-undo', async () => {
-    if (pendingAction) return;
+    if (pendingAction || presenting) return;
     if (selectedCell || selectedHandPiece) {
       selectedCell = null;
       selectedHandPiece = null;
@@ -884,12 +999,14 @@ function renderControls() {
   bind('btn-newgame', showNewGameDialog);
   bind('btn-confirm', onConfirm);
   bind('btn-cancel', onCancelUndo);
+  bind('btn-present', startPresentation);
+  bind('btn-stop-present', stopPresentation);
 }
 
 /* ── Resign ──────────────────────────────────────────────────────────── */
 
 function onResign() {
-  if (!serverState || serverState.isTerminal || pendingAction) return;
+  if (!serverState || serverState.isTerminal || pendingAction || presenting) return;
   const active = serverState.activePlayer;
   const loser = active === 'white' ? 'White' : 'Black';
   const winner = active === 'white' ? 'Black' : 'White';

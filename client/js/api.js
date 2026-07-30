@@ -35,3 +35,7 @@ export async function gotoHistory(index) {
 export async function resetGame(gsfen) {
   return api('POST', '/api/reset', { gsfen: gsfen || undefined });
 }
+
+export async function applyGAN(gan) {
+  return api('POST', '/api/apply-gan', { gan });
+}
