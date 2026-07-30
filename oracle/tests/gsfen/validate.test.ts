@@ -72,7 +72,7 @@ function emptyDeployState(overrides?: Partial<GameState>): GameState {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('validateState — valid states', () => {
+describe('validateState --- valid states', () => {
   it('startpos is valid', () => {
     const state = parseOk('startpos');
     assertValid(state);
@@ -128,8 +128,8 @@ describe('validateState — valid states', () => {
   });
 });
 
-describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
-  describe('BR-GSFEN-VALID-001-TOP — Marshal not at top of stack (BR-STACK-004)', () => {
+describe('validateState --- BR-GSFEN-VALID-001 Marshal integrity', () => {
+  describe('BR-GSFEN-VALID-001-TOP --- Marshal not at top of stack (BR-STACK-004)', () => {
     it('rejects Marshal not at top of stack (battle)', () => {
       const state = emptyBattleState();
       // Stack with Marshal at bottom, Pawn on top
@@ -143,7 +143,7 @@ describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
     });
   });
 
-  describe('BR-GSFEN-VALID-001-COUNT — Marshal appears ≠ 1 on board in battle (BR-DEPLOY-003)', () => {
+  describe('BR-GSFEN-VALID-001-COUNT --- Marshal appears ≠ 1 on board in battle (BR-DEPLOY-003)', () => {
     it('rejects missing Marshal in battle phase', () => {
       const state = emptyBattleState();
       // No Marshal on board for either player, and none in hand
@@ -159,7 +159,7 @@ describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
     });
   });
 
-  describe('BR-GSFEN-VALID-001-HAND — Marshal in Hand during battle (BR-DEPLOY-011)', () => {
+  describe('BR-GSFEN-VALID-001-HAND --- Marshal in Hand during battle (BR-DEPLOY-011)', () => {
     it('rejects Marshal in hand during battle', () => {
       const state = emptyBattleState();
       // Put Marshal on board for both players, but also Marshal in white's hand
@@ -170,7 +170,7 @@ describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
     });
   });
 
-  describe('BR-GSFEN-VALID-001-BOTH — Marshal both on board and in Hand in deploy (BR-DEPLOY-003)', () => {
+  describe('BR-GSFEN-VALID-001-BOTH --- Marshal both on board and in Hand in deploy (BR-DEPLOY-003)', () => {
     it('rejects deploy with Marshal both on board and in hand', () => {
       const state = emptyDeployState();
       state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
@@ -179,7 +179,7 @@ describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
     });
   });
 
-  describe('BR-GSFEN-VALID-001-FIRST — Marshal in Hand but player has pieces on board (BR-DEPLOY-003)', () => {
+  describe('BR-GSFEN-VALID-001-FIRST --- Marshal in Hand but player has pieces on board (BR-DEPLOY-003)', () => {
     it('rejects deploy with Marshal in hand but other pieces on board', () => {
       const state = emptyDeployState();
       // Place a Pawn on board but keep Marshal in hand
@@ -189,12 +189,12 @@ describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
   });
 
   describe('Valid deploy scenarios', () => {
-    it('accepts valid deploys — Marshal in hand with no pieces on board', () => {
+    it('accepts valid deploys --- Marshal in hand with no pieces on board', () => {
       const state = emptyDeployState();
       assertValid(state);
     });
 
-    it('accepts valid deploys — Marshal on board as top of stack', () => {
+    it('accepts valid deploys --- Marshal on board as top of stack', () => {
       const state = emptyDeployState();
       state.position[8][4] = [{ type: 'M', owner: 'white' }] as Stack;
       state.hands.white.M = 0;
@@ -203,9 +203,9 @@ describe('validateState — BR-GSFEN-VALID-001 Marshal integrity', () => {
   });
 });
 
-describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
+describe('validateState --- BR-GSFEN-VALID-002 inventory conservation', () => {
   /** All piece types except M (Marshal over-count can't be tested in battle
-   *  because BR-GSFEN-VALID-001 Marshal checks fire first — see BR-GSFEN-VALID-002 + deploy M test below). */
+   *  because BR-GSFEN-VALID-001 Marshal checks fire first --- see BR-GSFEN-VALID-002 + deploy M test below). */
   const NON_M_TYPES = ['A', 'C', 'E', 'F', 'G', 'J', 'L', 'N', 'P', 'S', 'T', 'U', 'Y'] as const;
 
   /** Place N pieces of a type across separate cells in row 5. */
@@ -220,7 +220,7 @@ describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
     }
   }
 
-  describe('white over-count per type (battle) — board + hand > initial', () => {
+  describe('white over-count per type (battle) --- board + hand > initial', () => {
     for (const type of NON_M_TYPES) {
       it(`${type} (initial ${INITIAL_COUNTS[type]})`, () => {
         const state = emptyBattleState();
@@ -234,7 +234,7 @@ describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
     }
   });
 
-  describe('black over-count per type (battle) — board + hand > initial', () => {
+  describe('black over-count per type (battle) --- board + hand > initial', () => {
     for (const type of NON_M_TYPES) {
       it(`${type} (initial ${INITIAL_COUNTS[type]})`, () => {
         const state = emptyBattleState();
@@ -248,7 +248,7 @@ describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
     }
   });
 
-  describe('white over-count M (deploy — only phase where BR-GSFEN-VALID-002 can fire for M)', () => {
+  describe('white over-count M (deploy --- only phase where BR-GSFEN-VALID-002 can fire for M)', () => {
     it('M (initial 1)', () => {
       const state = emptyDeployState();
       // Place 2 white Marshals on board, none in hand
@@ -276,12 +276,12 @@ describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
     });
   });
 
-  describe('deploy-phase strict equality — board + hand < initial', () => {
+  describe('deploy-phase strict equality --- board + hand < initial', () => {
     it('rejects deploy where a piece type is missing (board + hand < initial)', () => {
       const state = emptyDeployState();
       // Remove a Cannon from white's hand without placing it on board
       state.hands.white.C = 0;
-      // C initial = 1; board 0 + hand 0 = 0 < 1 → violation
+      // C initial = 1; board 0 + hand 0 = 0 < 1 -> violation
       assertInvalid(state, 'BR-GSFEN-VALID-002');
     });
 
@@ -295,7 +295,7 @@ describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
       state.position[8][2] = [{ type: 'E', owner: 'white' }] as Stack;
       // Remove all Spears from white's hand
       state.hands.white.E = 0;
-      // board 2 + hand 0 = 2 < initial 3 → deploy strict equality violated
+      // board 2 + hand 0 = 2 < initial 3 -> deploy strict equality violated
       assertInvalid(state, 'BR-GSFEN-VALID-002');
     });
 
@@ -313,7 +313,7 @@ describe('validateState — BR-GSFEN-VALID-002 inventory conservation', () => {
   });
 });
 
-describe('validateState — BR-GSFEN-VALID-003 Done flags', () => {
+describe('validateState --- BR-GSFEN-VALID-003 Done flags', () => {
   it('rejects done flag on the active player', () => {
     const state = emptyDeployState();
     state.turn.done = 'white'; // white is active, can't have done
@@ -338,7 +338,7 @@ describe('validateState — BR-GSFEN-VALID-003 Done flags', () => {
   });
 });
 
-describe('validateState — BR-GSFEN-VALID-004 deploy-phase constraints', () => {
+describe('validateState --- BR-GSFEN-VALID-004 deploy-phase constraints', () => {
   /** Helper: set up a minimal valid deploy state with FULL_HAND (all pieces in hand).
    *  When placing pieces on the board, reduce the hand count to maintain strict equality
    *  (board[type] + hand[type] = initial[type] during deploy, BR-GSFEN-VALID-002). */
@@ -365,7 +365,7 @@ describe('validateState — BR-GSFEN-VALID-004 deploy-phase constraints', () => 
     state.hands.white.M = 0; // 1 board + 0 hand = 1 = initial
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0; // 1 board + 0 hand = 1 = initial
-    // White Pawn in black zone (row 1, col 1 — a separate square from Black Marshal)
+    // White Pawn in black zone (row 1, col 1 --- a separate square from Black Marshal)
     state.position[0][0] = [{ type: 'P', owner: 'white' }] as Stack;
     state.hands.white.P = 3; // 1 board + 3 hand = 4 = initial
     assertInvalid(state, 'BR-GSFEN-VALID-004');
@@ -377,7 +377,7 @@ describe('validateState — BR-GSFEN-VALID-004 deploy-phase constraints', () => 
     state.hands.white.M = 0;
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
     state.hands.black.M = 0;
-    // Black Pawn in white zone (row 9, col 1 — separate from White Marshal)
+    // Black Pawn in white zone (row 9, col 1 --- separate from White Marshal)
     state.position[8][0] = [{ type: 'P', owner: 'black' }] as Stack;
     state.hands.black.P = 3; // 1 board + 3 hand = 4 = initial
     assertInvalid(state, 'BR-GSFEN-VALID-004');
@@ -415,7 +415,7 @@ describe('validateState — BR-GSFEN-VALID-004 deploy-phase constraints', () => 
   });
 });
 
-describe('validateState — BR-GSFEN-VALID-005 counter bounds', () => {
+describe('validateState --- BR-GSFEN-VALID-005 counter bounds', () => {
   it('rejects deploy counter > 50', () => {
     const state = parseOk('startpos');
     state.turn.counter = 51;
@@ -447,7 +447,7 @@ describe('validateState — BR-GSFEN-VALID-005 counter bounds', () => {
   });
 });
 
-describe('validateState — multi-rule violations (first-rule ordering)', () => {
+describe('validateState --- multi-rule violations (first-rule ordering)', () => {
   it('BR-GSFEN-VALID-001-TOP fires before BR-GSFEN-VALID-001-COUNT: Marshal buried + missing Marshal', () => {
     const state = emptyBattleState();
     // BR-GSFEN-VALID-001-TOP: Marshal buried under Pawn
@@ -456,7 +456,7 @@ describe('validateState — multi-rule violations (first-rule ordering)', () => 
       { type: 'P', owner: 'white' },
     ] as Stack;
     state.position[0][4] = [{ type: 'M', owner: 'black' }] as Stack;
-    // White Marshal count on board = 1 (at pos 4,4 but not at top → -TOP fires)
+    // White Marshal count on board = 1 (at pos 4,4 but not at top -> -TOP fires)
     // -TOP is checked first in the loop
     assertInvalid(state, 'BR-GSFEN-VALID-001-TOP');
   });

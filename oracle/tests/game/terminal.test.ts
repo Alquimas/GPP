@@ -1,8 +1,8 @@
 /**
  * Terminal condition tests.
  *
- * Step  9: evaluateExposure — Deploy→Battle boundary (BR-DEPLOY-012).
- * Step 11: checkTerminal, hasLegalPlays — Checkmate, Stalemate, Repetition.
+ * Step  9: evaluateExposure --- Deploy->Battle boundary (BR-DEPLOY-012).
+ * Step 11: checkTerminal, hasLegalPlays --- Checkmate, Stalemate, Repetition.
  *
  * @module
  */
@@ -120,7 +120,7 @@ describe('hasLegalPlays', () => {
   it('returns true when a player has an arata available', () => {
     // Build: White Marshal at (5,9); White has Pawn in hand.
     // Place a White Pawn at (5,7) so the most advanced piece is row 7.
-    // Arata zone: rows 7–9. (5,8) is in zone and empty — valid arata target.
+    // Arata zone: rows 7–9. (5,8) is in zone and empty --- valid arata target.
     const base = gsfenState(MARSHAL_ALONE_BATTLE);
     const pos = setStack(
       base.position,
@@ -140,7 +140,7 @@ describe('hasLegalPlays', () => {
     //   F=(5,8), L=(6,9), R=(4,9), FL=(6,8), FR=(4,8).
     // Block all five with BLACK size-3 stacks so the Marshal cannot land
     // on them (BR-MOVE-005: source stack size 1 < target stack size 3).
-    // White has no other pieces and empty hands — no aratas.
+    // White has no other pieces and empty hands --- no aratas.
     const state = emptyBattleState('white');
     let pos = state.position;
     pos = setStack(
@@ -253,7 +253,7 @@ describe('hasInsufficientMaterial', () => {
   });
 
   it('returns false when one player has no Marshal on board', () => {
-    // Clear Black's Marshal at (1,1) — MARSHAL_ALONE_BATTLE row 1 is "8,m"
+    // Clear Black's Marshal at (1,1) --- MARSHAL_ALONE_BATTLE row 1 is "8,m"
     const base = gsfenState(MARSHAL_ALONE_BATTLE);
     const pos = setStack(base.position, { col: 1, row: 1 }, null);
     const state: GameState = { ...base, position: pos };
@@ -262,7 +262,7 @@ describe('hasInsufficientMaterial', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  checkTerminal — Checkmate & Stalemate                              */
+/*  checkTerminal --- Checkmate & Stalemate                              */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -282,13 +282,13 @@ function emptyBattleState(activePlayer: 'white' | 'black'): GameState {
 
 describe('checkTerminal', () => {
   it('returns checkmate when Marshal is in check and has no legal moves', () => {
-    // White Marshal at (1,9) — corner.
+    // White Marshal at (1,9) --- corner.
     // All three reachable squares are blocked by Black size-3 stacks
     // so BR-MOVE-005 prevents landing (source size 1 < target size 3).
     //   (1,8) = size-3 Black stack
     //   (2,9) = size-3 Black stack
     //   (2,8) = size-3 stack topped by Black Marshal (step-FL attacks (1,9))
-    // No Self Check computation needed — move engine rejects size violations directly.
+    // No Self Check computation needed --- move engine rejects size violations directly.
     const state = emptyBattleState('white');
     let pos = state.position;
     pos = setStack(
@@ -344,7 +344,7 @@ describe('checkTerminal', () => {
     // White Marshal at (1,9). All three escape squares blocked by
     // Black size-3 stacks. The top of (1,8) is a Spy so it does NOT
     // attack (1,9) (Spy has diagonal-only movement). (2,8) and (2,9)
-    // tops are Pawns — Pawn F from (2,8)→(2,9), from (2,9)→off-board.
+    // tops are Pawns --- Pawn F from (2,8)->(2,9), from (2,9)->off-board.
     // None attack (1,9).
     const state = emptyBattleState('white');
     let pos = state.position;
@@ -353,7 +353,7 @@ describe('checkTerminal', () => {
       { col: 1 as any, row: 9 as any },
       createStack([{ type: 'M', owner: 'white' }]),
     );
-    // (1,8): Spy top — Spy never attacks (1,9) (diagonals only)
+    // (1,8): Spy top --- Spy never attacks (1,9) (diagonals only)
     pos = setStack(
       pos,
       { col: 1 as any, row: 8 as any },
@@ -363,7 +363,7 @@ describe('checkTerminal', () => {
         { type: 'Y', owner: 'black' },
       ]),
     );
-    // (2,9): Pawn top — Pawn F from (2,9) is off-board
+    // (2,9): Pawn top --- Pawn F from (2,9) is off-board
     pos = setStack(
       pos,
       { col: 2 as any, row: 9 as any },
@@ -373,7 +373,7 @@ describe('checkTerminal', () => {
         { type: 'P', owner: 'black' },
       ]),
     );
-    // (2,8): Pawn top — Pawn F from (2,8) = (2,9), not (1,9)
+    // (2,8): Pawn top --- Pawn F from (2,8) = (2,9), not (1,9)
     pos = setStack(
       pos,
       { col: 2 as any, row: 8 as any },
@@ -401,7 +401,7 @@ describe('checkTerminal', () => {
   });
 
   it('returns ongoing when the game continues', () => {
-    // MARSHAL_ALONE_BATTLE would trigger insufficient-material — add a
+    // MARSHAL_ALONE_BATTLE would trigger insufficient-material --- add a
     // Pawn to White's hand to give both players mating potential.
     const base = gsfenState(MARSHAL_ALONE_BATTLE);
     const state: GameState = {
@@ -423,8 +423,8 @@ describe('checkTerminal', () => {
     //   them via Self Check filtering.
     //
     //   However, Black General at (1,4) CAN move safely (e.g., step BR to (2,3)
-    //   or range F to (1,5) — all empty and unattacked). So hasLegalPlays
-    //   returns true, and checkTerminal returns ongoing — NOT stalemate.
+    //   or range F to (1,5) --- all empty and unattacked). So hasLegalPlays
+    //   returns true, and checkTerminal returns ongoing --- NOT stalemate.
     const state = gsfenState(MARSHAL_BLOCKED_GENERAL_FREE);
 
     // Marshal has 3 reachable squares geometrically
@@ -443,7 +443,7 @@ describe('checkTerminal', () => {
     );
     expect(generalMoves.length).toBeGreaterThan(0);
 
-    // hasLegalPlays scans ALL pieces — finds the General's safe move
+    // hasLegalPlays scans ALL pieces --- finds the General's safe move
     expect(hasLegalPlays(state)).toBe(true);
 
     // checkTerminal: not stalemate, game continues
@@ -475,7 +475,7 @@ describe('checkTerminal', () => {
     // legal escape, causing checkTerminal to return 'ongoing'.
     const game = new Game(CHECKMATE_AFTER_CAPTURE);
 
-    // Before the move — Black's turn, ongoing
+    // Before the move --- Black's turn, ongoing
     expect(game.state.turn.activePlayer).toBe('black');
     expect(game.result.kind).toBe('ongoing');
 
@@ -485,11 +485,11 @@ describe('checkTerminal', () => {
     if (!gan.ok) return;
     const result = game.applyAction(gan.action);
 
-    // After the move — White's turn, no legal plays, White is in check
+    // After the move --- White's turn, no legal plays, White is in check
     expect(result.state.turn.activePlayer).toBe('white');
     expect(isInCheck(result.state.position, 'white')).toBe(true);
 
-    // hasLegalPlays must return false — no escape from check
+    // hasLegalPlays must return false --- no escape from check
     expect(hasLegalPlays(result.state)).toBe(false);
 
     // checkTerminal must detect checkmate

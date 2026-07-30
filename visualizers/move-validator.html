@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Move Validator — Gungi</title>
+<title>Move Validator --- Gungi</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -85,7 +85,7 @@
 
 <script>
 /* =====================================================
-   PROTOTYPE — throwaway move validator
+   PROTOTYPE --- throwaway move validator
    Question: "Does the movement data in PIECE_MOVEMENT
    produce the right destinations from centre (5,5)?"
    ===================================================== */
@@ -98,7 +98,7 @@ const DD = {
   BL: { col: 1, row: 1 }, BR: { col:-1, row: 1 },
 };
 
-// ── PIECE_MOVEMENT — inlined from oracle/src/constants.ts ──
+// ── PIECE_MOVEMENT --- inlined from oracle/src/constants.ts ──
 const PIECE_MOVEMENT = {
   M: { step: ['F','B','L','R','FL','FR','BL','BR'], limitedRange:[], range:[], jumps:[] },
   G: { step: ['FL','FR','BL','BR'], limitedRange:[], range:['F','B','L','R'], jumps:[] },
@@ -123,7 +123,7 @@ const PIECE_MOVEMENT = {
 const PIECE_NAMES = {A:'Archer',C:'Cannon',E:'Spear',F:'Fortress',G:'General',J:'Major',L:'Lieutenant',M:'Marshal',N:'Knight',P:'Pawn',S:'Samurai',T:'Captain',U:'Musketeer',Y:'Spy'};
 const ALL_TYPES = ['M','G','L','J','S','E','N','Y','F','P','C','A','U','T'];
 
-function pieceLabel(t) { return t + ' — ' + PIECE_NAMES[t]; }
+function pieceLabel(t) { return t + ' --- ' + PIECE_NAMES[t]; }
 
 // ── Compute offsets ───────────────────────────────────
 function computeOffsets(def, size) {
@@ -144,7 +144,7 @@ function computeOffsets(def, size) {
   }
 
   // Limited-range
-  const lrMax = 1 + size; // 2→3→4
+  const lrMax = 1 + size; // 2->3->4
   for (const dir of def.limitedRange) {
     const d = DD[dir];
     for (let n = 1; n <= lrMax; n++)
@@ -200,7 +200,7 @@ function getDestinations(def, size, player) {
       row = origin.row + sign * o.row;
     }
     if (col < 1 || col > 9 || row < 1 || row > 9) continue;
-    // Stack-size landing restriction (BR-MOVE-005): not applied here —
+    // Stack-size landing restriction (BR-MOVE-005): not applied here ---
     // board is empty, so all destinations are reachable at any stack size.
     destinations.push({col, row, cls: o.cls});
   }
@@ -229,7 +229,7 @@ function getDestinations(def, size, player) {
     }
   }
 
-  // Deduplicate destinations — if multiple classes reach the same square, keep higher-priority
+  // Deduplicate destinations --- if multiple classes reach the same square, keep higher-priority
   // Priority: step < limited < range < jump (jump survives)
   const order = {step:0, limited:1, range:2, jump:3};
   const destMap = new Map();
@@ -305,7 +305,7 @@ function render() {
 
   // Update info
   document.getElementById('info').textContent =
-    `${destMap.size} legal destinations — ${pieceLabel(type)} at Stack ${size} (${player})`;
+    `${destMap.size} legal destinations --- ${pieceLabel(type)} at Stack ${size} (${player})`;
 }
 
 pieceSelect.addEventListener('change', render);

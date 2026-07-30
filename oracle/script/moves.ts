@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * moves — Enumerate all legal actions from a GSFEN position.
+ * moves --- Enumerate all legal actions from a GSFEN position.
  *
  * Usage:
  *   npm run gsfen -- moves "<gsfen string>"

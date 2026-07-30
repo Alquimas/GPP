@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gsfen-find.sh — Find GSFEN strings in project files
+# gsfen-find.sh --- Find GSFEN strings in project files
 #
 # Finds GSFEN state serialization strings (the 4-field format or the
 # "startpos" keyword) across source, tests, fixtures, and docs.
@@ -10,7 +10,7 @@
 #   ./gsfen-find.sh --no-md             # skip .md files (docs have examples)
 #   ./gsfen-find.sh --color             # highlight matches
 #
-# The regex uses 8 slashes (9 rows) as its anchor — very unlikely to
+# The regex uses 8 slashes (9 rows) as its anchor --- very unlikely to
 # produce false positives in normal code.  False negatives are minimised
 # by keeping the character class broad ([A-Za-z0-9,]).
 #
@@ -42,15 +42,15 @@ for arg in "$@"; do
 done
 
 # Regex:
-#   startpos                    — the keyword form, OR
-#   [A-Za-z0-9,]+              — first row of the position field
-#   (/[A-Za-z0-9,]+){8}        — rows 2-9 (8 more, each preceded by /)
-#   [ ]                         — space before turn
-#   (w|b|dw|db|dwB|dbW)        — turn token
-#   [ ]                         — space before hands
-#   (-|[A-Za-z0-9]+)           — hands (hyphen or alphanumeric)
-#   [ ]                         — space before counter
-#   [1-9][0-9]*                 — counter (>=1, no leading zeros)
+#   startpos                    --- the keyword form, OR
+#   [A-Za-z0-9,]+              --- first row of the position field
+#   (/[A-Za-z0-9,]+){8}        --- rows 2-9 (8 more, each preceded by /)
+#   [ ]                         --- space before turn
+#   (w|b|dw|db|dwB|dbW)        --- turn token
+#   [ ]                         --- space before hands
+#   (-|[A-Za-z0-9]+)           --- hands (hyphen or alphanumeric)
+#   [ ]                         --- space before counter
+#   [1-9][0-9]*                 --- counter (>=1, no leading zeros)
 GSFEN_REGEX='startpos|[A-Za-z0-9,]+(/[A-Za-z0-9,]+){8} (w|b|dw|db|dwB|dbW) (-|[A-Za-z0-9]+) [1-9][0-9]*'
 
 if command -v rg &>/dev/null; then

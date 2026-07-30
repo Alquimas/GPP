@@ -1,5 +1,5 @@
 /**
- * Board query helpers — general-purpose utilities for inspecting a Gungi
+ * Board query helpers --- general-purpose utilities for inspecting a Gungi
  * Position (the 9×9 board).  Pure domain logic with no I/O.
  *
  * These live here instead of the validator or movement modules so that all
@@ -23,8 +23,8 @@ import type {
 /* ------------------------------------------------------------------ */
 /*  Runtime-validated narrowing helpers                                */
 /*                                                                     */
-/*  These are the SINGLE points of truth for narrowing `number` →      */
-/*  `BoardCoord` and `Piece[]` → `Stack`.  Every other call site in    */
+/*  These are the SINGLE points of truth for narrowing `number` ->      */
+/*  `BoardCoord` and `Piece[]` -> `Stack`.  Every other call site in    */
 /*  the codebase should route through one of these helpers instead of  */
 /*  using a raw `as BoardCoord` / `as Stack` cast.                     */
 /* ------------------------------------------------------------------ */
@@ -43,7 +43,7 @@ export function isBoardCoord(n: number): n is BoardCoord {
  * Build a Square from raw coordinates. Returns null if either component
  * is outside the 1..9 board range.
  *
- * Prefer this over a manual `as BoardCoord` cast — the type predicate
+ * Prefer this over a manual `as BoardCoord` cast --- the type predicate
  * in `isBoardCoord` does the narrowing.
  */
 export function trySquare(col: number, row: number): Square | null {
@@ -212,7 +212,7 @@ export function findPieceOnBoard(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Board primitives (Step 6 — Movement Rules Engine)                  */
+/*  Board primitives (Step 6 --- Movement Rules Engine)                  */
 /* ------------------------------------------------------------------ */
 
 /** Return the stack at a square, or null if empty. */
@@ -276,7 +276,7 @@ export function applyDirection(
   const base = WHITE_DIR_DELTA[direction];
   const dc = player === 'white' ? base.col : -base.col;
   const dr = player === 'white' ? base.row : -base.row;
-  // trySquare narrows via the isBoardCoord type predicate — no cast needed.
+  // trySquare narrows via the isBoardCoord type predicate --- no cast needed.
   return trySquare(col + dc, row + dr);
 }
 

@@ -1,11 +1,11 @@
 /**
- * Test fixture barrel — loads every .gsfen fixture file and exports it as a named
+ * Test fixture barrel --- loads every .gsfen fixture file and exports it as a named
  * constant. All fixture names are the file stem (without extension) converted
  * to SCREAMING_SNAKE_CASE.
  *
  * Fixtures live in two subdirectories under `oracle/fixtures/`:
- *   `valid/`         — states that pass parseGSFEN + validateState
- *   `invalid/parse/` — states that fail parse-level validation (BR-GSFEN-CANON-* errors)
+ *   `valid/`         --- states that pass parseGSFEN + validateState
+ *   `invalid/parse/` --- states that fail parse-level validation (BR-GSFEN-CANON-* errors)
  *
  * Usage:
  *   import { STARTPOS_EXPANDED, BATTLE_START } from './support/fixtures.js';
@@ -29,7 +29,7 @@ function readInvalidParse(name: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Valid fixtures — pass parseGSFEN + validateState
+// Valid fixtures --- pass parseGSFEN + validateState
 // ---------------------------------------------------------------------------
 
 export const ALL_ON_BOARD = readValid('all-on-board');
@@ -90,7 +90,7 @@ export const WHITE_DONE_MULTI_COUNT_HAND = readValid('white-done-multi-count-han
 export const WHITE_MARSHAL_AT_5_9 = readValid('white-marshal-at-5-9');
 
 // ---------------------------------------------------------------------------
-// Parse-invalid fixtures — fail parse-level validation (BR-GSFEN-CANON-* errors)
+// Parse-invalid fixtures --- fail parse-level validation (BR-GSFEN-CANON-* errors)
 // ---------------------------------------------------------------------------
 
 export const C2_UNKNOWN_PIECE = readInvalidParse('c2-unknown-piece');
@@ -103,7 +103,7 @@ export const ROW_NOT_9 = readInvalidParse('row-not-9');
 export const STACK_OF_FOUR = readInvalidParse('stack-of-four');
 
 // ---------------------------------------------------------------------------
-// Lookup record: name → content for dynamic fixture access in tests
+// Lookup record: name -> content for dynamic fixture access in tests
 // ---------------------------------------------------------------------------
 
 export const FIXTURES: Record<string, string> = {

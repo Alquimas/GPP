@@ -5,8 +5,8 @@
  * - isSquareUnderAttack for every piece type at sizes 1-3
  * - Stack-size landing restriction (BR-MOVE-005)
  * - Marshal threat disregards BR-STACK-004
- * - isInCheck — basic, not-in-check, Marshal-in-stack, no-Marshal
- * - isExposed — both, one, neither, no-Marshal-on-board
+ * - isInCheck --- basic, not-in-check, Marshal-in-stack, no-Marshal
+ * - isExposed --- both, one, neither, no-Marshal-on-board
  * - Edge cases: empty board, board corners, mixed-ownership stacks
  * - GSFEN integration tests
  */
@@ -54,10 +54,10 @@ function gsfenPos(gsfen: string): Position {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Section 1 — isSquareUnderAttack: basic scenarios                   */
+/*  Section 1 --- isSquareUnderAttack: basic scenarios                   */
 /* ------------------------------------------------------------------ */
 
-describe('isSquareUnderAttack — basic scenarios', () => {
+describe('isSquareUnderAttack --- basic scenarios', () => {
   /* ------ Step-only pieces at size 1 ------ */
 
   it.each([
@@ -76,7 +76,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     { type: 'U' as PieceType, label: 'Musketeer', forward: false, backward: false },
     { type: 'T' as PieceType, label: 'Captain', forward: false, backward: true },
   ])(
-    '$label ($type) at centre — directional attack test at size 1',
+    '$label ($type) at centre --- directional attack test at size 1',
     ({ type, forward, backward }) => {
       const pos = emptyPos();
       putPiece(pos, 5, 5, type, 'white');
@@ -90,7 +90,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     },
   );
 
-  it('Pawn at centre — attacks forward (B) and backward (F) squares', () => {
+  it('Pawn at centre --- attacks forward (B) and backward (F) squares', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'P', 'black'); // forward
@@ -100,7 +100,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 6 }, 'white')).toBe(true);
   });
 
-  it('Pawn — does NOT attack diagonally', () => {
+  it('Pawn --- does NOT attack diagonally', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 4, 4, 'P', 'black'); // FL
@@ -110,7 +110,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 6, row: 4 }, 'white')).toBe(false);
   });
 
-  it('Marshal at centre — attacks all 8 neighbours', () => {
+  it('Marshal at centre --- attacks all 8 neighbours', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     // Place enemies in all 8 directions
@@ -135,7 +135,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
 
   /* ------ Range pieces ------ */
 
-  it('General — attacks along orthogonal range (empty path)', () => {
+  it('General --- attacks along orthogonal range (empty path)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'G', 'white');
     putPiece(pos, 5, 1, 'P', 'black'); // far forward
@@ -143,7 +143,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 1 }, 'white')).toBe(true);
   });
 
-  it('General — does NOT attack beyond obstruction', () => {
+  it('General --- does NOT attack beyond obstruction', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'G', 'white');
     putPiece(pos, 5, 5, 'P', 'white'); // friendly block
@@ -152,7 +152,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 1 }, 'white')).toBe(false);
   });
 
-  it('General — attacks the obstruction square itself', () => {
+  it('General --- attacks the obstruction square itself', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'G', 'white');
     putPiece(pos, 5, 5, 'P', 'black'); // enemy block
@@ -160,7 +160,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 5 }, 'white')).toBe(true);
   });
 
-  it('Lieutenant — attacks along diagonal range (empty path)', () => {
+  it('Lieutenant --- attacks along diagonal range (empty path)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'L', 'white');
     putPiece(pos, 1, 1, 'P', 'black'); // far FL diagonal
@@ -168,7 +168,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 1, row: 1 }, 'white')).toBe(true);
   });
 
-  it('Lieutenant — blocked diagonal does not attack beyond obstruction', () => {
+  it('Lieutenant --- blocked diagonal does not attack beyond obstruction', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'L', 'white');
     putPiece(pos, 3, 3, 'P', 'white'); // friendly block on diagonal
@@ -179,19 +179,19 @@ describe('isSquareUnderAttack — basic scenarios', () => {
 
   /* ------ Jump pieces ------ */
 
-  it('Cannon at size 1 — jumps forward 3 over intervening squares', () => {
+  it('Cannon at size 1 --- jumps forward 3 over intervening squares', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'C', 'white');
     putPiece(pos, 5, 2, 'P', 'black'); // 3 squares forward (row 5-3=2)
 
-    // White C jumps forward 3: dest = (0,+3) in white coords → (5, 5-3) = (5, 2)
+    // White C jumps forward 3: dest = (0,+3) in white coords -> (5, 5-3) = (5, 2)
     expect(isSquareUnderAttack(pos, { col: 5, row: 2 }, 'white')).toBe(true);
   });
 
-  it('Cannon at size 1 — cannot attack beyond jumped destination', () => {
+  it('Cannon at size 1 --- cannot attack beyond jumped destination', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'C', 'white');
-    putPiece(pos, 5, 1, 'P', 'black'); // 4 squares forward — too far
+    putPiece(pos, 5, 1, 'P', 'black'); // 4 squares forward --- too far
 
     expect(isSquareUnderAttack(pos, { col: 5, row: 1 }, 'white')).toBe(false);
   });
@@ -203,13 +203,13 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     putStack(pos, 5, 4, [
       { type: 'P', owner: 'black' },
       { type: 'P', owner: 'black' },
-    ]); // size 2 > source size 1 → blocked
+    ]); // size 2 > source size 1 -> blocked
     putPiece(pos, 5, 2, 'P', 'black');
 
     expect(isSquareUnderAttack(pos, { col: 5, row: 2 }, 'white')).toBe(false);
   });
 
-  it('Archer at size 1 — jumps forward 2 over 1 square', () => {
+  it('Archer at size 1 --- jumps forward 2 over 1 square', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'A', 'white');
     putPiece(pos, 5, 3, 'P', 'black'); // forward 2
@@ -218,7 +218,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 3 }, 'white')).toBe(true);
   });
 
-  it('Musketeer at size 1 — jumps forward 2', () => {
+  it('Musketeer at size 1 --- jumps forward 2', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'U', 'white');
     putPiece(pos, 5, 3, 'P', 'black');
@@ -228,7 +228,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
 
   /* ------ Limited-range pieces (Spy) ------ */
 
-  it('Spy at size 1 — attacks diagonal squares up to 2 away', () => {
+  it('Spy at size 1 --- attacks diagonal squares up to 2 away', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'Y', 'white');
     putPiece(pos, 3, 3, 'P', 'black'); // 2 steps FL
@@ -238,17 +238,17 @@ describe('isSquareUnderAttack — basic scenarios', () => {
     expect(isSquareUnderAttack(pos, { col: 7, row: 7 }, 'white')).toBe(true);
   });
 
-  it('Spy at size 1 — does not attack beyond range 2', () => {
+  it('Spy at size 1 --- does not attack beyond range 2', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'Y', 'white');
-    putPiece(pos, 2, 2, 'P', 'black'); // 3 steps FL — too far for size 1
+    putPiece(pos, 2, 2, 'P', 'black'); // 3 steps FL --- too far for size 1
 
     expect(isSquareUnderAttack(pos, { col: 2, row: 2 }, 'white')).toBe(false);
   });
 
   /* ------ Empty board ------ */
 
-  it('Empty board — no squares under attack', () => {
+  it('Empty board --- no squares under attack', () => {
     const pos = emptyPos();
     expect(isSquareUnderAttack(pos, { col: 5, row: 5 }, 'white')).toBe(false);
     expect(isSquareUnderAttack(pos, { col: 5, row: 5 }, 'black')).toBe(false);
@@ -256,7 +256,7 @@ describe('isSquareUnderAttack — basic scenarios', () => {
 
   /* ------ Board edge ------ */
 
-  it('Piece at corner — only attacks squares within bounds', () => {
+  it('Piece at corner --- only attacks squares within bounds', () => {
     const pos = emptyPos();
     putPiece(pos, 1, 1, 'M', 'white'); // top-right corner
     putPiece(pos, 1, 2, 'P', 'black'); // B
@@ -277,18 +277,18 @@ describe('isSquareUnderAttack — basic scenarios', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 2 — Stack-size landing restriction (BR-MOVE-005)           */
+/*  Section 2 --- Stack-size landing restriction (BR-MOVE-005)           */
 /* ------------------------------------------------------------------ */
 
-describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
-  it('source=1, target=1 — CAN attack', () => {
+describe('isSquareUnderAttack --- stack-size restriction (BR-MOVE-005)', () => {
+  it('source=1, target=1 --- CAN attack', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // size 1
     putPiece(pos, 5, 4, 'P', 'black'); // size 1
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('source=1, target=2 — CANNOT attack', () => {
+  it('source=1, target=2 --- CANNOT attack', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // size 1
     putStack(pos, 5, 4, [
@@ -298,7 +298,7 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 
-  it('source=1, target=3 — CANNOT attack', () => {
+  it('source=1, target=3 --- CANNOT attack', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // size 1
     putStack(pos, 5, 4, [
@@ -309,7 +309,7 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 
-  it('source=2, target=3 — CANNOT attack', () => {
+  it('source=2, target=3 --- CANNOT attack', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -323,7 +323,7 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 
-  it('source=2, target=2 — CAN attack (equal)', () => {
+  it('source=2, target=2 --- CAN attack (equal)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -336,7 +336,7 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('source=3, target=3 — CAN attack (equal)', () => {
+  it('source=3, target=3 --- CAN attack (equal)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -351,7 +351,7 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('source=3, target=1 — CAN attack (source larger)', () => {
+  it('source=3, target=1 --- CAN attack (source larger)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -362,14 +362,14 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('source=1 attacks empty square — allowed', () => {
+  it('source=1 attacks empty square --- allowed', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // size 1
     // target (5,4) is empty
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('source=2 attacks friendly stack size 3 — CANNOT attack (BR-MOVE-005 applies to friendlies too)', () => {
+  it('source=2 attacks friendly stack size 3 --- CANNOT attack (BR-MOVE-005 applies to friendlies too)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -379,49 +379,49 @@ describe('isSquareUnderAttack — stack-size restriction (BR-MOVE-005)', () => {
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
       { type: 'P', owner: 'white' },
-    ]); // size 3 white — friendly but larger
+    ]); // size 3 white --- friendly but larger
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 3 — Marshal threat disregards BR-STACK-004                 */
+/*  Section 3 --- Marshal threat disregards BR-STACK-004                 */
 /* ------------------------------------------------------------------ */
 
-describe('Marshal threat — disregards BR-STACK-004', () => {
-  it('Pawn at size 1, enemy Marshal at size 1 — attacks the Marshal square', () => {
+describe('Marshal threat --- disregards BR-STACK-004', () => {
+  it('Pawn at size 1, enemy Marshal at size 1 --- attacks the Marshal square', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // source
     putPiece(pos, 5, 4, 'M', 'black'); // enemy Marshal
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('General at size 1, enemy Marshal far along range — attacks Marshal square', () => {
+  it('General at size 1, enemy Marshal far along range --- attacks Marshal square', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'G', 'white');
     putPiece(pos, 5, 1, 'M', 'black');
     expect(isSquareUnderAttack(pos, { col: 5, row: 1 }, 'white')).toBe(true);
   });
 
-  it('Pawn at size 1, enemy Marshal at size 2 in stack — CANNOT attack (stack too large)', () => {
+  it('Pawn at size 1, enemy Marshal at size 2 in stack --- CANNOT attack (stack too large)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // size 1
     putStack(pos, 5, 4, [
       { type: 'P', owner: 'black' },
       { type: 'M', owner: 'black' },
     ]); // size 2, Marshal on top
-    // BR-MOVE-005: source 1 < target 2 → cannot attack
+    // BR-MOVE-005: source 1 < target 2 -> cannot attack
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 
-  it('Cannon attacks Marshal — jump destination works for threat', () => {
+  it('Cannon attacks Marshal --- jump destination works for threat', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'C', 'white');
     putPiece(pos, 5, 2, 'M', 'black'); // jump target
     expect(isSquareUnderAttack(pos, { col: 5, row: 2 }, 'white')).toBe(true);
   });
 
-  it('Marshal threat from multi-size stack — source size 3 can attack Marshal at size 2', () => {
+  it('Marshal threat from multi-size stack --- source size 3 can attack Marshal at size 2', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -437,11 +437,11 @@ describe('Marshal threat — disregards BR-STACK-004', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 4 — Extended range at sizes 2-3                            */
+/*  Section 4 --- Extended range at sizes 2-3                            */
 /* ------------------------------------------------------------------ */
 
 describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
-  it('Marshal size 2 — step extends to 2 squares, attacks (5,3) from (5,5)', () => {
+  it('Marshal size 2 --- step extends to 2 squares, attacks (5,3) from (5,5)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -451,7 +451,7 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 3 }, 'white')).toBe(true);
   });
 
-  it('Marshal size 3 — step extends to 3 squares, attacks (5,2) from (5,5)', () => {
+  it('Marshal size 3 --- step extends to 3 squares, attacks (5,2) from (5,5)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -462,14 +462,14 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 2 }, 'white')).toBe(true);
   });
 
-  it('Marshal size 1 — step is 1 square, does NOT attack (5,3) from (5,5)', () => {
+  it('Marshal size 1 --- step is 1 square, does NOT attack (5,3) from (5,5)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white'); // size 1
     putPiece(pos, 5, 3, 'P', 'black');
     expect(isSquareUnderAttack(pos, { col: 5, row: 3 }, 'white')).toBe(false);
   });
 
-  it('Spy size 2 — limited-range extends to 3, attacks (2,2) from (5,5)', () => {
+  it('Spy size 2 --- limited-range extends to 3, attacks (2,2) from (5,5)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'Y', owner: 'white' },
@@ -479,7 +479,7 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 2, row: 2 }, 'white')).toBe(true);
   });
 
-  it('Spy size 3 — limited-range extends to 4, attacks (1,1) from (5,5)', () => {
+  it('Spy size 3 --- limited-range extends to 4, attacks (1,1) from (5,5)', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'Y', owner: 'white' },
@@ -490,7 +490,7 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 1, row: 1 }, 'white')).toBe(true);
   });
 
-  it('Cannon size 2 — jump extends to 2x range', () => {
+  it('Cannon size 2 --- jump extends to 2x range', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'C', owner: 'white' },
@@ -502,7 +502,7 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 1 }, 'white')).toBe(true);
   });
 
-  it('General size 2 — limited-range extends step diagonals to 2', () => {
+  it('General size 2 --- limited-range extends step diagonals to 2', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'G', owner: 'white' },
@@ -512,7 +512,7 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
     expect(isSquareUnderAttack(pos, { col: 3, row: 3 }, 'white')).toBe(true);
   });
 
-  it('General size 3 — limited-range extends step diagonals to 3', () => {
+  it('General size 3 --- limited-range extends step diagonals to 3', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -525,21 +525,21 @@ describe('Extended range at sizes 2-3 (BR-MOVEMENT-005)', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 5 — isSquareUnderAttack: ownership & sourceStackSize filter */
+/*  Section 5 --- isSquareUnderAttack: ownership & sourceStackSize filter */
 /* ------------------------------------------------------------------ */
 
-describe('isSquareUnderAttack — ownership and sourceStackSize filter', () => {
+describe('isSquareUnderAttack --- ownership and sourceStackSize filter', () => {
   it("Only the attacking player's pieces count", () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'P', 'black');
     // White attacks (5,4)
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
-    // Black does NOT attack (5,4) — it's black's own piece there
+    // Black does NOT attack (5,4) --- it's black's own piece there
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'black')).toBe(false);
   });
 
-  it('Mixed-ownership stack — top determines ownership for attack', () => {
+  it('Mixed-ownership stack --- top determines ownership for attack', () => {
     const pos = emptyPos();
     // Stack with black top, white bottom
     putStack(pos, 5, 5, [
@@ -547,13 +547,13 @@ describe('isSquareUnderAttack — ownership and sourceStackSize filter', () => {
       { type: 'M', owner: 'black' },
     ]);
     putPiece(pos, 5, 4, 'P', 'white');
-    // Top is black Marshal → black's piece for attack purposes
+    // Top is black Marshal -> black's piece for attack purposes
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'black')).toBe(true);
     // White does NOT attack from this square (top is black)
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 
-  it('sourceStackSize filter — only pieces of matching size are considered', () => {
+  it('sourceStackSize filter --- only pieces of matching size are considered', () => {
     const pos = emptyPos();
     // size 1 piece at a new location
     putPiece(pos, 3, 3, 'P', 'white');
@@ -567,20 +567,20 @@ describe('isSquareUnderAttack — ownership and sourceStackSize filter', () => {
     // target reachable by size-2: (3,6) is F for white from (3,7)
     putPiece(pos, 3, 6, 'P', 'black');
 
-    // Without filter — both attack
+    // Without filter --- both attack
     expect(isSquareUnderAttack(pos, { col: 3, row: 2 }, 'white')).toBe(true);
     expect(isSquareUnderAttack(pos, { col: 3, row: 6 }, 'white')).toBe(true);
 
-    // With sourceStackSize=1 — only size-1 piece considered
+    // With sourceStackSize=1 --- only size-1 piece considered
     expect(isSquareUnderAttack(pos, { col: 3, row: 2 }, 'white', 1)).toBe(true);
     expect(isSquareUnderAttack(pos, { col: 3, row: 6 }, 'white', 1)).toBe(false);
 
-    // With sourceStackSize=2 — only size-2 piece considered
+    // With sourceStackSize=2 --- only size-2 piece considered
     expect(isSquareUnderAttack(pos, { col: 3, row: 2 }, 'white', 2)).toBe(false);
     expect(isSquareUnderAttack(pos, { col: 3, row: 6 }, 'white', 2)).toBe(true);
   });
 
-  it('No matching piece — returns false', () => {
+  it('No matching piece --- returns false', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white'); // size 1
     putPiece(pos, 5, 4, 'P', 'black');
@@ -590,32 +590,32 @@ describe('isSquareUnderAttack — ownership and sourceStackSize filter', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 6 — isInCheck: basic detection                             */
+/*  Section 6 --- isInCheck: basic detection                             */
 /* ------------------------------------------------------------------ */
 
-describe('isInCheck — basic detection', () => {
-  it('Marshal under attack by enemy Pawn — in check', () => {
+describe('isInCheck --- basic detection', () => {
+  it('Marshal under attack by enemy Pawn --- in check', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 4, 'P', 'black'); // enemy Pawn
     expect(isInCheck(pos, 'white')).toBe(true);
   });
 
-  it('Marshal not under attack — not in check', () => {
+  it('Marshal not under attack --- not in check', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     // No enemy pieces
     expect(isInCheck(pos, 'white')).toBe(false);
   });
 
-  it('Marshal with no enemy nearby — not in check', () => {
+  it('Marshal with no enemy nearby --- not in check', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 1, 1, 'P', 'black'); // far away
     expect(isInCheck(pos, 'white')).toBe(false);
   });
 
-  it('Opponent checks — symmetry', () => {
+  it('Opponent checks --- symmetry', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'black');
     putPiece(pos, 5, 4, 'P', 'white');
@@ -624,11 +624,11 @@ describe('isInCheck — basic detection', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 7 — isInCheck: Marshal not on board / in stack             */
+/*  Section 7 --- isInCheck: Marshal not on board / in stack             */
 /* ------------------------------------------------------------------ */
 
-describe('isInCheck — Marshal not on board', () => {
-  it('Marshal in hand (deploy phase) — not in check', () => {
+describe('isInCheck --- Marshal not on board', () => {
+  it('Marshal in hand (deploy phase) --- not in check', () => {
     const pos = emptyPos();
     // No Marshal on board
     putPiece(pos, 5, 5, 'P', 'white');
@@ -637,7 +637,7 @@ describe('isInCheck — Marshal not on board', () => {
     expect(isInCheck(pos, 'black')).toBe(false);
   });
 
-  it("Only opponent's Marshal on board — not in check for player without Marshal", () => {
+  it("Only opponent's Marshal on board --- not in check for player without Marshal", () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'black');
     putPiece(pos, 5, 4, 'P', 'white');
@@ -648,8 +648,8 @@ describe('isInCheck — Marshal not on board', () => {
   });
 });
 
-describe('isInCheck — Marshal in stack', () => {
-  it('Marshal on top of a size-2 stack — still detected', () => {
+describe('isInCheck --- Marshal in stack', () => {
+  it('Marshal on top of a size-2 stack --- still detected', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -663,7 +663,7 @@ describe('isInCheck — Marshal in stack', () => {
     expect(isInCheck(pos, 'white')).toBe(true);
   });
 
-  it('Marshal on top of size-3 stack — still detected when under attack', () => {
+  it('Marshal on top of size-3 stack --- still detected when under attack', () => {
     const pos = emptyPos();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -679,17 +679,17 @@ describe('isInCheck — Marshal in stack', () => {
       { type: 'P', owner: 'black' },
       { type: 'P', owner: 'black' },
     ]); // size 3
-    // Black Pawn at (5,6) can step to (5,5) — source 3 >= target 3
+    // Black Pawn at (5,6) can step to (5,5) --- source 3 >= target 3
     expect(isInCheck(pos, 'white')).toBe(true);
   });
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 8 — isExposed                                              */
+/*  Section 8 --- isExposed                                              */
 /* ------------------------------------------------------------------ */
 
-describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
-  it('Both Marshals under attack — both exposed', () => {
+describe('isExposed --- exposure evaluation (BR-DEPLOY-012)', () => {
+  it('Both Marshals under attack --- both exposed', () => {
     const pos = emptyPos();
     // White Marshal at (5,9), enemy Pawn at (5,8)
     putPiece(pos, 5, 9, 'M', 'white');
@@ -703,7 +703,7 @@ describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
     expect(result.black).toBe(true);
   });
 
-  it('Only White Marshal under attack — white exposed', () => {
+  it('Only White Marshal under attack --- white exposed', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'M', 'white');
     putPiece(pos, 5, 8, 'P', 'black');
@@ -714,7 +714,7 @@ describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
     expect(result.black).toBe(false);
   });
 
-  it('Only Black Marshal under attack — black exposed', () => {
+  it('Only Black Marshal under attack --- black exposed', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'M', 'white'); // safe
     putPiece(pos, 5, 1, 'M', 'black');
@@ -725,7 +725,7 @@ describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
     expect(result.black).toBe(true);
   });
 
-  it('Neither Marshal under attack — neither exposed', () => {
+  it('Neither Marshal under attack --- neither exposed', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'M', 'white');
     putPiece(pos, 5, 1, 'M', 'black');
@@ -736,7 +736,7 @@ describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
     expect(result.black).toBe(false);
   });
 
-  it('Neither Marshal on board (deploy phase) — neither exposed', () => {
+  it('Neither Marshal on board (deploy phase) --- neither exposed', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'P', 'black');
@@ -746,7 +746,7 @@ describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
     expect(result.black).toBe(false);
   });
 
-  it('No pieces at all — neither exposed', () => {
+  it('No pieces at all --- neither exposed', () => {
     const pos = emptyPos();
     const result = isExposed(pos);
     expect(result.white).toBe(false);
@@ -755,11 +755,11 @@ describe('isExposed — exposure evaluation (BR-DEPLOY-012)', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 9 — Integration tests with GSFEN fixtures                  */
+/*  Section 9 --- Integration tests with GSFEN fixtures                  */
 /* ------------------------------------------------------------------ */
 
-describe('GSFEN integration — attack/check/exposure states', () => {
-  it('startpos — no attacks, no checks, no exposure', () => {
+describe('GSFEN integration --- attack/check/exposure states', () => {
+  it('startpos --- no attacks, no checks, no exposure', () => {
     const pos = gsfenPos('startpos');
     // Empty board in startpos
     expect(isSquareUnderAttack(pos, { col: 5, row: 5 }, 'white')).toBe(false);
@@ -770,7 +770,7 @@ describe('GSFEN integration — attack/check/exposure states', () => {
     expect(exp.black).toBe(false);
   });
 
-  it('white-marshal-at-5-9 — only White Marshal on board, no enemies near', () => {
+  it('white-marshal-at-5-9 --- only White Marshal on board, no enemies near', () => {
     const pos = gsfenPos(BOTH_MARSHALS_DEPLOY_CTR2);
     // Black Marshal at (5,1), White Marshal at (5,9)
     // All other pieces are in hands, no attack possible
@@ -778,21 +778,21 @@ describe('GSFEN integration — attack/check/exposure states', () => {
     expect(isInCheck(pos, 'black')).toBe(false);
   });
 
-  it('both-marshals-placed — Marshals placed, no threats', () => {
+  it('both-marshals-placed --- Marshals placed, no threats', () => {
     const pos = gsfenPos(BOTH_MARSHALS_PLACED);
     expect(isInCheck(pos, 'white')).toBe(false);
     expect(isInCheck(pos, 'black')).toBe(false);
   });
 
-  it('battle-start — Marshals have no direct threats', () => {
+  it('battle-start --- Marshals have no direct threats', () => {
     const pos = gsfenPos(BATTLE_START);
     // White Marshal at (5,9), Black Marshal at (5,1)
-    // Both have pieces in between — check threats
+    // Both have pieces in between --- check threats
     expect(isInCheck(pos, 'white')).toBe(false);
     expect(isInCheck(pos, 'black')).toBe(false);
   });
 
-  it('dense-engagement — complex position with stacks', () => {
+  it('dense-engagement --- complex position with stacks', () => {
     // Board layout (row 1 = top):
     //   Row 1: p at (3,1), e at (7,1)
     //   Row 2: GN stack at (5,2) [G bottom, N top]
@@ -802,9 +802,9 @@ describe('GSFEN integration — attack/check/exposure states', () => {
     //   Row 7: PS stack at (4,7), PU stack at (6,7)
     //   Row 8: S at (3,8), g at (4,8), S at (7,8)
     //   Row 9: m at (5,9)
-    // White Marshal at (5,9) — no black piece threatens it (nearest black pieces
+    // White Marshal at (5,9) --- no black piece threatens it (nearest black pieces
     // are at rows 1-3, too far for step movement, and row 8 has only white pieces).
-    // Black Marshal at (5,3) — no white piece reaches it (white pieces on rows 5-9
+    // Black Marshal at (5,3) --- no white piece reaches it (white pieces on rows 5-9
     // are blocked or out of range).
     const pos = gsfenPos(DENSE_ENGAGEMENT);
     expect(isInCheck(pos, 'white')).toBe(false);
@@ -818,15 +818,15 @@ describe('GSFEN integration — attack/check/exposure states', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 3 }, 'white')).toBe(false);
 
     // Sanity: white pieces DO attack some squares (the position is not dead)
-    // g (white General) at (4,8) has range movement — attacks along orthogonals
+    // g (white General) at (4,8) has range movement --- attacks along orthogonals
     expect(isSquareUnderAttack(pos, { col: 4, row: 7 }, 'white')).toBe(true);
-    // Y (black Spy) at top of (5,5) stack — attacks diagonals
+    // Y (black Spy) at top of (5,5) stack --- attacks diagonals
     expect(isSquareUnderAttack(pos, { col: 4, row: 4 }, 'black')).toBe(true);
   });
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 10 — Edge cases                                            */
+/*  Section 10 --- Edge cases                                            */
 /* ------------------------------------------------------------------ */
 
 describe('Edge cases', () => {
@@ -836,13 +836,13 @@ describe('Edge cases', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 5 }, 'white')).toBe(false);
   });
 
-  it('No enemy pieces — no attacks for opponent', () => {
+  it('No enemy pieces --- no attacks for opponent', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     expect(isSquareUnderAttack(pos, { col: 5, row: 5 }, 'black')).toBe(false);
   });
 
-  it('Black player direction — Pawn at centre attacks correctly for black', () => {
+  it('Black player direction --- Pawn at centre attacks correctly for black', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'black');
     putPiece(pos, 5, 6, 'P', 'white'); // black F = row+1
@@ -854,7 +854,7 @@ describe('Edge cases', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'black')).toBe(true);
   });
 
-  it('Black Marshal check — symmetry of direction', () => {
+  it('Black Marshal check --- symmetry of direction', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'black');
     putPiece(pos, 5, 6, 'P', 'white'); // black F = row+1
@@ -865,12 +865,12 @@ describe('Edge cases', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'P', 'white'); // friendly
-    // White asking if white attacks a friendly square — still true
+    // White asking if white attacks a friendly square --- still true
     // (Attack disregards friendly occupation per BR-Attack)
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
-  it('Path blocked by obstruction — squares beyond are not attacked', () => {
+  it('Path blocked by obstruction --- squares beyond are not attacked', () => {
     const pos = emptyPos();
     // General at (5,9), Pawn at (5,6) blocks, target at (5,3)
     putPiece(pos, 5, 9, 'G', 'white');
@@ -882,7 +882,7 @@ describe('Edge cases', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 6 }, 'white')).toBe(true);
   });
 
-  it('Enemy block — squares beyond are not attacked', () => {
+  it('Enemy block --- squares beyond are not attacked', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 9, 'G', 'white');
     putPiece(pos, 5, 6, 'P', 'black'); // enemy block
@@ -893,7 +893,7 @@ describe('Edge cases', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 6 }, 'white')).toBe(true);
   });
 
-  it('Multiple attackers — returns true if any piece can attack', () => {
+  it('Multiple attackers --- returns true if any piece can attack', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 3, 5, 'P', 'white');
@@ -902,11 +902,11 @@ describe('Edge cases', () => {
     // Pawn at (5,5) attacks (5,4)
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
 
-    // Pawn at (3,5) cannot attack (5,4) — wrong direction
+    // Pawn at (3,5) cannot attack (5,4) --- wrong direction
     // But the first piece already covers it
   });
 
-  it('Jump path blocked by large stack on over square — not attacked', () => {
+  it('Jump path blocked by large stack on over square --- not attacked', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'C', 'white'); // size 1
     // Size-2 stack on over square (5,4)
@@ -919,7 +919,7 @@ describe('Edge cases', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 2 }, 'white')).toBe(false);
   });
 
-  it('Jump path — empty over squares allow attack (BR-PATH-002)', () => {
+  it('Jump path --- empty over squares allow attack (BR-PATH-002)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'C', 'white');
     // Over squares (5,4) and (5,3) are empty
@@ -927,7 +927,7 @@ describe('Edge cases', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 2 }, 'white')).toBe(true);
   });
 
-  it('All pieces attack the target at same time — dense scenario', () => {
+  it('All pieces attack the target at same time --- dense scenario', () => {
     const pos = emptyPos();
     // Place multiple white pieces that can all attack (5,4)
     putPiece(pos, 5, 5, 'P', 'white'); // B to (5,6)... no wait
@@ -944,11 +944,11 @@ describe('Edge cases', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 11 — getLegalDestinations cross-check                      */
+/*  Section 11 --- getLegalDestinations cross-check                      */
 /* ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ */
-/*  Section 11 — Exact attack-set enumeration                          */
+/*  Section 11 --- Exact attack-set enumeration                          */
 /* ------------------------------------------------------------------ */
 
 describe('Exact attack-set enumeration', () => {
@@ -978,7 +978,7 @@ describe('Exact attack-set enumeration', () => {
     }
   }
 
-  it('Marshal at (5,5) size 1 — attacks EXACTLY the 8 neighbours', () => {
+  it('Marshal at (5,5) size 1 --- attacks EXACTLY the 8 neighbours', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     // Place enemies on all 8 neighbour squares so they can be tested
@@ -995,14 +995,14 @@ describe('Exact attack-set enumeration', () => {
     for (const sq of neighbours) putPiece(pos, sq.col, sq.row, 'P', 'black');
 
     assertExactAttackSet(pos, 5, 5, 'white', neighbours, [
-      { col: 5, row: 3 }, // 2 forward — out of step range
-      { col: 7, row: 5 }, // 2 left — out of step range
-      { col: 7, row: 3 }, // 2 FL — out of step range
+      { col: 5, row: 3 }, // 2 forward --- out of step range
+      { col: 7, row: 5 }, // 2 left --- out of step range
+      { col: 7, row: 3 }, // 2 FL --- out of step range
       { col: 5, row: 5 }, // own square
     ]);
   });
 
-  it('Fortress at (5,5) size 1 — attacks EXACTLY F, L, R, BL, BR (5 squares)', () => {
+  it('Fortress at (5,5) size 1 --- attacks EXACTLY F, L, R, BL, BR (5 squares)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'F', 'white');
     const attacked = [
@@ -1015,13 +1015,13 @@ describe('Exact attack-set enumeration', () => {
     for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
 
     assertExactAttackSet(pos, 5, 5, 'white', attacked, [
-      { col: 5, row: 6 }, // B — Fortress cannot go backward
-      { col: 6, row: 4 }, // FL — Fortress cannot go FL
-      { col: 4, row: 4 }, // FR — Fortress cannot go FR
+      { col: 5, row: 6 }, // B --- Fortress cannot go backward
+      { col: 6, row: 4 }, // FL --- Fortress cannot go FL
+      { col: 4, row: 4 }, // FR --- Fortress cannot go FR
     ]);
   });
 
-  it('Pawn at (5,5) size 1 — attacks EXACTLY F, B (2 squares)', () => {
+  it('Pawn at (5,5) size 1 --- attacks EXACTLY F, B (2 squares)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     const attacked = [
@@ -1031,16 +1031,16 @@ describe('Exact attack-set enumeration', () => {
     for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
 
     assertExactAttackSet(pos, 5, 5, 'white', attacked, [
-      { col: 6, row: 5 }, // L — Pawn cannot go sideways
-      { col: 4, row: 5 }, // R — Pawn cannot go sideways
-      { col: 6, row: 4 }, // FL — Pawn cannot go diagonal
-      { col: 4, row: 4 }, // FR — Pawn cannot go diagonal
-      { col: 6, row: 6 }, // BL — Pawn cannot go diagonal
-      { col: 4, row: 6 }, // BR — Pawn cannot go diagonal
+      { col: 6, row: 5 }, // L --- Pawn cannot go sideways
+      { col: 4, row: 5 }, // R --- Pawn cannot go sideways
+      { col: 6, row: 4 }, // FL --- Pawn cannot go diagonal
+      { col: 4, row: 4 }, // FR --- Pawn cannot go diagonal
+      { col: 6, row: 6 }, // BL --- Pawn cannot go diagonal
+      { col: 4, row: 6 }, // BR --- Pawn cannot go diagonal
     ]);
   });
 
-  it('Samurai at (5,5) size 1 — attacks EXACTLY F, FL, FR, B (4 squares)', () => {
+  it('Samurai at (5,5) size 1 --- attacks EXACTLY F, FL, FR, B (4 squares)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'S', 'white');
     const attacked = [
@@ -1052,14 +1052,14 @@ describe('Exact attack-set enumeration', () => {
     for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
 
     assertExactAttackSet(pos, 5, 5, 'white', attacked, [
-      { col: 6, row: 5 }, // L — Samurai cannot go L
-      { col: 4, row: 5 }, // R — Samurai cannot go R
-      { col: 6, row: 6 }, // BL — Samurai cannot go BL
-      { col: 4, row: 6 }, // BR — Samurai cannot go BR
+      { col: 6, row: 5 }, // L --- Samurai cannot go L
+      { col: 4, row: 5 }, // R --- Samurai cannot go R
+      { col: 6, row: 6 }, // BL --- Samurai cannot go BL
+      { col: 4, row: 6 }, // BR --- Samurai cannot go BR
     ]);
   });
 
-  it('Captain at (5,5) size 1 — attacks EXACTLY FL, FR, B (3 squares)', () => {
+  it('Captain at (5,5) size 1 --- attacks EXACTLY FL, FR, B (3 squares)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'T', 'white');
     const attacked = [
@@ -1070,36 +1070,36 @@ describe('Exact attack-set enumeration', () => {
     for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
 
     assertExactAttackSet(pos, 5, 5, 'white', attacked, [
-      { col: 5, row: 4 }, // F — Captain cannot go F
-      { col: 6, row: 5 }, // L — Captain cannot go L
-      { col: 4, row: 5 }, // R — Captain cannot go R
-      { col: 6, row: 6 }, // BL — Captain cannot go BL
-      { col: 4, row: 6 }, // BR — Captain cannot go BR
+      { col: 5, row: 4 }, // F --- Captain cannot go F
+      { col: 6, row: 5 }, // L --- Captain cannot go L
+      { col: 4, row: 5 }, // R --- Captain cannot go R
+      { col: 6, row: 6 }, // BL --- Captain cannot go BL
+      { col: 4, row: 6 }, // BR --- Captain cannot go BR
     ]);
   });
 
-  it('Cannon at (5,5) size 1 — attacks EXACTLY L, R, B + jump forward 3', () => {
+  it('Cannon at (5,5) size 1 --- attacks EXACTLY L, R, B + jump forward 3', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'C', 'white');
     const attacked = [
       { col: 6, row: 5 }, // L (step)
       { col: 4, row: 5 }, // R (step)
       { col: 5, row: 6 }, // B (step)
-      { col: 5, row: 2 }, // Jump forward 3: dest (0,+3) → (5, 5-3) = (5,2)
+      { col: 5, row: 2 }, // Jump forward 3: dest (0,+3) -> (5, 5-3) = (5,2)
     ];
     for (const sq of attacked) putPiece(pos, sq.col, sq.row, 'P', 'black');
 
     assertExactAttackSet(pos, 5, 5, 'white', attacked, [
-      { col: 5, row: 4 }, // F step — Cannon has no F step
-      { col: 5, row: 3 }, // Jump over-square — not a destination
-      { col: 5, row: 1 }, // Beyond jump — too far
-      { col: 6, row: 4 }, // FL — not a Cannon direction
+      { col: 5, row: 4 }, // F step --- Cannon has no F step
+      { col: 5, row: 3 }, // Jump over-square --- not a destination
+      { col: 5, row: 1 }, // Beyond jump --- too far
+      { col: 6, row: 4 }, // FL --- not a Cannon direction
     ]);
   });
 });
 
 /* ------------------------------------------------------------------ */
-/*  Section 12 — Cross-check with getLegalDestinations                 */
+/*  Section 12 --- Cross-check with getLegalDestinations                 */
 /* ------------------------------------------------------------------ */
 
 describe('Cross-check with getLegalDestinations', () => {
@@ -1126,7 +1126,7 @@ describe('Cross-check with getLegalDestinations', () => {
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const canReach = moves.some((m) => m.dest.col === 5 && m.dest.row === 4);
 
-    expect(canReach).toBe(false); // 1 < 3 → blocked by BR-MOVE-005
+    expect(canReach).toBe(false); // 1 < 3 -> blocked by BR-MOVE-005
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(false);
   });
 });

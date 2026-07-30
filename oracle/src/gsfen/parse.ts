@@ -1,15 +1,15 @@
 /**
- * GSFEN parser — parses Gungi Stacking Forsyth-Edwards Notation strings
+ * GSFEN parser --- parses Gungi Stacking Forsyth-Edwards Notation strings
  * into GameState objects, validating canonical form.
  *
  * Canonical-form rules are organised by the field they constrain
  * (see GSFEN.md §Canonicalization):
- *   - BR-GSFEN-CANON-SEPARATOR-*   — field separation
- *   - BR-GSFEN-CANON-POSITION-*    — Position field
- *   - BR-GSFEN-CANON-TURN-*        — Turn field
- *   - BR-GSFEN-CANON-HANDS-*       — Hands field
- *   - BR-GSFEN-CANON-COUNTER-*     — Counter field
- *   - BR-GSFEN-CANON-KEYWORD-*     — startpos keyword
+ *   - BR-GSFEN-CANON-SEPARATOR-*   --- field separation
+ *   - BR-GSFEN-CANON-POSITION-*    --- Position field
+ *   - BR-GSFEN-CANON-TURN-*        --- Turn field
+ *   - BR-GSFEN-CANON-HANDS-*       --- Hands field
+ *   - BR-GSFEN-CANON-COUNTER-*     --- Counter field
+ *   - BR-GSFEN-CANON-KEYWORD-*     --- startpos keyword
  *
  * @module
  */
@@ -46,7 +46,7 @@ type FieldResult<T> = { ok: true; value: T } | { ok: false; error: GameError };
 
 const VALID_PIECE_SET = new Set<string>(ALL_PIECE_TYPES);
 
-/** Safe cast: an already-validated piece letter → PieceType (centralises the unsafe cast). */
+/** Safe cast: an already-validated piece letter -> PieceType (centralises the unsafe cast). */
 function isPieceType(ch: string): ch is PieceType {
   return VALID_PIECE_SET.has(ch);
 }
@@ -63,16 +63,16 @@ function isCountDigit(ch: string): boolean {
 /**
  * Parse the Position field.
  *
- * GSFEN row items are written Col 9 → Col 1 (left to right in Standard
+ * GSFEN row items are written Col 9 -> Col 1 (left to right in Standard
  * Diagram).  Our internal Position uses position[row][col-1] where col 1
  * = rightmost, so we reverse the mapping.
  *
- * Canonical-form rules enforced (GSFEN.md §Canonicalization → Position rules):
- *   - BR-GSFEN-CANON-POSITION-ROW-COUNT     — exactly 9 rows
- *   - BR-GSFEN-CANON-POSITION-SQUARE-COUNT   — each row sums to 9 squares
- *   - BR-GSFEN-CANON-POSITION-COMPRESSION    — no adjacent empty-run items
- *   - BR-GSFEN-CANON-POSITION-STACK-SPELLING — valid piece letters, stack depth 1–3
- *   - BR-GSFEN-CANON-POSITION-EMPTY-ITEM     — no bare commas or empty segments
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization -> Position rules):
+ *   - BR-GSFEN-CANON-POSITION-ROW-COUNT     --- exactly 9 rows
+ *   - BR-GSFEN-CANON-POSITION-SQUARE-COUNT   --- each row sums to 9 squares
+ *   - BR-GSFEN-CANON-POSITION-COMPRESSION    --- no adjacent empty-run items
+ *   - BR-GSFEN-CANON-POSITION-STACK-SPELLING --- valid piece letters, stack depth 1–3
+ *   - BR-GSFEN-CANON-POSITION-EMPTY-ITEM     --- no bare commas or empty segments
  */
 function parsePosition(posStr: string): FieldResult<Position> {
   const rows = posStr.split('/');
@@ -100,7 +100,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
     }
 
     const items = rowStr.split(',');
-    // Start from the rightmost column index (Col 9 → idx 8) and work left.
+    // Start from the rightmost column index (Col 9 -> idx 8) and work left.
     let pos = 8;
     let prevWasDigit = false;
     const row: (Stack | null)[] = new Array<Stack | null>(9).fill(null);
@@ -120,7 +120,7 @@ function parsePosition(posStr: string): FieldResult<Position> {
           return {
             ok: false,
             error: new GameError(
-              `Row ${r + 1}: adjacent empty-run items must be merged (BR-GSFEN-CANON-POSITION-COMPRESSION) — write 5, not 4,1`,
+              `Row ${r + 1}: adjacent empty-run items must be merged (BR-GSFEN-CANON-POSITION-COMPRESSION) --- write 5, not 4,1`,
               'BR-GSFEN-CANON-POSITION-COMPRESSION',
             ),
           };
@@ -221,8 +221,8 @@ function parsePosition(posStr: string): FieldResult<Position> {
  * | dwB   | deploy     | white  | black  |
  * | dbW   | deploy     | black  | white  |
  *
- * Canonical-form rule enforced (GSFEN.md §Canonicalization → Turn rules):
- *   - BR-GSFEN-CANON-TURN-TOKEN — must be one of the six valid tokens
+ * Canonical-form rule enforced (GSFEN.md §Canonicalization -> Turn rules):
+ *   - BR-GSFEN-CANON-TURN-TOKEN --- must be one of the six valid tokens
  */
 function parseTurn(turnStr: string): FieldResult<TurnState> {
   let phase: Phase;
@@ -264,7 +264,7 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
       return {
         ok: false,
         error: new GameError(
-          `Invalid turn token "${turnStr}" (BR-GSFEN-CANON-TURN-TOKEN) — must be one of: w, b, dw, db, dwB, dbW`,
+          `Invalid turn token "${turnStr}" (BR-GSFEN-CANON-TURN-TOKEN) --- must be one of: w, b, dw, db, dwB, dbW`,
           'BR-GSFEN-CANON-TURN-TOKEN',
         ),
       };
@@ -283,13 +283,13 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
  * Format: `-` when both empty, otherwise White (uppercase, alphabetical,
  * with optional count 2-4) followed by Black (lowercase, alphabetical).
  *
- * Canonical-form rules enforced (GSFEN.md §Canonicalization → Hand rules):
- *   - BR-GSFEN-CANON-HANDS-EMPTY-MARKER    — `-` when both empty
- *   - BR-GSFEN-CANON-HANDS-SECTION-ORDER   — White (uppercase) before Black (lowercase)
- *   - BR-GSFEN-CANON-HANDS-ALPHABETICAL    — letters alphabetical within each section
- *   - BR-GSFEN-CANON-HANDS-DUPLICATE       — each letter at most once per section
- *   - BR-GSFEN-CANON-HANDS-COUNT-FORMAT    — counts 2–4, omitted when 1
- *   - BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR — no stray characters
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization -> Hand rules):
+ *   - BR-GSFEN-CANON-HANDS-EMPTY-MARKER    --- `-` when both empty
+ *   - BR-GSFEN-CANON-HANDS-SECTION-ORDER   --- White (uppercase) before Black (lowercase)
+ *   - BR-GSFEN-CANON-HANDS-ALPHABETICAL    --- letters alphabetical within each section
+ *   - BR-GSFEN-CANON-HANDS-DUPLICATE       --- each letter at most once per section
+ *   - BR-GSFEN-CANON-HANDS-COUNT-FORMAT    --- counts 2–4, omitted when 1
+ *   - BR-GSFEN-CANON-HANDS-UNEXPECTED-CHAR --- no stray characters
  */
 function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }> {
   if (handsStr === '-') {
@@ -387,9 +387,9 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
  * Parse the counter field.
  * Must be a positive integer with no leading zeros.
  *
- * Canonical-form rules enforced (GSFEN.md §Canonicalization → Counter rules):
- *   - BR-GSFEN-CANON-COUNTER-LEADING-ZERO — no leading zeros
- *   - BR-GSFEN-CANON-COUNTER-POSITIVE     — must be ≥ 1 (parser regex guarantees this)
+ * Canonical-form rules enforced (GSFEN.md §Canonicalization -> Counter rules):
+ *   - BR-GSFEN-CANON-COUNTER-LEADING-ZERO --- no leading zeros
+ *   - BR-GSFEN-CANON-COUNTER-POSITIVE     --- must be ≥ 1 (parser regex guarantees this)
  */
 function parseCounter(counterStr: string): FieldResult<number> {
   // BR-GSFEN-CANON-COUNTER-LEADING-ZERO + BR-GSFEN-CANON-COUNTER-POSITIVE:
@@ -417,14 +417,14 @@ function parseCounter(counterStr: string): FieldResult<number> {
  * Parse a GSFEN string into a GameState.
  *
  * Accepts the `startpos` keyword (expanded to START_GSFEN) and full 4-field
- * GSFEN strings.  Returns a ParseResult — on success the GameState is
+ * GSFEN strings.  Returns a ParseResult --- on success the GameState is
  * well-formed (canonical form satisfied) but not necessarily semantically
  * valid (see `validateState`).
  *
  * Canonical-form rules enforced (GSFEN.md §Canonicalization):
- *   - BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT — exactly 4 fields
- *   - BR-GSFEN-CANON-SEPARATOR-WHITESPACE  — single-space separation, no embedded whitespace
- *   - BR-GSFEN-CANON-KEYWORD-CASE          — `startpos` is lowercase and exact
+ *   - BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT --- exactly 4 fields
+ *   - BR-GSFEN-CANON-SEPARATOR-WHITESPACE  --- single-space separation, no embedded whitespace
+ *   - BR-GSFEN-CANON-KEYWORD-CASE          --- `startpos` is lowercase and exact
  *
  * @param input - Raw GSFEN string to parse.
  */
@@ -439,21 +439,21 @@ export function parseGSFEN(input: string): ParseResult {
     return {
       ok: false,
       error: new GameError(
-        'GSFEN must not have leading or trailing whitespace (BR-GSFEN-CANON-SEPARATOR-WHITESPACE) — trim the string',
+        'GSFEN must not have leading or trailing whitespace (BR-GSFEN-CANON-SEPARATOR-WHITESPACE) --- trim the string',
         'BR-GSFEN-CANON-SEPARATOR-WHITESPACE',
       ),
     };
   }
 
   // BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT: Fields separated by exactly one space (U+0020).
-  // Using split on single space — multi-space segments produce empty strings,
+  // Using split on single space --- multi-space segments produce empty strings,
   // which makes the resulting array longer than 4.
   const parts = input.split(' ');
   if (parts.length !== 4) {
     return {
       ok: false,
       error: new GameError(
-        `GSFEN must have exactly 4 single-space-separated fields (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT), got ${parts.length} segments — format: <position> <turn> <hands> <counter>`,
+        `GSFEN must have exactly 4 single-space-separated fields (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT), got ${parts.length} segments --- format: <position> <turn> <hands> <counter>`,
         'BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT',
       ),
     };
@@ -465,7 +465,7 @@ export function parseGSFEN(input: string): ParseResult {
       return {
         ok: false,
         error: new GameError(
-          'GSFEN fields must not contain tabs or other whitespace (BR-GSFEN-CANON-SEPARATOR-WHITESPACE) — use single spaces only',
+          'GSFEN fields must not contain tabs or other whitespace (BR-GSFEN-CANON-SEPARATOR-WHITESPACE) --- use single spaces only',
           'BR-GSFEN-CANON-SEPARATOR-WHITESPACE',
         ),
       };

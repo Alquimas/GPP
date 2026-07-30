@@ -26,9 +26,9 @@ export type { PlayValidation };
  * Validate the action's declared outcome against the engine-computed outcome.
  *
  * The movement engine (determineOutcome) already classified the target:
- *   - null     → empty or friendly (automatic stacking)
- *   - 'stack'  → enemy, size < 3, not Marshal (player may choose)
- *   - 'capture'→ enemy, size = 3 OR top is Marshal (forced capture)
+ *   - null     -> empty or friendly (automatic stacking)
+ *   - 'stack'  -> enemy, size < 3, not Marshal (player may choose)
+ *   - 'capture'-> enemy, size = 3 OR top is Marshal (forced capture)
  *
  * This function reuses the engine's classification instead of re-deriving
  * the reason.  The targetStack parameter is used only for error-message
@@ -40,7 +40,7 @@ function validateOutcome(
   actionOutcome: 'stack' | 'capture' | null,
 ): GameError | null {
   if (engineOutcome === null) {
-    // Engine says no capture possible — empty or friendly target
+    // Engine says no capture possible --- empty or friendly target
     if (actionOutcome !== null) {
       if (targetStack === null) {
         return new GameError(
@@ -57,14 +57,14 @@ function validateOutcome(
   }
 
   if (engineOutcome === 'capture') {
-    // Engine says capture is forced (size 3 or Marshal top) — outcome must be omitted
+    // Engine says capture is forced (size 3 or Marshal top) --- outcome must be omitted
     if (actionOutcome !== null) {
-      return new GameError('Capture is forced — cannot specify outcome token', 'BR-CAPTURE-002');
+      return new GameError('Capture is forced --- cannot specify outcome token', 'BR-CAPTURE-002');
     }
     return null;
   }
 
-  // Engine says choice exists (stack or capture legal) — outcome must be present
+  // Engine says choice exists (stack or capture legal) --- outcome must be present
   if (actionOutcome === null) {
     return new GameError(
       'Outcome must be specified (stack/capture) when both are legal',
@@ -96,7 +96,7 @@ function getArataZone(
 ): { minRow: BoardCoord; maxRow: BoardCoord } {
   if (player === 'white') {
     // White: between Row 9 (own edge) and the smallest Row containing any White piece
-    let mostAdvanced: BoardCoord = 9; // default: no pieces → own edge only
+    let mostAdvanced: BoardCoord = 9; // default: no pieces -> own edge only
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         const stack = state.position[r][c];
@@ -115,7 +115,7 @@ function getArataZone(
     return { minRow: mostAdvanced, maxRow: 9 };
   } else {
     // Black: between Row 1 (own edge) and the largest Row containing any Black piece
-    let mostAdvanced: BoardCoord = 1; // default: no pieces → own edge only
+    let mostAdvanced: BoardCoord = 1; // default: no pieces -> own edge only
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         const stack = state.position[r][c];
@@ -150,7 +150,7 @@ function getArataZone(
  *   4. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
  *   5. BR-STACK-006: Turncoat validation (Captain check, levels, hand)
  *   6. BR-STACK-004: No stacking on Marshal
- *   7. BR-ACTION-002: Self Check — own Marshal not under attack after move
+ *   7. BR-ACTION-002: Self Check --- own Marshal not under attack after move
  *
  * Rules enforced upstream (not checked here):
  *   - BR-MOVE-001 (piece is top of its stack): enforced by
@@ -239,7 +239,7 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     };
   }
 
-  // 5. Outcome validation — reuse the engine's classification (determineOutcome),
+  // 5. Outcome validation --- reuse the engine's classification (determineOutcome),
   //    no longer re-derives the reason (BR-STACK-002/004, BR-CAPTURE-001/002/003).
   const outcomeError = validateOutcome(matchingMove.outcome, targetStack, outcome);
   if (outcomeError) {
@@ -314,7 +314,7 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     }
   }
 
-  // 7. BR-ACTION-002: Self Check — apply the move and check
+  // 7. BR-ACTION-002: Self Check --- apply the move and check
   const postMoveState = applyMove(state, action);
   if (isInCheck(postMoveState.position, player)) {
     return {
@@ -354,7 +354,7 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
     };
   }
 
-  // 0. BR-ARATA-001: Phase check — Arata is a Play, only valid in battle phase
+  // 0. BR-ARATA-001: Phase check --- Arata is a Play, only valid in battle phase
   if (state.turn.phase !== 'battle') {
     return {
       ok: false,

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * gsfen-gen — Generate GSFEN fixture files by loading a fixture and applying
+ * gsfen-gen --- Generate GSFEN fixture files by loading a fixture and applying
  * overlay mutations.
  *
  * Usage:
@@ -238,10 +238,10 @@ function applyHandsTokens(state: GameState, tokens: string[]): void {
 
     const sign = token[0];
     if (sign !== '+' && sign !== '-') {
-      die(`Invalid hand token: "${token}" — expected "+M" or "-P" format`);
+      die(`Invalid hand token: "${token}" --- expected "+M" or "-P" format`);
     }
     if (token.length !== 2) {
-      die(`Invalid hand token: "${token}" — tokens must be exactly 2 characters (e.g. "+M", "-P")`);
+      die(`Invalid hand token: "${token}" --- tokens must be exactly 2 characters (e.g. "+M", "-P")`);
     }
 
     const letter = token[1];
@@ -285,7 +285,7 @@ function main(): void {
   const args = parseArgs(process.argv.slice(2));
 
   // -----------------------------------------------------------------------
-  // 1 — Load fixture
+  // 1 --- Load fixture
   // -----------------------------------------------------------------------
   if (!existsSync(args.from)) {
     die(`--from file not found: "${args.from}"`);
@@ -299,18 +299,18 @@ function main(): void {
   const state: GameState = parsed.state;
 
   // -----------------------------------------------------------------------
-  // 2 — Apply board mutations (in argument order)
+  // 2 --- Apply board mutations (in argument order)
   // -----------------------------------------------------------------------
   for (const op of args.sets) applySetOp(state, op);
   for (const op of args.clears) applyClearOp(state, op);
 
   // -----------------------------------------------------------------------
-  // 3 — Apply hand mutations
+  // 3 --- Apply hand mutations
   // -----------------------------------------------------------------------
   if (args.handsTokens.length > 0) applyHandsTokens(state, args.handsTokens);
 
   // -----------------------------------------------------------------------
-  // 4 — Apply turn / counter overrides
+  // 4 --- Apply turn / counter overrides
   // -----------------------------------------------------------------------
   if (args.turn !== null) {
     state.turn = parseTurnToken(args.turn);
@@ -320,7 +320,7 @@ function main(): void {
   }
 
   // -----------------------------------------------------------------------
-  // 5 — Validate semantics
+  // 5 --- Validate semantics
   // -----------------------------------------------------------------------
   const validation = validateState(state);
   if (!validation.ok) {
@@ -329,7 +329,7 @@ function main(): void {
   }
 
   // -----------------------------------------------------------------------
-  // 6 — Serialize and defensive re-parse
+  // 6 --- Serialize and defensive re-parse
   // -----------------------------------------------------------------------
   const gsfen = serializeGSFEN(state);
   const reparsed = parseGSFEN(gsfen);
@@ -343,7 +343,7 @@ function main(): void {
   }
 
   // -----------------------------------------------------------------------
-  // 7 — Write
+  // 7 --- Write
   // -----------------------------------------------------------------------
   const writePath = validateWritePath(args.write);
   writeFileSync(writePath, gsfen + '\n');

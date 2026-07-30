@@ -104,9 +104,9 @@ describe('parseTurncoat', () => {
 // Worked examples from GAN.md
 // ---------------------------------------------------------------------------
 
-describe('parseGAN — worked examples from GAN.md', () => {
+describe('parseGAN --- worked examples from GAN.md', () => {
   // Example 1: Opening Placement
-  // M5-9 → Placement: Marshal at 5-9, done=false
+  // M5-9 -> Placement: Marshal at 5-9, done=false
   it('Example 1: M5-9', () => {
     const action = assertOk(parseGAN('M5-9'));
     expect(action.kind).toBe('placement');
@@ -117,7 +117,7 @@ describe('parseGAN — worked examples from GAN.md', () => {
   });
 
   // Example 2: Placement with Done
-  // G5-1! → Placement: General at 5-1, done=true
+  // G5-1! -> Placement: General at 5-1, done=true
   it('Example 2: G5-1!', () => {
     const action = assertOk(parseGAN('G5-1!'));
     expect(action.kind).toBe('placement');
@@ -128,7 +128,7 @@ describe('parseGAN — worked examples from GAN.md', () => {
   });
 
   // Example 3: Plain Move, no choice available
-  // 2-7>2-6 → Move: 2-7 to 2-6, outcome=null, turncoat=[]
+  // 2-7>2-6 -> Move: 2-7 to 2-6, outcome=null, turncoat=[]
   it('Example 3: 2-7>2-6', () => {
     const action = assertOk(parseGAN('2-7>2-6'));
     expect(action.kind).toBe('move');
@@ -140,7 +140,7 @@ describe('parseGAN — worked examples from GAN.md', () => {
   });
 
   // Example 4: Move with a forced Capture
-  // 3-3>3-2 → Move: 3-3 to 3-2, outcome=null, turncoat=[]
+  // 3-3>3-2 -> Move: 3-3 to 3-2, outcome=null, turncoat=[]
   it('Example 4: 3-3>3-2', () => {
     const action = assertOk(parseGAN('3-3>3-2'));
     expect(action.kind).toBe('move');
@@ -152,7 +152,7 @@ describe('parseGAN — worked examples from GAN.md', () => {
   });
 
   // Example 5: Move with Stack choice, Turncoat declined
-  // 5-6>5-5= → Move: 5-6 to 5-5, outcome='stack', turncoat=[]
+  // 5-6>5-5= -> Move: 5-6 to 5-5, outcome='stack', turncoat=[]
   it('Example 5: 5-6>5-5=', () => {
     const action = assertOk(parseGAN('5-6>5-5='));
     expect(action.kind).toBe('move');
@@ -164,7 +164,7 @@ describe('parseGAN — worked examples from GAN.md', () => {
   });
 
   // Example 6: Same Move, Turncoat taken
-  // 5-6>5-5=+2 → Move: 5-6 to 5-5, outcome='stack', turncoat=[2]
+  // 5-6>5-5=+2 -> Move: 5-6 to 5-5, outcome='stack', turncoat=[2]
   it('Example 6: 5-6>5-5=+2', () => {
     const action = assertOk(parseGAN('5-6>5-5=+2'));
     expect(action.kind).toBe('move');
@@ -176,7 +176,7 @@ describe('parseGAN — worked examples from GAN.md', () => {
   });
 
   // Example 7: Arata with Turncoat
-  // T*5-6+1 → Arata: Captain at 5-6, turncoat=[1]
+  // T*5-6+1 -> Arata: Captain at 5-6, turncoat=[1]
   it('Example 7: T*5-6+1', () => {
     const action = assertOk(parseGAN('T*5-6+1'));
     expect(action.kind).toBe('arata');
@@ -191,14 +191,14 @@ describe('parseGAN — worked examples from GAN.md', () => {
 // Invalid strings from GAN.md
 // ---------------------------------------------------------------------------
 
-describe('parseGAN — invalid strings from GAN.md', () => {
-  // 5-8-5-7 — uses "-" instead of ">" between squares (BR-GAN-GRAMMAR-005)
+describe('parseGAN --- invalid strings from GAN.md', () => {
+  // 5-8-5-7 --- uses "-" instead of ">" between squares (BR-GAN-GRAMMAR-005)
   it('rejects 5-8-5-7 (uses - instead of >)', () => {
     const result = parseGAN('5-8-5-7');
     assertError(result, 'BR-GAN-GRAMMAR-005');
   });
 
-  // 3-3>3-2x — redundant x when capture is forced (BR-GAN-CANON-001 violation)
+  // 3-3>3-2x --- redundant x when capture is forced (BR-GAN-CANON-001 violation)
   // This is syntactically valid (grammar permits optional outcome), but
   // semantically non-canonical (narrowed BR-GAN-CANON-001). The parser accepts it; validation rejects it.
   it('parses 3-3>3-2x (valid syntax, BR-GAN-CANON-001 violation is semantic/validation)', () => {
@@ -212,10 +212,10 @@ describe('parseGAN — invalid strings from GAN.md', () => {
     expect(result.action.outcome).toBe('capture');
   });
 
-  // 5-6>5-5 — missing outcome when choice exists
-  // This is a semantic (BR-GAN-VALID-003/narrowed BR-GAN-CANON-001) issue — at parse level it's valid syntax
+  // 5-6>5-5 --- missing outcome when choice exists
+  // This is a semantic (BR-GAN-VALID-003/narrowed BR-GAN-CANON-001) issue --- at parse level it's valid syntax
   it('parses 5-6>5-5 but validation would reject (BR-GAN-VALID-003/narrowed BR-GAN-CANON-001)', () => {
-    // Parsing succeeds — outcome=null, turncoat=[]
+    // Parsing succeeds --- outcome=null, turncoat=[]
     const result = parseGAN('5-6>5-5');
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -225,16 +225,16 @@ describe('parseGAN — invalid strings from GAN.md', () => {
     expect(result.action.turncoat).toEqual([]);
   });
 
-  // T*5-6+21 — levels not ascending (BR-GAN-GRAMMAR-010 violation)
+  // T*5-6+21 --- levels not ascending (BR-GAN-GRAMMAR-010 violation)
   it('rejects T*5-6+21 (levels not ascending)', () => {
     const result = parseGAN('T*5-6+21');
     assertError(result, 'BR-GAN-GRAMMAR-010');
   });
 
-  // M5-9!! — multiple "!" (BR-GAN-GRAMMAR-011 violation)
+  // M5-9!! --- multiple "!" (BR-GAN-GRAMMAR-011 violation)
   it('rejects M5-9!! (multiple !)', () => {
     const result = parseGAN('M5-9!!');
-    // This has two '!' marks — the parser should reject it
+    // This has two '!' marks --- the parser should reject it
     assertError(result, 'BR-GAN-GRAMMAR-011');
   });
 });
@@ -243,8 +243,8 @@ describe('parseGAN — invalid strings from GAN.md', () => {
 // Additional edge cases
 // ---------------------------------------------------------------------------
 
-describe('parseGAN — additional edge cases', () => {
-  // Turncoat level 12: 5-6>5-5=+12 → turncoat=[1, 2]
+describe('parseGAN --- additional edge cases', () => {
+  // Turncoat level 12: 5-6>5-5=+12 -> turncoat=[1, 2]
   it('parses move with turncoat +12', () => {
     const action = assertOk(parseGAN('5-6>5-5=+12'));
     expect(action.kind).toBe('move');
@@ -255,7 +255,7 @@ describe('parseGAN — additional edge cases', () => {
     expect(action.turncoat).toEqual([1, 2]);
   });
 
-  // Empty turncoat: T*5-6 → turncoat=[]
+  // Empty turncoat: T*5-6 -> turncoat=[]
   it('parses arata without turncoat', () => {
     const action = assertOk(parseGAN('T*5-6'));
     expect(action.kind).toBe('arata');
@@ -265,7 +265,7 @@ describe('parseGAN — additional edge cases', () => {
     expect(action.turncoat).toEqual([]);
   });
 
-  // Placement without Done: P3-8 → done=false
+  // Placement without Done: P3-8 -> done=false
   it('parses placement without done', () => {
     const action = assertOk(parseGAN('P3-8'));
     expect(action.kind).toBe('placement');
@@ -333,10 +333,10 @@ describe('parseGAN — additional edge cases', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Invalid inputs — rejection tests
+// Invalid inputs --- rejection tests
 // ---------------------------------------------------------------------------
 
-describe('parseGAN — invalid inputs', () => {
+describe('parseGAN --- invalid inputs', () => {
   it('rejects empty string', () => {
     const result = parseGAN('');
     // BR-GAN-GRAMMAR-001: empty input
@@ -358,7 +358,7 @@ describe('parseGAN — invalid inputs', () => {
 
   it('rejects lowercase piece letter in arata', () => {
     const result = parseGAN('t*5-6');
-    // BR-GAN-GRAMMAR-002: same as placement — lowercase 't' fails first-char check
+    // BR-GAN-GRAMMAR-002: same as placement --- lowercase 't' fails first-char check
     assertError(result, 'BR-GAN-GRAMMAR-002');
   });
 
@@ -406,7 +406,7 @@ describe('parseGAN — invalid inputs', () => {
 
   it('T5-6 parses as a placement (no * means not an arata)', () => {
     const result = parseGAN('T5-6');
-    // T5-6: piece='T', square='5-6' → valid placement syntax
+    // T5-6: piece='T', square='5-6' -> valid placement syntax
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.action.kind).toBe('placement');

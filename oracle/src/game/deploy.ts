@@ -43,7 +43,7 @@ function isInDeployZone(row: number, player: Player): boolean {
  *
  * Checks (in order):
  * 1. BR-DEPLOY-001: Must be in Deploy Phase
- * 2. BR-DEPLOY-002: Turn order (active player check — implicit)
+ * 2. BR-DEPLOY-002: Turn order (active player check --- implicit)
  * 3. BR-DEPLOY-003: Marshal must be first placement per player
  * 4. BR-DEPLOY-004: Destination within deploy zone
  * 5. BR-DEPLOY-005/006: Target is empty or friendly-topped stack under size 3
@@ -83,7 +83,7 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
 
   // 3. BR-DEPLOY-003: Marshal must be first placement
   if (piece === 'M') {
-    // Marshal placement is valid — but only if Marshal is still in hand
+    // Marshal placement is valid --- but only if Marshal is still in hand
     // (which we already checked above). The "first placement" condition
     // is enforced below: if ANY of the player's non-Marshal pieces have
     // been placed (count on board > 0), then Marshal should already be placed.
@@ -140,7 +140,7 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
   }
 
   // BR-DEPLOY-007: Done declaration is syntactically valid
-  // (always OK — done=true is allowed on any valid placement)
+  // (always OK --- done=true is allowed on any valid placement)
 
   return { ok: true };
 }

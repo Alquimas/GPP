@@ -5,7 +5,7 @@
  * rule reference from BUSINESS_RULES.md, rather than throwing.
  *
  * ## Error classes
- * - {@link GameError} — base class for all rule violations.
+ * - {@link GameError} --- base class for all rule violations.
  *
  * @module
  */
@@ -13,11 +13,11 @@
 /**
  * The closed vocabulary of rule identifiers that a GameError can cite.
  *
- * Adding a new rule identifier requires updating this union —
+ * Adding a new rule identifier requires updating this union ---
  * the compiler will catch every miss.
  */
 export type GameRule =
-  // Business rules — Battle Phase actions
+  // Business rules --- Battle Phase actions
   | 'BR-ACTION-001'
   | 'BR-ACTION-002'
   | 'BR-GAME-003'
@@ -31,13 +31,13 @@ export type GameRule =
   | 'BR-STACK-003'
   | 'BR-STACK-004'
   | 'BR-STACK-006'
-  // Business rules — Deploy Phase
+  // Business rules --- Deploy Phase
   | 'BR-DEPLOY-001'
   | 'BR-DEPLOY-002'
   | 'BR-DEPLOY-003'
   | 'BR-DEPLOY-004'
   | 'BR-DEPLOY-005'
-  // Business rules — Arata
+  // Business rules --- Arata
   | 'BR-ARATA-001'
   | 'BR-ARATA-002'
   | 'BR-ARATA-003'

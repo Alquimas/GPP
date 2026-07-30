@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# browse-rule.sh — T2 Rule Browser (Phase 3)
+# browse-rule.sh --- T2 Rule Browser (Phase 3)
 #
 # Given a BR-xxx or GSFEN rule code, returns:
 #   - The rule text from BUSINESS_RULES.md or GSFEN.md
@@ -31,7 +31,7 @@ GSFEN_DOC="$PROJECT_DIR/GSFEN.md"
 # ── helpers ────────────────────────────────────────────────────────
 
 color() { local c="$1"; shift; if [[ -t 1 ]]; then echo "$c$*${reset}"; else echo "$*"; fi; }
-bold="$(color '' '')"   # placeholder — computed if color is available
+bold="$(color '' '')"   # placeholder --- computed if color is available
 reset=""
 if [[ -t 1 ]]; then
   reset="$(tput sgr0 2>/dev/null || true)"
@@ -110,8 +110,8 @@ extract_gsfen_rule_text() {
     NR >= start {
       if (NR > start && (/^#{1,6} / || /^---$/ || /^- \*\*/ || /^$/)) exit
       if (NR == start) {
-        sub(/^- \*\*[^*]+\*\* — /, "")
-        sub(/^  - \*\*[^*]+\*\* — /, "")
+        sub(/^- \*\*[^*]+\*\* --- /, "")
+        sub(/^  - \*\*[^*]+\*\* --- /, "")
         print "  " $0
         next
       }
@@ -261,7 +261,7 @@ find_gsfen_related_rules() {
     rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
     if [[ -n "$rule_code" && "$rule_code" != "$code" ]]; then
       local title
-      title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 60)"
+      title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* --- //p' | head -c 60)"
       printf "    %-40s %s\n" "$rule_code" "$title"
     fi
   done
@@ -438,7 +438,7 @@ list_all_codes() {
     local rule_code
     rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
     local title
-    title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 70)"
+    title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* --- //p' | head -c 70)"
     if [[ -n "$rule_code" ]]; then
       printf "    %-44s %s\n" "$rule_code" "$title"
     fi
@@ -455,7 +455,7 @@ list_all_codes() {
     local rule_code
     rule_code="$(echo "$rest" | sed -n 's/.*\*\*\([^*]*\)\*\*.*/\1/p')"
     local title
-    title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* — //p' | head -c 70)"
+    title="$(echo "$rest" | sed -n 's/.*\*\*[^*]*\*\* --- //p' | head -c 70)"
     if [[ -n "$rule_code" ]]; then
       printf "    %-44s %s\n" "$rule_code" "$title"
     fi
@@ -512,13 +512,13 @@ show_rule() {
     code="BR-$code"
   fi
 
-  # Validate format — accept any BR- with hyphen-separated uppercase/digit segments
+  # Validate format --- accept any BR- with hyphen-separated uppercase/digit segments
   if ! echo "$code" | grep -qE '^BR-[A-Z][A-Z0-9]*(-[A-Z0-9]+)*$'; then
     echo "Error: Invalid rule code format. Expected BR-XXX-NNN, BR-GAN-xxx, BR-GSFEN-CANON-*, or BR-GSFEN-VALID-* (e.g. BR-MOVE-005)" >&2
     exit 1
   fi
 
-  # Check if code exists — search BUSINESS_RULES.md, GAN.md, or GSFEN.md as appropriate
+  # Check if code exists --- search BUSINESS_RULES.md, GAN.md, or GSFEN.md as appropriate
   local exists=0
   if [[ "$code" == BR-GSFEN-* ]]; then
     exists="$($has_rg && rg -qF "$code" "$GSFEN_DOC" && echo 1 || grep -qF "$code" "$GSFEN_DOC" 2>/dev/null && echo 1 || echo 0)" || true
@@ -543,18 +543,18 @@ show_rule() {
       gsfen_section="$($has_rg -n "^## " "$GSFEN_DOC" | awk -F: '/Canonicalization/{s="Canonicalization"} /Semantic Validity/{s="Semantic Validity"} END{if(s) print s}')"
     fi
     if echo "$code" | grep -q 'CANON'; then
-      echo "  GSFEN.md → Canonicalization section"
+      echo "  GSFEN.md -> Canonicalization section"
     else
-      echo "  GSFEN.md → Semantic Validity section"
+      echo "  GSFEN.md -> Semantic Validity section"
     fi
   elif [[ "$code" == BR-GAN-* ]]; then
     # GAN codes belong to sections in GAN.md
     if echo "$code" | grep -q 'GRAMMAR'; then
-      echo "  GAN.md → Grammar rules section"
+      echo "  GAN.md -> Grammar rules section"
     elif echo "$code" | grep -q 'CANON'; then
-      echo "  GAN.md → Canonical-form rules section"
+      echo "  GAN.md -> Canonical-form rules section"
     else
-      echo "  GAN.md → Semantic Validity section"
+      echo "  GAN.md -> Semantic Validity section"
     fi
   else
     local group_title

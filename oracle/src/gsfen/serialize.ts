@@ -1,10 +1,10 @@
 /**
- * GSFEN serializer — converts a GameState into a canonical GSFEN string.
+ * GSFEN serializer --- converts a GameState into a canonical GSFEN string.
  *
  * The output is always canonical (see GSFEN.md §Canonicalization):
  * - BR-GSFEN-CANON-POSITION-SQUARE-COUNT:    exactly 9 squares per row
  * - BR-GSFEN-CANON-POSITION-COMPRESSION:     empty runs maximally merged (no adjacent digit items)
- * - BR-GSFEN-CANON-POSITION-STACK-SPELLING:  stack letters bottom→top, case encodes ownership
+ * - BR-GSFEN-CANON-POSITION-STACK-SPELLING:  stack letters bottom->top, case encodes ownership
  * - BR-GSFEN-CANON-HANDS-ALPHABETICAL:       hands alphabetical within each section, counts omitted when 1
  * - BR-GSFEN-CANON-HANDS-SECTION-ORDER:      White's section (uppercase) precedes Black's (lowercase)
  * - BR-GSFEN-CANON-HANDS-EMPTY-MARKER:       `-` when both Hands are empty
@@ -28,7 +28,7 @@ import { ALL_PIECE_TYPES } from '../constants.js';
  * col 0 = Col 1 (rightmost).
  *
  * GSFEN representation: Row 1 through Row 9 separated by `/`.
- * Within each row, comma-separated items covering Columns 9 → 1
+ * Within each row, comma-separated items covering Columns 9 -> 1
  * (left to right in Standard Diagram).
  */
 function serializePosition(position: Position): string {
@@ -50,7 +50,7 @@ function serializePosition(position: Position): string {
           items.push(String(emptyRun));
           emptyRun = 0;
         }
-        // Encode stack bottom→top (same as internal order)
+        // Encode stack bottom->top (same as internal order)
         const letters = stack
           .map((p) => (p.owner === 'white' ? p.type : p.type.toLowerCase()))
           .join('');
@@ -92,7 +92,7 @@ function serializeTurn(turn: TurnState): string {
   if (done === null) {
     return activePlayer === 'white' ? 'dw' : 'db';
   }
-  // A done flag exists — the non-active player has declared Done
+  // A done flag exists --- the non-active player has declared Done
   if (done === 'black') {
     return 'dwB'; // White places next, Black has declared Done
   }
@@ -149,10 +149,10 @@ function serializeHands(hands: {
 /**
  * Serialize a GameState into a canonical GSFEN string.
  * Assumes the GameState is valid (passes validateState).
- * No validation is performed — invalid input produces invalid output.
+ * No validation is performed --- invalid input produces invalid output.
  *
  * @param state - The GameState to serialize.
- * @returns A canonical GSFEN string (always expanded — never the `startpos` keyword).
+ * @returns A canonical GSFEN string (always expanded --- never the `startpos` keyword).
  */
 export function serializeGSFEN(state: GameState): string {
   const pos = serializePosition(state.position);

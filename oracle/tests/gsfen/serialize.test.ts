@@ -1,12 +1,12 @@
 /**
- * GSFEN serializer tests — Step 3 verification.
+ * GSFEN serializer tests --- Step 3 verification.
  *
  * Strategy (per ORACLE.md):
  * 1. Parametric round-trip: for every .gsfen fixture file, parse then
  *    serialize, asserting both text-identity (canonical inputs) and
  *    structural identity (parse∘serialize ≡ id).
  * 2. Edge cases: empty hands, single-piece hand, multi-count hand,
- *    full compaction, startpos keyword → canonical expansion.
+ *    full compaction, startpos keyword -> canonical expansion.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -60,7 +60,7 @@ const FIXTURE_NAMES = [
 // Parametric round-trip tests
 // ---------------------------------------------------------------------------
 
-describe('GSFEN round-trip — all fixture files', () => {
+describe('GSFEN round-trip --- all fixture files', () => {
   for (const name of FIXTURE_NAMES) {
     it(`${name}: parse(serialize(state)) structural round-trip`, () => {
       const raw = FIXTURES[name];
@@ -83,7 +83,7 @@ describe('GSFEN round-trip — all fixture files', () => {
   }
 });
 
-describe('GSFEN round-trip — startpos keyword', () => {
+describe('GSFEN round-trip --- startpos keyword', () => {
   it('serialize(parse("startpos")) produces START_GSFEN (not the keyword)', () => {
     const state = assertOk(parseGSFEN('startpos'));
     const serialized = serializeGSFEN(state);
@@ -109,7 +109,7 @@ describe('GSFEN round-trip — startpos keyword', () => {
 // Round-trip on the worked examples from GSFEN.md
 // ---------------------------------------------------------------------------
 
-describe('GSFEN round-trip — GSFEN.md worked examples', () => {
+describe('GSFEN round-trip --- GSFEN.md worked examples', () => {
   it('Example 2: White Marshal at 5-9, Black to place', () => {
     const gsfen = WHITE_MARSHAL_AT_5_9;
     const state = assertOk(parseGSFEN(gsfen));
@@ -139,8 +139,8 @@ describe('GSFEN round-trip — GSFEN.md worked examples', () => {
 // Edge-case tests
 // ---------------------------------------------------------------------------
 
-describe('serializeGSFEN — edge cases', () => {
-  it('empty hands marker: both hands empty → "-" (BR-GSFEN-CANON-HANDS-EMPTY-MARKER)', () => {
+describe('serializeGSFEN --- edge cases', () => {
+  it('empty hands marker: both hands empty -> "-" (BR-GSFEN-CANON-HANDS-EMPTY-MARKER)', () => {
     const state: GameState = {
       position: Array.from({ length: 9 }, () => new Array<Stack | null>(9).fill(null)),
       turn: { phase: 'battle', activePlayer: 'white', done: null, counter: 1 },
@@ -181,17 +181,17 @@ describe('serializeGSFEN — edge cases', () => {
     };
     const serialized = serializeGSFEN(state);
     const parts = serialized.split(' ');
-    // A=2 → "2A", C=1 → "C", E=3 → "3E" = "2AC3E"
+    // A=2 -> "2A", C=1 -> "C", E=3 -> "3E" = "2AC3E"
     expect(parts[2]).toBe('2AC3E');
   });
 
   it('full compaction: row with pieces only at columns 1 and 9', () => {
     // Row 1: empty at cols 2-8, piece at col 9 and col 1
-    // GSFEN: "M,7,P" — piece at col 9, 7 empty, piece at col 1
+    // GSFEN: "M,7,P" --- piece at col 9, 7 empty, piece at col 1
     const row: (Stack | null)[] = new Array<Stack | null>(9).fill(null);
     row[8] = [{ type: 'M', owner: 'white' }]; // Col 9
     row[0] = [{ type: 'P', owner: 'white' }]; // Col 1
-    // row[1] through row[7] remain null — 7 consecutive empties
+    // row[1] through row[7] remain null --- 7 consecutive empties
 
     const position: Position = Array.from({ length: 9 }, () =>
       new Array<Stack | null>(9).fill(null),
@@ -207,7 +207,7 @@ describe('serializeGSFEN — edge cases', () => {
     const serialized = serializeGSFEN(state);
     const posField = serialized.split(' ')[0];
     const rows = posField.split('/');
-    // Row 1: M at col 9 (idx 8), 7 empties (idx 7→1), P at col 1 (idx 0)
+    // Row 1: M at col 9 (idx 8), 7 empties (idx 7->1), P at col 1 (idx 0)
     // GSFEN items left to right: "M" (col 9), "7" (7 empty), "P" (col 1)
     expect(rows[0]).toBe('M,7,P');
   });
@@ -221,12 +221,12 @@ describe('serializeGSFEN — edge cases', () => {
   });
 
   it('deploy turn with done flag serializes correctly (dwB / dbW)', () => {
-    // Black done, white to place → dwB
+    // Black done, white to place -> dwB
     const gsfen = BLACK_DONE_DECLARED;
     const state = assertOk(parseGSFEN(gsfen));
     expect(serializeGSFEN(state)).toBe(gsfen);
 
-    // White done, black to place → dbW
+    // White done, black to place -> dbW
     const gsfen2 = WHITE_DONE_MULTI_COUNT_HAND;
     const state2 = assertOk(parseGSFEN(gsfen2));
     expect(serializeGSFEN(state2)).toBe(gsfen2);
@@ -237,7 +237,7 @@ describe('serializeGSFEN — edge cases', () => {
 // Negative assertions: serializer only produces canonical output
 // ---------------------------------------------------------------------------
 
-describe('serializeGSFEN — canonical output guarantees', () => {
+describe('serializeGSFEN --- canonical output guarantees', () => {
   it('never produces adjacent empty-run digits (BR-GSFEN-CANON-POSITION-COMPRESSION guarantee)', () => {
     const state = assertOk(parseGSFEN(START_GSFEN));
     // Add some pieces to create a non-trivial row
@@ -275,7 +275,7 @@ describe('serializeGSFEN — canonical output guarantees', () => {
   });
 
   it('mixed-ownership stacks preserve case (ownership encoding)', () => {
-    // Battle-midgame has a PyT mixed stack — verify it serializes correctly
+    // Battle-midgame has a PyT mixed stack --- verify it serializes correctly
     const raw = FIXTURES['battle-midgame'];
     const state = assertOk(parseGSFEN(raw));
     const serialized = serializeGSFEN(state);

@@ -1,13 +1,13 @@
 /**
- * GSFEN semantic validator — checks that a parsed GameState satisfies the
+ * GSFEN semantic validator --- checks that a parsed GameState satisfies the
  * semantic validity rules BR-GSFEN-VALID-001–005 from GSFEN.md.
  *
  * Semantic validity rules (GSFEN.md §Semantic Validity):
- *   - BR-GSFEN-VALID-001 — Marshal integrity (5 sub-codes)
- *   - BR-GSFEN-VALID-002 — Inventory conservation
- *   - BR-GSFEN-VALID-003 — Done flags
- *   - BR-GSFEN-VALID-004 — Deploy-phase constraints
- *   - BR-GSFEN-VALID-005 — Counter bounds
+ *   - BR-GSFEN-VALID-001 --- Marshal integrity (5 sub-codes)
+ *   - BR-GSFEN-VALID-002 --- Inventory conservation
+ *   - BR-GSFEN-VALID-003 --- Done flags
+ *   - BR-GSFEN-VALID-004 --- Deploy-phase constraints
+ *   - BR-GSFEN-VALID-005 --- Counter bounds
  *
  * All rules assume the string has already satisfied the grammar and
  * canonical-form rules (enforced by the parser).
@@ -45,28 +45,28 @@ export type { ValidationResult };
  *
  * @param state - The GameState to validate.
  * @throws {GameError} with rule:
- *   - 'BR-GSFEN-VALID-001-TOP'   — Marshal not at top of its stack (BR-STACK-004)
- *   - 'BR-GSFEN-VALID-001-COUNT' — Battle: Marshal appears ≠ 1 on board (BR-DEPLOY-003)
- *   - 'BR-GSFEN-VALID-001-HAND'  — Battle: Marshal in Hand (BR-DEPLOY-011)
- *   - 'BR-GSFEN-VALID-001-BOTH'  — Deploy: Marshal on board AND in Hand (BR-DEPLOY-003)
- *   - 'BR-GSFEN-VALID-001-FIRST' — Deploy: Marshal in Hand but player has pieces on board (BR-DEPLOY-003)
- *   - 'BR-GSFEN-VALID-002'       — Inventory conservation violated (BR-CAPTURE-004)
- *   - 'BR-GSFEN-VALID-003'       — Done flags inconsistent (BR-DEPLOY-007)
- *   - 'BR-GSFEN-VALID-004'       — Deploy-phase constraints violated (BR-DEPLOY-004, BR-DEPLOY-005)
- *   - 'BR-GSFEN-VALID-005'       — Counter bounds violated (BR-DEPLOY-002)
+ *   - 'BR-GSFEN-VALID-001-TOP'   --- Marshal not at top of its stack (BR-STACK-004)
+ *   - 'BR-GSFEN-VALID-001-COUNT' --- Battle: Marshal appears ≠ 1 on board (BR-DEPLOY-003)
+ *   - 'BR-GSFEN-VALID-001-HAND'  --- Battle: Marshal in Hand (BR-DEPLOY-011)
+ *   - 'BR-GSFEN-VALID-001-BOTH'  --- Deploy: Marshal on board AND in Hand (BR-DEPLOY-003)
+ *   - 'BR-GSFEN-VALID-001-FIRST' --- Deploy: Marshal in Hand but player has pieces on board (BR-DEPLOY-003)
+ *   - 'BR-GSFEN-VALID-002'       --- Inventory conservation violated (BR-CAPTURE-004)
+ *   - 'BR-GSFEN-VALID-003'       --- Done flags inconsistent (BR-DEPLOY-007)
+ *   - 'BR-GSFEN-VALID-004'       --- Deploy-phase constraints violated (BR-DEPLOY-004, BR-DEPLOY-005)
+ *   - 'BR-GSFEN-VALID-005'       --- Counter bounds violated (BR-DEPLOY-002)
  */
 export function validateState(state: GameState): ValidationResult {
   const isBattle = state.turn.phase === 'battle';
 
   // -----------------------------------------------------------------------
-  // BR-GSFEN-VALID-001 — Marshal integrity (BR-STACK-004, BR-DEPLOY-003, BR-DEPLOY-011)
+  // BR-GSFEN-VALID-001 --- Marshal integrity (BR-STACK-004, BR-DEPLOY-003, BR-DEPLOY-011)
   //
   // Five sub-codes let consumers branch on the specific violation:
-  //   -TOP   — Marshal not at top of its stack group (BR-STACK-004)
-  //   -COUNT — Battle phase: Marshal appears ≠ 1 time on board (BR-DEPLOY-003)
-  //   -HAND  — Battle phase: Marshal in Hand (BR-DEPLOY-011)
-  //   -BOTH  — Deploy phase: Marshal simultaneously on board and in Hand (BR-DEPLOY-003)
-  //   -FIRST — Deploy phase: Marshal in Hand but player has pieces on board (BR-DEPLOY-003)
+  //   -TOP   --- Marshal not at top of its stack group (BR-STACK-004)
+  //   -COUNT --- Battle phase: Marshal appears ≠ 1 time on board (BR-DEPLOY-003)
+  //   -HAND  --- Battle phase: Marshal in Hand (BR-DEPLOY-011)
+  //   -BOTH  --- Deploy phase: Marshal simultaneously on board and in Hand (BR-DEPLOY-003)
+  //   -FIRST --- Deploy phase: Marshal in Hand but player has pieces on board (BR-DEPLOY-003)
   // -----------------------------------------------------------------------
   for (const player of ['white', 'black'] as Player[]) {
     const boardMCount = countPieceOnBoard(state.position, 'M', player);
@@ -80,7 +80,7 @@ export function validateState(state: GameState): ValidationResult {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} Marshal at row ${pos.row + 1}, col ${pos.col + 1} is not at top of its stack (BR-GSFEN-VALID-001-TOP) — Marshal must be the last (top) letter in its stack group (BR-STACK-004)`,
+            `${player === 'white' ? 'White' : 'Black'} Marshal at row ${pos.row + 1}, col ${pos.col + 1} is not at top of its stack (BR-GSFEN-VALID-001-TOP) --- Marshal must be the last (top) letter in its stack group (BR-STACK-004)`,
             'BR-GSFEN-VALID-001-TOP',
           ),
         };
@@ -88,22 +88,22 @@ export function validateState(state: GameState): ValidationResult {
     }
 
     if (isBattle) {
-      // BR-GSFEN-VALID-001-COUNT: Battle phase — Marshal appears exactly once on board
+      // BR-GSFEN-VALID-001-COUNT: Battle phase --- Marshal appears exactly once on board
       if (boardMCount !== 1) {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} Marshal appears ${boardMCount} time(s) on board in battle phase (expected 1) (BR-GSFEN-VALID-001-COUNT — BR-DEPLOY-003)`,
+            `${player === 'white' ? 'White' : 'Black'} Marshal appears ${boardMCount} time(s) on board in battle phase (expected 1) (BR-GSFEN-VALID-001-COUNT --- BR-DEPLOY-003)`,
             'BR-GSFEN-VALID-001-COUNT',
           ),
         };
       }
-      // BR-GSFEN-VALID-001-HAND: Battle phase — Marshal never in Hand
+      // BR-GSFEN-VALID-001-HAND: Battle phase --- Marshal never in Hand
       if (handMCount !== 0) {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} Marshal is in hand during battle phase (BR-GSFEN-VALID-001-HAND) — Marshal must be on board in battle (BR-DEPLOY-011)`,
+            `${player === 'white' ? 'White' : 'Black'} Marshal is in hand during battle phase (BR-GSFEN-VALID-001-HAND) --- Marshal must be on board in battle (BR-DEPLOY-011)`,
             'BR-GSFEN-VALID-001-HAND',
           ),
         };
@@ -115,7 +115,7 @@ export function validateState(state: GameState): ValidationResult {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} Marshal is both on board and in hand during deploy phase (BR-GSFEN-VALID-001-BOTH) — Marshal must be in one place (BR-DEPLOY-003)`,
+            `${player === 'white' ? 'White' : 'Black'} Marshal is both on board and in hand during deploy phase (BR-GSFEN-VALID-001-BOTH) --- Marshal must be in one place (BR-DEPLOY-003)`,
             'BR-GSFEN-VALID-001-BOTH',
           ),
         };
@@ -125,7 +125,7 @@ export function validateState(state: GameState): ValidationResult {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} Marshal is in hand but player has pieces on board (BR-GSFEN-VALID-001-FIRST) — Marshal must be placed first (BR-DEPLOY-003)`,
+            `${player === 'white' ? 'White' : 'Black'} Marshal is in hand but player has pieces on board (BR-GSFEN-VALID-001-FIRST) --- Marshal must be placed first (BR-DEPLOY-003)`,
             'BR-GSFEN-VALID-001-FIRST',
           ),
         };
@@ -134,7 +134,7 @@ export function validateState(state: GameState): ValidationResult {
   }
 
   // -----------------------------------------------------------------------
-  // BR-GSFEN-VALID-002 — Inventory conservation (BR-CAPTURE-004)
+  // BR-GSFEN-VALID-002 --- Inventory conservation (BR-CAPTURE-004)
   //
   // For each player and each Piece Type:
   //   - Any phase:    board[type] + hand[type] ≤ initial[type]
@@ -153,7 +153,7 @@ export function validateState(state: GameState): ValidationResult {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} ${type} count (board: ${boardCounts[type]}, hand: ${hand[type]}) = ${total} exceeds initial count ${initial} (BR-GSFEN-VALID-002 — total on board + in hand must not exceed initial count)`,
+            `${player === 'white' ? 'White' : 'Black'} ${type} count (board: ${boardCounts[type]}, hand: ${hand[type]}) = ${total} exceeds initial count ${initial} (BR-GSFEN-VALID-002 --- total on board + in hand must not exceed initial count)`,
             'BR-GSFEN-VALID-002',
           ),
         };
@@ -164,7 +164,7 @@ export function validateState(state: GameState): ValidationResult {
         return {
           ok: false,
           error: new GameError(
-            `${player === 'white' ? 'White' : 'Black'} ${type} count (board: ${boardCounts[type]}, hand: ${hand[type]}) = ${total} is less than initial count ${initial} during deploy phase (BR-GSFEN-VALID-002 — deploy requires strict equality, no captures yet)`,
+            `${player === 'white' ? 'White' : 'Black'} ${type} count (board: ${boardCounts[type]}, hand: ${hand[type]}) = ${total} is less than initial count ${initial} during deploy phase (BR-GSFEN-VALID-002 --- deploy requires strict equality, no captures yet)`,
             'BR-GSFEN-VALID-002',
           ),
         };
@@ -173,7 +173,7 @@ export function validateState(state: GameState): ValidationResult {
   }
 
   // -----------------------------------------------------------------------
-  // BR-GSFEN-VALID-003 — Done flags consistency (BR-DEPLOY-007)
+  // BR-GSFEN-VALID-003 --- Done flags consistency (BR-DEPLOY-007)
   //
   // At most one player has a Done flag (enforced by the Turn token grammar).
   // The placing player never carries the flag.
@@ -188,7 +188,7 @@ export function validateState(state: GameState): ValidationResult {
       return {
         ok: false,
         error: new GameError(
-          `Done flag set on the placing player (${activePlayer}) (BR-GSFEN-VALID-003) — the placing player never carries the done flag (BR-DEPLOY-007)`,
+          `Done flag set on the placing player (${activePlayer}) (BR-GSFEN-VALID-003) --- the placing player never carries the done flag (BR-DEPLOY-007)`,
           'BR-GSFEN-VALID-003',
         ),
       };
@@ -200,7 +200,7 @@ export function validateState(state: GameState): ValidationResult {
       return {
         ok: false,
         error: new GameError(
-          `${done === 'white' ? 'White' : 'Black'} has declared Done but does not have a Marshal on the board (BR-GSFEN-VALID-003) — Done requires Marshal placed (BR-DEPLOY-007)`,
+          `${done === 'white' ? 'White' : 'Black'} has declared Done but does not have a Marshal on the board (BR-GSFEN-VALID-003) --- Done requires Marshal placed (BR-DEPLOY-007)`,
           'BR-GSFEN-VALID-003',
         ),
       };
@@ -208,7 +208,7 @@ export function validateState(state: GameState): ValidationResult {
   }
 
   // -----------------------------------------------------------------------
-  // BR-GSFEN-VALID-004 — Deploy-phase constraints (BR-DEPLOY-004, BR-DEPLOY-005)
+  // BR-GSFEN-VALID-004 --- Deploy-phase constraints (BR-DEPLOY-004, BR-DEPLOY-005)
   //
   // In deploy states (dw/db/dwB/dbW):
   //   - White's pieces appear only on Rows 7–9 (BR-DEPLOY-004)
@@ -227,7 +227,7 @@ export function validateState(state: GameState): ValidationResult {
               return {
                 ok: false,
                 error: new GameError(
-                  `Mixed-ownership stack at row ${r + 1}, col ${c + 1} during deploy phase (BR-GSFEN-VALID-004) — all pieces in a stack must belong to the same owner (BR-DEPLOY-005)`,
+                  `Mixed-ownership stack at row ${r + 1}, col ${c + 1} during deploy phase (BR-GSFEN-VALID-004) --- all pieces in a stack must belong to the same owner (BR-DEPLOY-005)`,
                   'BR-GSFEN-VALID-004',
                 ),
               };
@@ -241,7 +241,7 @@ export function validateState(state: GameState): ValidationResult {
               return {
                 ok: false,
                 error: new GameError(
-                  `White piece at row ${r + 1} during deploy phase (only rows 7-9 allowed) (BR-GSFEN-VALID-004 — BR-DEPLOY-004)`,
+                  `White piece at row ${r + 1} during deploy phase (only rows 7-9 allowed) (BR-GSFEN-VALID-004 --- BR-DEPLOY-004)`,
                   'BR-GSFEN-VALID-004',
                 ),
               };
@@ -253,7 +253,7 @@ export function validateState(state: GameState): ValidationResult {
               return {
                 ok: false,
                 error: new GameError(
-                  `Black piece at row ${r + 1} during deploy phase (only rows 1-3 allowed) (BR-GSFEN-VALID-004 — BR-DEPLOY-004)`,
+                  `Black piece at row ${r + 1} during deploy phase (only rows 1-3 allowed) (BR-GSFEN-VALID-004 --- BR-DEPLOY-004)`,
                   'BR-GSFEN-VALID-004',
                 ),
               };
@@ -265,7 +265,7 @@ export function validateState(state: GameState): ValidationResult {
   }
 
   // -----------------------------------------------------------------------
-  // BR-GSFEN-VALID-005 — Counter bounds (BR-DEPLOY-002)
+  // BR-GSFEN-VALID-005 --- Counter bounds (BR-DEPLOY-002)
   //
   // In Deploy Phase, the counter must not exceed 50 (at most 25 placements
   // per player, BR-DEPLOY-002). In Battle Phase there is no upper bound.
@@ -275,7 +275,7 @@ export function validateState(state: GameState): ValidationResult {
     return {
       ok: false,
       error: new GameError(
-        `Counter ${state.turn.counter} exceeds maximum 50 for deploy phase (BR-GSFEN-VALID-005 — at most 50 placements, BR-DEPLOY-002)`,
+        `Counter ${state.turn.counter} exceeds maximum 50 for deploy phase (BR-GSFEN-VALID-005 --- at most 50 placements, BR-DEPLOY-002)`,
         'BR-GSFEN-VALID-005',
       ),
     };

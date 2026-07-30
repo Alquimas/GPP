@@ -1,5 +1,5 @@
 /**
- * Gungi Developer Client — HTTP API server + static file server.
+ * Gungi Developer Client --- HTTP API server + static file server.
  *
  * Run with: npx tsx client/server.ts
  * Uses the oracle's Game engine to manage a full game session with
@@ -100,7 +100,7 @@ function doUndo(): boolean {
   return true;
 }
 
-/** Go to a specific history index (read-only view — game is rebuilt there). */
+/** Go to a specific history index (read-only view --- game is rebuilt there). */
 function doGoto(index: number): boolean {
   if (index < 0 || index >= fullHistory.length) return false;
   currentGameIndex = index;
@@ -136,7 +136,7 @@ function actionLabel(action: Action): string {
       return `Place ${pn} ${action.dest.col}-${action.dest.row}${action.done ? " ✓" : ""}`;
     }
     case "move": {
-      let label = `Move ${action.origin.col}-${action.origin.row}→${action.dest.col}-${action.dest.row}`;
+      let label = `Move ${action.origin.col}-${action.origin.row}->${action.dest.col}-${action.dest.row}`;
       // outcome: null = forced (auto-stack or forced-capture), 'stack' = choice, 'capture' = choice
       if (action.outcome === "stack") label += " (stack)";
       else if (action.outcome === "capture") label += " (capture)";
@@ -260,15 +260,15 @@ function resultLabel(result: { kind: string; loser?: string }): string {
     case "ongoing":
       return "Game in progress";
     case "checkmate":
-      return `Checkmate — ${result.loser} loses`;
+      return `Checkmate --- ${result.loser} loses`;
     case "stalemate":
-      return `Stalemate — ${result.loser} loses`;
+      return `Stalemate --- ${result.loser} loses`;
     case "exposure":
-      return `Exposure — ${result.loser} loses`;
+      return `Exposure --- ${result.loser} loses`;
     case "exposure-draw":
-      return `Exposure — Draw`;
+      return `Exposure --- Draw`;
     case "repetition":
-      return `Repetition — Draw`;
+      return `Repetition --- Draw`;
     default:
       return result.kind;
   }
@@ -579,9 +579,9 @@ async function main() {
 
   server.listen(PORT, () => {
     console.log(`\n  🏯 Gungi Developer Client\n`);
-    console.log(`  → http://localhost:${PORT}\n`);
+    console.log(`  -> http://localhost:${PORT}\n`);
     console.log(`  Keys:  g=GSFEN  a=Actions  h=History  t=Turn info`);
-    console.log(`         u=Undo  ←→=Navigate  r=Reset  ?=Help\n`);
+    console.log(`         u=Undo  ←->=Navigate  r=Reset  ?=Help\n`);
   });
 }
 

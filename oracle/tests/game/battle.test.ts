@@ -2,10 +2,10 @@
  * Battle-phase action validation tests (Step 8).
  *
  * Covers:
- * - validateMove — BR-MOVE-001/002/003/005, BR-STACK-002/003/004,
+ * - validateMove --- BR-MOVE-001/002/003/005, BR-STACK-002/003/004,
  *   BR-CAPTURE-001/002/003, BR-ACTION-002 (Self Check)
- * - validateArata — BR-ARATA-001 through BR-ARATA-007, BR-ACTION-002
- * - validatePlay — dispatcher
+ * - validateArata --- BR-ARATA-001 through BR-ARATA-007, BR-ACTION-002
+ * - validatePlay --- dispatcher
  *
  * TDD: tests are written first; they define expected behaviour before
  * implementation.
@@ -100,7 +100,7 @@ function placement(piece: PieceType, dc: number, dr: number, done = false): Acti
 /* ------------------------------------------------------------------ */
 
 describe('validateMove', () => {
-  describe('BR-PLAY-002 — phase check', () => {
+  describe('BR-PLAY-002 --- phase check', () => {
     it('rejects a move during deploy phase', () => {
       // Deploy-phase state (STARTPOS-like): any move must be rejected.
       const state = gsfenState(DEPLOY_PHASE_CTR1);
@@ -110,7 +110,7 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-MOVE-002 — origin must contain own piece', () => {
+  describe('BR-MOVE-002 --- origin must contain own piece', () => {
     it('rejects move from an empty square', () => {
       const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 6, 5, 5));
       expect(r.ok).toBe(false);
@@ -124,13 +124,13 @@ describe('validateMove', () => {
     });
 
     it('accepts move from a square whose top piece belongs to active player', () => {
-      // White Marshal at (5,9) — move left to (4,9) which is empty
+      // White Marshal at (5,9) --- move left to (4,9) which is empty
       const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
       expect(r.ok).toBe(true);
     });
   });
 
-  describe('BR-MOVE-003 — reachable destination', () => {
+  describe('BR-MOVE-003 --- reachable destination', () => {
     it('accepts a move to a reachable square', () => {
       // Marshal at (5,9) step left to (4,9)
       const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
@@ -138,7 +138,7 @@ describe('validateMove', () => {
     });
 
     it('rejects a move to a square the piece cannot reach', () => {
-      // Marshal at (5,9) — step only, cannot reach (5,6) which is 3 away
+      // Marshal at (5,9) --- step only, cannot reach (5,6) which is 3 away
       const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 5, 6));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
@@ -155,7 +155,7 @@ describe('validateMove', () => {
     });
 
     it('rejects outcome=null when capture/stack choice exists', () => {
-      // White GG (size 2) at (5,9), Black p (size 1) at (5,8) — choice exists
+      // White GG (size 2) at (5,9), Black p (size 1) at (5,8) --- choice exists
       const state = gsfenState(CHOICE_POS);
       const r = validateMove(state, move(5, 9, 5, 8));
       expect(r.ok).toBe(false);
@@ -188,9 +188,9 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-MOVE-005 — stack size landing restriction', () => {
+  describe('BR-MOVE-005 --- stack size landing restriction', () => {
     it('rejects move when source size < target size', () => {
-      // Marshal size 1 at (5,9), friendly AFG size 3 at (5,7) — blocked
+      // Marshal size 1 at (5,9), friendly AFG size 3 at (5,7) --- blocked
       // BR-MOVE-005 (source stack size >= target stack size) is now checked
       // explicitly in validateMove before the reachability query.
       const state = gsfenState(SIZE_MISMATCH_AFG);
@@ -200,7 +200,7 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-CAPTURE-003 — source size < target enemy stack size', () => {
+  describe('BR-CAPTURE-003 --- source size < target enemy stack size', () => {
     it('rejects move when source size < target enemy stack size', () => {
       // Marshal size 1 at (5,9), change the size-3 stack at (5,7) to enemy-owned.
       // BR-MOVE-005 (source >= target) is now checked explicitly in validateMove,
@@ -220,10 +220,10 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-STACK-003 — stacking on friendly squares', () => {
+  describe('BR-STACK-003 --- stacking on friendly squares', () => {
     it('accepts move onto a friendly-topped stack with outcome=null (automatic stacking)', () => {
       // White Marshal at (5,9) moves to (5,8) where White Pawn is.
-      // Target size 1 <= source size 1, friendly-topped → automatic stacking.
+      // Target size 1 <= source size 1, friendly-topped -> automatic stacking.
       const state = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       const r = validateMove(state, move(5, 9, 5, 8, null));
       expect(r.ok).toBe(true);
@@ -239,10 +239,10 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-STACK-004 — no stacking on friendly Marshal', () => {
+  describe('BR-STACK-004 --- no stacking on friendly Marshal', () => {
     it('rejects a move that would land on a friendly Marshal', () => {
       // White Pawn at (5,8), White Marshal at (5,9).
-      // Move Pawn north to (5,9) would stack onto the friendly Marshal — illegal.
+      // Move Pawn north to (5,9) would stack onto the friendly Marshal --- illegal.
       const state = gsfenState(FRIENDLY_STACK_TEST);
       const r = validateMove(state, move(5, 8, 5, 9));
       expect(r.ok).toBe(false);
@@ -252,7 +252,7 @@ describe('validateMove', () => {
     it('rejects a move that would land on an enemy Marshal', () => {
       // White size-2 stack at (5,9), Black Marshal at (5,8).
       // BR-STACK-004 prohibits ANY piece from being placed or moved on top of
-      // a Marshal — friendly or enemy. The Marshal is never actually captured;
+      // a Marshal --- friendly or enemy. The Marshal is never actually captured;
       // Checkmate ends the Game before Capture resolves.
       const state = gsfenState(ENEMY_MARSHAL_STACK_TEST);
       const r = validateMove(state, move(5, 9, 5, 8, null));
@@ -261,12 +261,12 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-ACTION-002 — Self Check', () => {
+  describe('BR-ACTION-002 --- Self Check', () => {
     it('rejects a move that leaves own Marshal in check due to stack size change', () => {
       // White Marshal (top of [P,P,M] size 3) at (5,9) captures Black Pawn at (5,8).
       // After capture, Marshal becomes size 1 at (5,8).
       // Black General at (5,7) gains line of sight along the file and attacks (5,8).
-      // This violates Self Check — the move is illegal.
+      // This violates Self Check --- the move is illegal.
       const state = gsfenState(SELF_CHECK_POS);
       const r = validateMove(state, move(5, 9, 5, 8, 'capture'));
       expect(r.ok).toBe(false);
@@ -291,9 +291,9 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-STACK-006 — Turncoat validation (Move)', () => {
+  describe('BR-STACK-006 --- Turncoat validation (Move)', () => {
     it('rejects turncoat from a non-Captain piece', () => {
-      // Marshal at (5,9) moves to (4,9) with turncoat — not a Captain
+      // Marshal at (5,9) moves to (4,9) with turncoat --- not a Captain
       const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9, null, [1]));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
@@ -301,7 +301,7 @@ describe('validateMove', () => {
 
     it('rejects turncoat on a Capture outcome', () => {
       // Captain at (6,7) moves FR to (5,6) where enemy piece sits.
-      // Capture chosen, turncoat=[1] — illegal because Turncoat needs Stack.
+      // Capture chosen, turncoat=[1] --- illegal because Turncoat needs Stack.
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
       pos = setStack(pos, { col: 6, row: 7 }, createStack([{ type: 'T', owner: 'white' }]));
@@ -318,7 +318,7 @@ describe('validateMove', () => {
 
     it('rejects turncoat when target stack level contains a friendly piece (not enemy)', () => {
       // Captain at (6,7) on size-2 stack moves FR to (5,6) with a single enemy piece.
-      // Post-move stack: [p, T] size 2. Level 2 is the Captain (friendly) — cannot swap.
+      // Post-move stack: [p, T] size 2. Level 2 is the Captain (friendly) --- cannot swap.
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
       pos = setStack(
@@ -393,7 +393,7 @@ describe('validateMove', () => {
       // Captain on size-2 stack at (6,7) moves FR to (5,6). Target stack has two enemy pieces.
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
-      // Captain on top of a friendly Pawn → stack size 2
+      // Captain on top of a friendly Pawn -> stack size 2
       pos = setStack(
         pos,
         { col: 6, row: 7 },
@@ -402,7 +402,7 @@ describe('validateMove', () => {
           { type: 'T', owner: 'white' },
         ]),
       );
-      // Target: two Black Pawns → stack size 2 (source 2 >= target 2)
+      // Target: two Black Pawns -> stack size 2 (source 2 >= target 2)
       pos = setStack(
         pos,
         { col: 5, row: 6 },
@@ -434,7 +434,7 @@ describe('validateMove', () => {
       }
     });
 
-    it('accepts Captain stacking with Turncoat levels 1 and 2 — both levels swapped', () => {
+    it('accepts Captain stacking with Turncoat levels 1 and 2 --- both levels swapped', () => {
       const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
       // Captain on size-2 stack (on top of Pawn)
@@ -446,7 +446,7 @@ describe('validateMove', () => {
           { type: 'T', owner: 'white' },
         ]),
       );
-      // Target: two enemy pieces of different types → stack size 2
+      // Target: two enemy pieces of different types -> stack size 2
       pos = setStack(
         pos,
         { col: 5, row: 6 },
@@ -499,7 +499,7 @@ describe('validateArata', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-002');
   });
 
-  it('rejects arata of Marshal — not in hand during battle phase (BR-ARATA-002)', () => {
+  it('rejects arata of Marshal --- not in hand during battle phase (BR-ARATA-002)', () => {
     // Marshal is never in hand during battle phase (BR-DEPLOY-011).
     // The piece-in-hand check (BR-ARATA-002) rejects it regardless of target.
     const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('M', 5, 7));
@@ -509,26 +509,26 @@ describe('validateArata', () => {
 
   it('accepts arata with piece in hand to valid square', () => {
     // BATTLE_MID_VARIANT: White most advanced piece is Archer at row 4.
-    // Arata zone: rows 4-9. (5,7) is row 7 — in zone.
+    // Arata zone: rows 4-9. (5,7) is row 7 --- in zone.
     const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
     expect(r.ok).toBe(true);
   });
 
   it('rejects arata beyond most advanced piece (BR-ARATA-003)', () => {
-    // Row 3 is forward of row 4 (most advanced White piece) — outside zone
+    // Row 3 is forward of row 4 (most advanced White piece) --- outside zone
     const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 3));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-003');
   });
 
   it('accepts arata at the most advanced piece row', () => {
-    // Row 4 is the most advanced White piece row — should be in zone
+    // Row 4 is the most advanced White piece row --- should be in zone
     const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 4));
     expect(r.ok).toBe(true);
   });
 
   it('rejects arata onto a full stack (BR-ARATA-005)', () => {
-    // AFG size 3 at (5,7) — cannot stack on top
+    // AFG size 3 at (5,7) --- cannot stack on top
     const state = gsfenState(SIZE_MISMATCH_AFG);
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);
@@ -567,7 +567,7 @@ describe('validateArata', () => {
   it('rejects arata onto enemy-topped square (BR-ARATA-006)', () => {
     // Use a position where (5,7) is within White's arata zone AND has an enemy top.
     // White's most advanced piece is at row 5 (General), zone = rows 5-9.
-    // Row 7 has a Black Pawn [p] at (5,7) — within zone, enemy-topped.
+    // Row 7 has a Black Pawn [p] at (5,7) --- within zone, enemy-topped.
     const state = gsfenState(ARATA_ZONE_TEST);
     const r = validateArata(state, arata('P', 5, 7));
     expect(r.ok).toBe(false);
@@ -580,16 +580,16 @@ describe('validateArata', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-007');
   });
 
-  describe('BR-STACK-006 — Turncoat validation (Arata)', () => {
+  describe('BR-STACK-006 --- Turncoat validation (Arata)', () => {
     it('rejects arata turncoat from a non-Captain piece', () => {
-      // Arata Pawn with turncoat — Pawn is not Captain
+      // Arata Pawn with turncoat --- Pawn is not Captain
       const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7, [1]));
       expect(r.ok).toBe(false);
       if (!r.ok) expect(r.error.rule).toBe('BR-STACK-006');
     });
 
     it('rejects arata turncoat when target has no enemy pieces to swap', () => {
-      // Arata Captain at (5,7) — target is empty, no enemy pieces.
+      // Arata Captain at (5,7) --- target is empty, no enemy pieces.
       // Need to add T to hand since BATTLE_MID_VARIANT has no Captain.
       const base = gsfenState(BATTLE_MID_VARIANT);
       const state: GameState = {
@@ -626,7 +626,7 @@ describe('validateArata', () => {
 
     it('accepts Captain arata with Turncoat level 1 and updates state correctly', () => {
       // Target (5,8) has [p, P] (Black Pawn bottom, White Pawn top).
-      // Arata Captain on top → stack becomes [p, P, T]. Swap level 1: Pawn→White Pawn.
+      // Arata Captain on top -> stack becomes [p, P, T]. Swap level 1: Pawn->White Pawn.
       const base = gsfenState(BATTLE_MID_VARIANT);
       let pos = setStack(base.position, { col: 5, row: 8 }, null);
       pos = setStack(
@@ -663,9 +663,9 @@ describe('validateArata', () => {
     // BR-ARATA-005 (stack size limit). Level 1 is the only arata-swappable level.
   });
 
-  describe('BR-ACTION-002 — Self Check after Arata', () => {
+  describe('BR-ACTION-002 --- Self Check after Arata', () => {
     it('accepts arata that does not leave own Marshal in check', () => {
-      // Arata places a Pawn at (5,7) — adjacent to Marshal at (5,9) but doesn't block anything.
+      // Arata places a Pawn at (5,7) --- adjacent to Marshal at (5,9) but doesn't block anything.
       // The Self Check code path is exercised but doesn't trigger (Marshal is safe).
       const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
       expect(r.ok).toBe(true);
@@ -685,7 +685,7 @@ describe('validateArata', () => {
     });
 
     it('includes speculativeState with correct piece placement on success', () => {
-      // Arata places a Pawn at (5,7) — verify the speculativeState reflects the placement.
+      // Arata places a Pawn at (5,7) --- verify the speculativeState reflects the placement.
       const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 7));
       if (r.ok) {
         expect(r.speculativeState).toBeDefined();
@@ -722,7 +722,7 @@ describe('validatePlay', () => {
   });
 
   it('includes pre-computed speculativeState with correct board changes on success', () => {
-    // Move Marshal from (5,9) left to (4,9) — empty square
+    // Move Marshal from (5,9) left to (4,9) --- empty square
     const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
     if (r.ok) {
       expect(r.speculativeState).toBeDefined();
@@ -746,7 +746,7 @@ describe('validatePlay', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-ACTION-001');
   });
 
-  describe('BR-TURN-002 — active player flips after Play; counter increments', () => {
+  describe('BR-TURN-002 --- active player flips after Play; counter increments', () => {
     it('flips active player and increments counter after a valid Move', () => {
       const r = validatePlay(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 4, 9));
       if (r.ok) {
@@ -776,10 +776,10 @@ describe('validatePlay', () => {
   });
 
   /* ------------------------------------------------------------------ */
-  /*  Regression: BR-STACK-003 — friendly 3-stack landing rejection      */
+  /*  Regression: BR-STACK-003 --- friendly 3-stack landing rejection      */
   /* ------------------------------------------------------------------ */
 
-  describe('BR-STACK-003 — friendly stack of 3', () => {
+  describe('BR-STACK-003 --- friendly stack of 3', () => {
     it('rejects a move landing on a friendly stack already at size 3', () => {
       const state = gsfenState(MARSHAL_ALONE_BATTLE);
       // Place a 3-deep friendly White stack at 5-8 (one square forward of
@@ -831,7 +831,7 @@ describe('validatePlay', () => {
 
       // Place the last Black spy at an empty square in the deploy zone,
       // without declaring Done (the hand will be empty after placement,
-      // which auto-ends the deploy phase → transitions to battle).
+      // which auto-ends the deploy phase -> transitions to battle).
       const placeSpy: Action = {
         kind: 'placement',
         piece: 'Y',
@@ -856,15 +856,15 @@ describe('validatePlay', () => {
   /*  Regression: fuzzer crash applying action on battle state            */
   /* ------------------------------------------------------------------ */
 
-  describe('fuzzer regression — fuzzer-crash-145', () => {
+  describe('fuzzer regression --- fuzzer-crash-145', () => {
     it('hasLegalPlays does not crash when a battle state has 3-deep stacks being targeted by size-3 sources', () => {
       // The fuzzer reached a battle state where White has no hands and Black
       // has size-3 pieces that can target friendly size-3 stacks. The call
-      // to hasLegalPlays → isMoveSafe crashed by trying to create a 4-piece
+      // to hasLegalPlays -> isMoveSafe crashed by trying to create a 4-piece
       // stack. The fix: isMoveSafe must check that the target isn't already
       // at max stack size (3) before stacking.
       const base = gsfenState(FUZZER_CRASH_145);
-      // The GSFEN is White's turn — flip to Black so the scan iterates
+      // The GSFEN is White's turn --- flip to Black so the scan iterates
       // over Black's pieces (which include size-3 stacks targeting
       // friendly size-3 stacks).
       const blackState: GameState = {

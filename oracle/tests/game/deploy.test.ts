@@ -1,7 +1,7 @@
 /**
  * Deploy-phase action validation tests (Step 8).
  *
- * Covers validatePlacement — BR-DEPLOY-001 through BR-DEPLOY-007,
+ * Covers validatePlacement --- BR-DEPLOY-001 through BR-DEPLOY-007,
  * including Marshal-first, deploy zone, stacking, and Done.
  *
  * TDD: tests define expected behaviour before implementation.
@@ -121,15 +121,15 @@ describe('validatePlacement', () => {
   });
 
   it('accepts placement on friendly stack under size 3 (BR-DEPLOY-005)', () => {
-    // White PM (Pawn+Marshal) at (5,9) size 2 → stack General on top
+    // White PM (Pawn+Marshal) at (5,9) size 2 -> stack General on top
     const state = gsfenState(MP_STACK_DEPLOY_CTR3);
     const r = validatePlacement(state, placement('G', 5, 9));
     expect(r.ok).toBe(true);
   });
 
-  it('rejects placement on full stack (size 3) — BR-DEPLOY-005', () => {
+  it('rejects placement on full stack (size 3) --- BR-DEPLOY-005', () => {
     // Marshal already placed at (5,8) (hand.M=0 so BR-DEPLOY-003 passes).
-    // Stack PPP at (5,9) is size 3 — placing G on top must be rejected.
+    // Stack PPP at (5,9) is size 3 --- placing G on top must be rejected.
     const state = gsfenState(DEPLOY_FULL_STACK_PAWNS);
     const r = validatePlacement(state, placement('G', 5, 9));
     expect(r.ok).toBe(false);
@@ -268,7 +268,7 @@ describe('applyPlacement', () => {
     expect(r.state.turn.done).toBe('white');
     expect(r.state.turn.activePlayer).toBe('black');
 
-    // Black places Marshal, does NOT declare Done — should keep turn
+    // Black places Marshal, does NOT declare Done --- should keep turn
     state = r.state;
     r = applyPlacement(state, placement('M', 5, 1));
     expect(r.state.turn.done).toBe('white');
@@ -293,7 +293,7 @@ describe('applyPlacement', () => {
     expect(state.turn.done).toBe('white');
     expect(state.turn.activePlayer).toBe('black');
 
-    // Black places Pawn at (5,2), declares Done → both done
+    // Black places Pawn at (5,2), declares Done -> both done
     const final = applyThroughEngine(state, placement('P', 5, 2, true));
 
     // No exposure expected (Marshals safely away from enemy pieces)
@@ -344,9 +344,9 @@ describe('applyPlacement', () => {
     // of sight to White Marshal at (1,9).
     //
     // After White places the last Pawn:
-    //   1. White's hand empties → auto-Done per BR-DEPLOY-009
-    //   2. Both players Done → Deploy Phase ends → Exposure evaluation
-    //   3. White Marshal is under attack by Black General → White loses
+    //   1. White's hand empties -> auto-Done per BR-DEPLOY-009
+    //   2. Both players Done -> Deploy Phase ends -> Exposure evaluation
+    //   3. White Marshal is under attack by Black General -> White loses
     const state = gsfenState(DEPLOY_AUTO_DONE);
     expect(state.hands.white.P).toBe(1); // exactly 1 piece left
     expect(state.turn.done).toBe('black'); // Black already Done
@@ -370,15 +370,15 @@ describe('applyPlacement', () => {
     }
   });
 
-  it('both Marshals under attack at deploy→battle boundary results in Exposure Draw (BR-DEPLOY-012)', () => {
+  it('both Marshals under attack at deploy->battle boundary results in Exposure Draw (BR-DEPLOY-012)', () => {
     // DEPLOY_EXPOSURE_DRAW: White already Done (dbW token). Black's turn.
     //
     // Board threats:
-    //   - Black General at (1,1) → range along col 1 → attacks White Marshal at (1,9)
-    //   - White General at (5,9) (top of [N,N,G]) → range along col 5 → attacks Black Marshal at (5,1)
+    //   - Black General at (1,1) -> range along col 1 -> attacks White Marshal at (1,9)
+    //   - White General at (5,9) (top of [N,N,G]) -> range along col 5 -> attacks Black Marshal at (5,1)
     //
-    // Black places any piece (except cols 1 and 5 — to avoid blocking the sight lines)
-    // and declares Done → both players Done → Exposure → both exposed → draw.
+    // Black places any piece (except cols 1 and 5 --- to avoid blocking the sight lines)
+    // and declares Done -> both players Done -> Exposure -> both exposed -> draw.
     const state = gsfenState(DEPLOY_EXPOSURE_DRAW);
     expect(state.turn.activePlayer).toBe('black');
     expect(state.turn.done).toBe('white'); // White already Done
@@ -392,25 +392,25 @@ describe('applyPlacement', () => {
     expect(topPiece(stack!).type).toBe('P');
     expect(topPiece(stack!).owner).toBe('black');
 
-    // Both Marshals exposed → draw
+    // Both Marshals exposed -> draw
     expect(r.result.kind).toBe('exposure-draw');
   });
 
-  it('Lieutenants expose both Marshals at deploy→battle boundary resulting in Exposure Draw (BR-DEPLOY-012)', () => {
+  it('Lieutenants expose both Marshals at deploy->battle boundary resulting in Exposure Draw (BR-DEPLOY-012)', () => {
     // DEPLOY_LT_EXPOSURE_DRAW: White already Done (dbW token). Black has 1 Pawn left.
     //
     // Diagonal sight lines:
-    //   - Black Lt at (9,1) → FL range → attacks White Marshal at (1,9)
-    //   - White Lt at (9,9) → FR range → attacks Black Marshal at (1,1)
+    //   - Black Lt at (9,1) -> FL range -> attacks White Marshal at (1,9)
+    //   - White Lt at (9,9) -> FR range -> attacks Black Marshal at (1,1)
     //
-    // Black must place the last Pawn anywhere except (2,2) or (3,3) — those
+    // Black must place the last Pawn anywhere except (2,2) or (3,3) --- those
     // squares lie on the White Lieutenant's diagonal path and would obstruct it.
     const state = gsfenState(DEPLOY_LT_EXPOSURE_DRAW);
     expect(state.turn.activePlayer).toBe('black');
     expect(state.turn.done).toBe('white');
     expect(state.hands.black.P).toBe(1); // Black's last piece
 
-    // Place at (5,3) — within Black's deploy zone, not on diagonal path
+    // Place at (5,3) --- within Black's deploy zone, not on diagonal path
     const r = applyThroughEngine(state, placement('P', 5, 3));
 
     // Black's Pawn should be at (5,3)
@@ -419,24 +419,24 @@ describe('applyPlacement', () => {
     expect(topPiece(stack!).type).toBe('P');
     expect(topPiece(stack!).owner).toBe('black');
 
-    // Hand exhausted → auto-Done. White already Done. Both done → Exposure.
-    // Both Marshals under attack via diagonal Lieutenant ranges → draw.
+    // Hand exhausted -> auto-Done. White already Done. Both done -> Exposure.
+    // Both Marshals under attack via diagonal Lieutenant ranges -> draw.
     expect(r.result.kind).toBe('exposure-draw');
   });
 
-  it('Black blocks White Lieutenant by deploying at (3,3), breaking the exposure-draw — White loses (BR-DEPLOY-012)', () => {
+  it('Black blocks White Lieutenant by deploying at (3,3), breaking the exposure-draw --- White loses (BR-DEPLOY-012)', () => {
     // Same fixture. Black places last Pawn at (3,3) instead.
     //
-    // White Lieutenant's diagonal path: (9,9)→(8,8)→(7,7)→(6,6)→(5,5)→(4,4)→(3,3)→(2,2)→(1,1)
-    // Pawn at (3,3) is an obstruction — the Lieutenant can land on it but
+    // White Lieutenant's diagonal path: (9,9)->(8,8)->(7,7)->(6,6)->(5,5)->(4,4)->(3,3)->(2,2)->(1,1)
+    // Pawn at (3,3) is an obstruction --- the Lieutenant can land on it but
     // cannot extend past it to reach Black Marshal at (1,1).
     //
     // Black Lieutenant at (9,1) still has unobstructed FL path to (1,9).
-    // Result: only White Marshal exposed → White loses.
+    // Result: only White Marshal exposed -> White loses.
     const state = gsfenState(DEPLOY_LT_EXPOSURE_DRAW);
     expect(state.hands.black.P).toBe(1);
 
-    // Place at (3,3) — on the diagonal path, blocks the Lieutenant
+    // Place at (3,3) --- on the diagonal path, blocks the Lieutenant
     const r = applyThroughEngine(state, placement('P', 3, 3));
 
     // Black's Pawn at (3,3)
@@ -445,26 +445,26 @@ describe('applyPlacement', () => {
     expect(topPiece(stack!).type).toBe('P');
     expect(topPiece(stack!).owner).toBe('black');
 
-    // Only White exposed → White loses
+    // Only White exposed -> White loses
     expect(r.result.kind).toBe('exposure');
     if (r.result.kind === 'exposure') {
       expect(r.result.loser).toBe('white');
     }
   });
 
-  it('Black blocks Black Lieutenant by deploying at (7,3), breaking the exposure-draw — Black loses (BR-DEPLOY-012)', () => {
+  it('Black blocks Black Lieutenant by deploying at (7,3), breaking the exposure-draw --- Black loses (BR-DEPLOY-012)', () => {
     // Same fixture. Black places last Pawn at (7,3) instead.
     //
-    // Black Lieutenant's FL path: (9,1)→(8,2)→(7,3)→(6,4)→(5,5)→(4,6)→(3,7)→(2,8)→(1,9)
-    // Pawn at (7,3) is an obstruction — the Lieutenant cannot extend past it
+    // Black Lieutenant's FL path: (9,1)->(8,2)->(7,3)->(6,4)->(5,5)->(4,6)->(3,7)->(2,8)->(1,9)
+    // Pawn at (7,3) is an obstruction --- the Lieutenant cannot extend past it
     // to reach White Marshal at (1,9).
     //
     // White Lieutenant at (9,9) still has unobstructed FR path to (1,1).
-    // Result: only Black Marshal exposed → Black loses.
+    // Result: only Black Marshal exposed -> Black loses.
     const state = gsfenState(DEPLOY_LT_EXPOSURE_DRAW);
     expect(state.hands.black.P).toBe(1);
 
-    // Place at (7,3) — on Black Lieutenant's FL path, blocks the attack
+    // Place at (7,3) --- on Black Lieutenant's FL path, blocks the attack
     const r = applyThroughEngine(state, placement('P', 7, 3));
 
     // Black's Pawn at (7,3)
@@ -473,7 +473,7 @@ describe('applyPlacement', () => {
     expect(topPiece(stack!).type).toBe('P');
     expect(topPiece(stack!).owner).toBe('black');
 
-    // Only Black exposed → Black loses
+    // Only Black exposed -> Black loses
     expect(r.result.kind).toBe('exposure');
     if (r.result.kind === 'exposure') {
       expect(r.result.loser).toBe('black');

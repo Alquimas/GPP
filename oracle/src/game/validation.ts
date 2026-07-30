@@ -27,7 +27,7 @@ export type ValidationResult = { ok: true } | { ok: false; error: GameError };
 /* ------------------------------------------------------------------ */
 
 /**
- * Play validation result — includes the FULL committed post-action state on success.
+ * Play validation result --- includes the FULL committed post-action state on success.
  *
  * The state includes: board position, hand contents, active player flip
  * (BR-TURN-002), turn counter increment, and Turncoat swap resolution (BR-STACK-006).

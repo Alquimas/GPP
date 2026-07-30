@@ -1,5 +1,5 @@
 /**
- * Movement rules engine — computes all legal destinations for any piece at
+ * Movement rules engine --- computes all legal destinations for any piece at
  * any stack size, applying the BR-MOVEMENT / BR-PATH / BR-MOVE-005 rules.
  *
  * Pure domain logic with no I/O.  Every function treats Position as immutable.
@@ -51,18 +51,18 @@ function canLandOnStack(sourceSize: number, targetStack: Stack | null): boolean 
 
 /**
  * Determine move outcome based on target ownership and stack composition.
- * - null      → empty or friendly (automatic stack)
- * - 'stack'   → enemy, size < 3, top is not Marshal (player may choose)
- * - 'capture' → enemy, size = 3 OR top is Marshal (forced)
+ * - null      -> empty or friendly (automatic stack)
+ * - 'stack'   -> enemy, size < 3, top is not Marshal (player may choose)
+ * - 'capture' -> enemy, size = 3 OR top is Marshal (forced)
  *
  * ## BR-STACK-004 separation
  * This function does NOT enforce "no piece may be placed or moved on top
  * of a Marshal."  The movement engine computes every geometrically
  * reachable square; the semantic prohibition on stacking onto a Marshal
- * is enforced by the validator (Step 8 — `validateMove` / `validateArata`)
+ * is enforced by the validator (Step 8 --- `validateMove` / `validateArata`)
  * which rejects moves whose target top is a friendly Marshal.  Callers
  * that need only the rule-legal move set must therefore run the result
- * through the validator — `getLegalDestinations` alone is necessary but
+ * through the validator --- `getLegalDestinations` alone is necessary but
  * not sufficient for legality.
  */
 function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcome | null {
@@ -79,7 +79,7 @@ function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcom
  * For White: positive row = forward (row-1), positive col = left (col+1).
  * For Black: negate both components.
  *
- * Returns `null` if the computed square lies outside the board — callers
+ * Returns `null` if the computed square lies outside the board --- callers
  * should treat null as "off-board destination" (skip / block, depending
  * on movement class).
  */
@@ -91,7 +91,7 @@ function applyCoordDelta(origin: Square, delta: CoordDelta, player: Player): Squ
 
 /* ------------------------------------------------------------------ */
 /*  1. Step movement (BR-MOVEMENT-001)                                 */
-/*     Size 1 only — exactly 1 square per allowed direction.          */
+/*     Size 1 only --- exactly 1 square per allowed direction.          */
 /* ------------------------------------------------------------------ */
 
 function computeStepMovement(
@@ -155,12 +155,12 @@ function computeTraceMovement(
 
     for (let step = 1; step <= maxRange; step++) {
       const next = applyDirection(col, row, dir, player);
-      if (!next) break; // off board — stop tracing this direction
+      if (!next) break; // off board --- stop tracing this direction
 
       const targetStack = getStack(position, next);
 
       if (targetStack !== null) {
-        // BR-PATH-001: obstruction — may land on it, but cannot go beyond
+        // BR-PATH-001: obstruction --- may land on it, but cannot go beyond
         if (canLandOnStack(sourceSize, targetStack)) {
           results.push({
             dest: next,
@@ -171,7 +171,7 @@ function computeTraceMovement(
         break; // stop tracing past obstruction
       }
 
-      // Empty square — always a valid landing (BR-MOVE-005 is trivially
+      // Empty square --- always a valid landing (BR-MOVE-005 is trivially
       // satisfied for an empty target; `canLandOnStack(sourceSize, null)`
       // is always true, so we push unconditionally rather than re-check).
       results.push({ dest: next, moveClass, outcome: null });
@@ -204,7 +204,7 @@ function computeTraceMovement(
  * pattern.  The previous level's destination becomes part of the jumped-
  * over set.
  *
- * @throws if `base.over` is empty — a jump pattern with no intervening
+ * @throws if `base.over` is empty --- a jump pattern with no intervening
  *   squares is not a meaningful jump (it would be a step) and signals a
  *   data error in `PIECE_MOVEMENT`.  Failing loudly here prevents silent
  *   divergence under differential testing against a future Core.
@@ -276,13 +276,13 @@ function computeJumpMovement(
   for (const base of baseJumps) {
     const patterns = getScaledJumps(base, sourceSize);
     for (const pattern of patterns) {
-      // `applyCoordDelta` returns null for off-board destinations — skip.
+      // `applyCoordDelta` returns null for off-board destinations --- skip.
       const destSquare = applyCoordDelta(square, pattern.dest, player);
       if (!destSquare) continue;
 
       // BR-PATH-002: check all jumped-over squares.
       // An off-board over-square means the jump pattern itself is
-      // geometrically impossible from this origin — block.
+      // geometrically impossible from this origin --- block.
       let blocked = false;
       for (const over of pattern.over) {
         const overSquare = applyCoordDelta(square, over, player);
@@ -364,7 +364,7 @@ export function getLegalDestinations(
     );
   }
 
-  // 3. Range movement (BR-MOVEMENT-003) — unaffected by stack size
+  // 3. Range movement (BR-MOVEMENT-003) --- unaffected by stack size
   if (def.range.length > 0) {
     results.push(...computeTraceMovement(position, square, player, def.range, 9, 'range'));
   }

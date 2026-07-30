@@ -1,5 +1,5 @@
 /**
- * Fixture verification tests — confirms that every .gsfen fixture file
+ * Fixture verification tests --- confirms that every .gsfen fixture file
  * parses correctly, validates, and satisfies structural invariants.
  *
  * Instead of brittle per-square golden-file assertions (which break when
@@ -7,7 +7,7 @@
  *   - parse + validateState succeed
  *   - Marshal positions (fixture-distinguishing property)
  *   - Turn state (phase, activePlayer, counter, done)
- *   - Hand contents (exact — these define fixture identity)
+ *   - Hand contents (exact --- these define fixture identity)
  *   - Inventory conservation (board + hand per type ≤ initial)
  *   - Deploy-phase zone constraints
  *   - Deploy-phase strict equality (board + hand = initial)
@@ -61,7 +61,7 @@ function H(overrides?: Partial<Hand>): Hand {
   return { ...INITIAL_COUNTS, ...overrides };
 }
 
-/** Assert a stack at (rowIdx, colIdx) has the expected bottom→top pieces. */
+/** Assert a stack at (rowIdx, colIdx) has the expected bottom->top pieces. */
 function assertStack(
   state: GameState,
   rowIdx: number,
@@ -195,7 +195,7 @@ function checkDeployZones(state: GameState): void {
 function checkStructuralInvariants(state: GameState): void {
   expect(validateState(state).ok).toBe(true);
 
-  // Marshal integrity (comprehensive — covers BR-STACK-004, BR-DEPLOY-003/011)
+  // Marshal integrity (comprehensive --- covers BR-STACK-004, BR-DEPLOY-003/011)
   checkMarshalIntegrity(state);
 
   // Inventory conservation per player
@@ -207,7 +207,7 @@ function checkStructuralInvariants(state: GameState): void {
 }
 
 // ---------------------------------------------------------------------------
-// Tests — one per fixture
+// Tests --- one per fixture
 // ---------------------------------------------------------------------------
 
 describe('fixture structural invariants', () => {

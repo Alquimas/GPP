@@ -18,7 +18,7 @@ export const ALL_PIECE_TYPES: PieceType[] = [
   'Y',
 ];
 
-/** Letter → full English name. */
+/** Letter -> full English name. */
 export const PIECE_NAMES: Record<PieceType, string> = {
   A: 'Archer',
   C: 'Cannon',
@@ -36,7 +36,7 @@ export const PIECE_NAMES: Record<PieceType, string> = {
   Y: 'Spy',
 };
 
-/** Letter → initial count per player (per GSFEN.md piece table). */
+/** Letter -> initial count per player (per GSFEN.md piece table). */
 export const INITIAL_COUNTS: Record<PieceType, number> = {
   A: 2,
   C: 1,
@@ -54,7 +54,7 @@ export const INITIAL_COUNTS: Record<PieceType, number> = {
   Y: 2,
 };
 
-/** A Hand record with every count at 0 — the canonical empty hand.
+/** A Hand record with every count at 0 --- the canonical empty hand.
  * Frozen at runtime to prevent accidental mutation of the shared instance
  * (used as a default return value in parseHands and as an export).
  */
@@ -75,18 +75,18 @@ export const EMPTY_HAND: Hand = Object.freeze({
   Y: 0,
 });
 
-/** A Hand record with every count at its initial value — the canonical full hand.
+/** A Hand record with every count at its initial value --- the canonical full hand.
  * Frozen at runtime to prevent accidental mutation of the shared instance.
  */
 export const FULL_HAND: Hand = Object.freeze({ ...INITIAL_COUNTS });
 
 /**
  * Declarative movement rules per piece type (White's perspective).
- * Pure data — the movement engine derives concrete destinations at runtime,
+ * Pure data --- the movement engine derives concrete destinations at runtime,
  * applying stack-size scaling per BR-MOVEMENT-005:
- *   size 1 — base (step = 1 sq, limited-range max 2)
- *   size 2 — +1 (step → 1-2, limited-range max 3, jump extends)
- *   size 3 — +2 (step → 1-3, limited-range max 4, jump extends)
+ *   size 1 --- base (step = 1 sq, limited-range max 2)
+ *   size 2 --- +1 (step -> 1-2, limited-range max 3, jump extends)
+ *   size 3 --- +2 (step -> 1-3, limited-range max 4, jump extends)
  * Range movement is unaffected by the stack bonus.
  */
 export const PIECE_MOVEMENT: Record<PieceType, MovementDef> = {

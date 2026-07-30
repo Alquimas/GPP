@@ -1,5 +1,5 @@
 /**
- * GAN serializer — converts Action objects into canonical GAN strings.
+ * GAN serializer --- converts Action objects into canonical GAN strings.
  *
  * Supports three action shapes:
  * - Placement (Deploy Phase) : `<piece><square>[!]`
@@ -40,10 +40,10 @@ export function serializeSquare(sq: Square): string {
 /**
  * Serialize a turncoat level array to its canonical suffix string.
  *
- * - `[]`  → `''`       (no token)
- * - `[1]` → `'+1'`
- * - `[2]` → `'+2'`
- * - `[1, 2]` → `'+12'`
+ * - `[]`  -> `''`       (no token)
+ * - `[1]` -> `'+1'`
+ * - `[2]` -> `'+2'`
+ * - `[1, 2]` -> `'+12'`
  *
  * @param levels - The elected turncoat swap levels (ascending, no duplicates).
  * @returns The turncoat suffix (including leading `+`), or empty string.
@@ -60,9 +60,9 @@ export function serializeTurncoat(levels: TurncoatLevels): string {
 /**
  * Serialize an outcome value to its canonical token.
  *
- * - `'stack'`   → `'='`
- * - `'capture'` → `'x'`
- * - `null`      → `''`
+ * - `'stack'`   -> `'='`
+ * - `'capture'` -> `'x'`
+ * - `null`      -> `''`
  *
  * @param outcome - The outcome choice.
  * @returns The outcome token string, or empty string.

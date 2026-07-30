@@ -1,24 +1,4 @@
-## Project Scope
-> **Project goal:** Develop a Gungi game logic core library that keeps track of a
-> single instance of a game, being capable of receiving an Action, validating it
-> against all the Gungi rules, and then updating the Game State, returning that
-> the game is finished or returning a typed error. The core is pure domain logic
-> with zero I/O and zero UI.
-> **Purpose:** Serve as a reusable foundation that other applications and
-> adapters (GUI, CLI, server, AI) can consume via a well-defined interface.
-> **Users:** Developers integrating the core into their applications.
-> **Deliverables:** Library package, source code repository, documentation of
-> the public API, and internal tests.
-> **Scope of this document:** Glossary definitions and business rules only.
-> The public API contract is specified in a separate document (`Gungi_API.md`).
-
-## Stakeholders
-| Stakeholder      | Expectations                                  | Actor     |
-| ---------------- | --------------------------------------------- | --------- |
-| Core Consumer    | Correct rule enforcement, a predictable API,  | Primary   |
-|                  | clear error types, documentation              |           |
-| Developer        | Clean and modular architecture, testability   | Secondary |
-| Tester           | Deterministic behavior, ability to fuzz       | Secondary |
+# Rules
 
 ## Glossary of terms
 
@@ -114,7 +94,7 @@ requiring exactly one **Play** ([Move](<#move>) or [Arata](<#arata>)).
 [Terminal Conditions](<#terminal-condition>) ([Checkmate](<#checkmate>),
 [Stalemate](<#stalemate>), [Repetition](<#repetition>)) are evaluated before
 each [Turn](<#turn>). [Exposure](<#exposure>) is evaluated exactly once, at
-the [Deploy](<#deploy-phase>)→[Battle](<#battle-phase>) boundary.
+the [Deploy](<#deploy-phase>)->[Battle](<#battle-phase>) boundary.
 [BR-TERMINATION](<#br-termination---game-termination-rules>).
 
 #### Placement
@@ -271,7 +251,7 @@ A [Terminal Condition](<#terminal-condition>) evaluated before each
 [Turn](<#turn>) in the [Battle Phase](<#battle-phase>), after
 [Repetition](<#repetition>). If both [Players](<#player>) have exactly
 their [Marshal](<#marshal>) on the [Board](<#board>) and no pieces remaining
-in either [Hand](<#hand>), the [Game](<#game>) ends in a draw — no
+in either [Hand](<#hand>), the [Game](<#game>) ends in a draw --- no
 [Player](<#player>) can ever deliver [Checkmate](<#checkmate>).
 
 #### Attack
@@ -991,7 +971,5 @@ If the [Active Player](<#active player>) is in [Stalemate](<#stalemate>), the
 If both [Players](<#player>) have only their [Marshal](<#marshal>) on the
 [Board](<#board>) (no other [Pieces](<#piece>) belonging to either
 [Player](<#player>)) and no [Pieces](<#piece>) in either
-[Hand](<#hand>), the [Game](<#game>) ends in a draw — no
+[Hand](<#hand>), the [Game](<#game>) ends in a draw --- no
 [Player](<#player>) can ever deliver [Checkmate](<#checkmate>).
-
-

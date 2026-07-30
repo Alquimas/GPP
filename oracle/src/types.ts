@@ -27,7 +27,7 @@ export type Square = {
 
 /**
  * A stack of pieces on a single square.
- * Ordered bottom→top (Level 1 first, highest level last).
+ * Ordered bottom->top (Level 1 first, highest level last).
  * Length is always 1–3.
  */
 export type Stack = [Piece] | [Piece, Piece] | [Piece, Piece, Piece];
@@ -49,7 +49,7 @@ export type Stack = [Piece] | [Piece, Piece] | [Piece, Piece, Piece];
  * constructs a Position by hand should pass it through
  * `validatePosition()` before use, or use `emptyPosition()` as the seed.
  *
- * Parsers (GSFEN, GAN) may produce malformed data — the semantic
+ * Parsers (GSFEN, GAN) may produce malformed data --- the semantic
  * validators (`validateState`, BR-GSFEN-VALID-*) catch stack-shape violations, but
  * `validatePosition()` is the cheaper, earlier guard for the 9×9 shape.
  */
@@ -83,7 +83,7 @@ export type Hand = Record<PieceType, number>;
 
 /**
  * A complete snapshot of the game at a given instant.
- * Two Game States are equal only when position, turn, and hands all match —
+ * Two Game States are equal only when position, turn, and hands all match ---
  * Repetition compares full Game States.
  */
 export type GameState = {
@@ -106,10 +106,10 @@ export type GlobalState = {
  * Terminal condition that ends the game.
  * - ongoing: game continues
  * - checkmate / stalemate: `loser` is the player who lost
- * - exposure: exactly one Marshal exposed → that player loses
- * - exposure-draw: both Marshals exposed → draw
- * - repetition: four identical game states → draw
- * - insufficient-material: both players have only their Marshals → draw
+ * - exposure: exactly one Marshal exposed -> that player loses
+ * - exposure-draw: both Marshals exposed -> draw
+ * - repetition: four identical game states -> draw
+ * - insufficient-material: both players have only their Marshals -> draw
  */
 export type GameResult =
   | { kind: 'ongoing' }
@@ -176,7 +176,7 @@ export type CoordDelta = {
  * A jump pattern at base size (Level 1).
  * `dest` is the destination relative to the origin, in player-relative
  * coordinates. `over` is the set of jumped-over squares relative to the
- * origin, ordered nearest→farthest.
+ * origin, ordered nearest->farthest.
  */
 export type JumpPattern = {
   dest: CoordDelta;
@@ -186,7 +186,7 @@ export type JumpPattern = {
 /**
  * Declarative movement rules for a single piece type.
  * Directions are player-relative; jumps use player-relative deltas.
- * Pure data — the movement engine derives concrete destinations at runtime,
+ * Pure data --- the movement engine derives concrete destinations at runtime,
  * including stack-size scaling per BR-MOVEMENT-005.
  */
 export type MovementDef = {

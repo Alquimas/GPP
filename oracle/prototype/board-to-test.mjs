@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PROTOTYPE — board-to-test.mjs
+ * PROTOTYPE --- board-to-test.mjs
  *
  * Reads a .state.txt (visual board) + .gsfen pair and outputs ready-to-paste
  * test code.  The answer it prototypes: "Can we quickly convert a described
@@ -9,8 +9,8 @@
  * Usage:  node prototype/board-to-test.mjs <name>
  *
  * Expects:
- *   ../fixtures/<name>.gsfen        — the GSFEN string (single line or file)
- *   ../../gsfen/<name>.state.txt    — visual description (see below)
+ *   ../fixtures/<name>.gsfen        --- the GSFEN string (single line or file)
+ *   ../../gsfen/<name>.state.txt    --- visual description (see below)
  *
  * Visual format (.state.txt):
  *
@@ -171,7 +171,7 @@ function generateTestCode(name, parsed, gsfen) {
         const token = tokens[ci];
         const stack = parseCell(token);
         if (stack && stack.length > 0) {
-          const visualCol = 9 - ci; // ci=0 → col 9, ci=8 → col 1
+          const visualCol = 9 - ci; // ci=0 -> col 9, ci=8 -> col 1
           out.push(renderStackAssertion(stack, rowVis, visualCol, ci));
         }
       }

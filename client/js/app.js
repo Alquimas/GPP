@@ -1,5 +1,5 @@
 /**
- * Gungi — Game UI Application
+ * Gungi --- Game UI Application
  *
  * Lishogi-inspired two-player local Gungi interface.
  * Board rendering, hand zones, move list, controls, and game flow.
@@ -178,7 +178,7 @@ function renderInfoBar() {
   if (s.isTerminal) {
     statusText = 'Game ended';
   } else if (pendingAction) {
-    statusText = `${s.playerLabel} — pending confirm`;
+    statusText = `${s.playerLabel} --- pending confirm`;
   } else {
     statusText = `${s.playerLabel} to ${actionWord}`;
   }
@@ -218,7 +218,7 @@ function renderBoard() {
   const legalPlacementDests = new Set();
 
   if (pendingAction || presenting) {
-    // Show pending/presenting state — no highlights
+    // Show pending/presenting state --- no highlights
   } else if (selectedCell) {
     for (const a of legalActions) {
       if (a.kind === 'move' && a.origin.col === selectedCell.col && a.origin.row === selectedCell.row) {
@@ -238,7 +238,7 @@ function renderBoard() {
 
   let html = '';
 
-  // Column headers (col 9 → col 1 left-to-right)
+  // Column headers (col 9 -> col 1 left-to-right)
   for (let c = 9; c >= 1; c--) {
     html += `<div class="board-label">${c}</div>`;
   }
@@ -251,7 +251,7 @@ function renderBoard() {
 
     for (let d = 0; d < 9; d++) {
       const cell = rowData[d];
-      const displayCol = 9 - d; // d=0 → col 9 (leftmost)
+      const displayCol = 9 - d; // d=0 -> col 9 (leftmost)
       const isOccupied = cell && cell.stack && cell.stack.length > 0;
       const topPiece = isOccupied ? cell.stack[cell.stack.length - 1] : null;
       const stackSize = isOccupied ? cell.stack.length : 0;
@@ -361,7 +361,7 @@ async function onCellClick(el) {
     return;
   }
 
-  // === Click on own piece → select for move (battle only) ===
+  // === Click on own piece -> select for move (battle only) ===
   if (serverState.phase === 'battle' && topPiece && topPiece.owner === serverState.activePlayer && !selectedCell && !selectedHandPiece) {
     selectedCell = { col, row };
     selectedHandPiece = null;
@@ -380,12 +380,12 @@ async function onCellClick(el) {
     );
 
     if (moves.length > 0) {
-      // Legal move destination (empty, enemy, or friendly-stack) → execute
+      // Legal move destination (empty, enemy, or friendly-stack) -> execute
       if (moves.length === 1) {
         await executeBattleAction(moves[0]);
         return;
       }
-      // Multiple outcomes → show choice popup
+      // Multiple outcomes -> show choice popup
       const srcPiece = (() => {
         const sr = selectedCell.row - 1;
         const sd = 9 - selectedCell.col;
@@ -393,11 +393,11 @@ async function onCellClick(el) {
         return sc?.stack?.[sc.stack.length - 1];
       })();
       const pn = srcPiece ? PIECE_LABELS[srcPiece.type] : 'Piece';
-      showOutcomeChoice(moves, `${pn} ${selectedCell.col}-${selectedCell.row} → ${col}-${row}`);
+      showOutcomeChoice(moves, `${pn} ${selectedCell.col}-${selectedCell.row} -> ${col}-${row}`);
       return;
     }
 
-    // Not a legal move dest. If clicking a friendly piece → switch selection.
+    // Not a legal move dest. If clicking a friendly piece -> switch selection.
     if (topPiece && topPiece.owner === serverState.activePlayer) {
       selectedCell = { col, row };
       selectedHandPiece = null;
@@ -471,7 +471,7 @@ async function onCellClick(el) {
     }
   }
 
-  // === Click elsewhere with selection → deselect ===
+  // === Click elsewhere with selection -> deselect ===
   if (selectedCell || selectedHandPiece) {
     selectedCell = null;
     selectedHandPiece = null;
@@ -534,8 +534,8 @@ function showOutcomeChoice(actions, sourceLabel) {
         icon = 'C'; iconCls = 'capture'; label = 'Capture top piece';
         sub = 'Remove the enemy top piece';
       } else {
-        icon = '→'; iconCls = 'null'; label = 'Move';
-        sub = a.display ? a.display.replace(/^Move\s+\d+-\d+→\d+-\d+/, '').trim() : '';
+        icon = '->'; iconCls = 'null'; label = 'Move';
+        sub = a.display ? a.display.replace(/^Move\s+\d+-\d+->\d+-\d+/, '').trim() : '';
       }
     } else if (a.kind === 'arata') {
       icon = '↓'; iconCls = 'null'; label = `Drop ${PIECE_LABELS[a.piece]}`;
@@ -677,17 +677,17 @@ function onHandPieceClick(color, type) {
   renderAll();
 
   if (serverState.phase === 'deploy') {
-    const msg = deployDonePending ? `Final placement: ${PIECE_LABELS[type]} (will declare Done)` : `Selected ${PIECE_LABELS[type]} — click deploy zone`;
+    const msg = deployDonePending ? `Final placement: ${PIECE_LABELS[type]} (will declare Done)` : `Selected ${PIECE_LABELS[type]} --- click deploy zone`;
     setStatus(msg);
   } else {
-    setStatus(`Selected ${PIECE_LABELS[type]} from hand — click destination`);
+    setStatus(`Selected ${PIECE_LABELS[type]} from hand --- click destination`);
   }
 }
 
 /* ── Battle action execution with confirm flow ──────────────────────── */
 
 async function executeBattleAction(action) {
-  // Don't send to server yet — set pending so player must confirm first
+  // Don't send to server yet --- set pending so player must confirm first
   pendingAction = action;
   selectedCell = null;
   selectedHandPiece = null;
@@ -759,7 +759,7 @@ async function startPresentation() {
     renderAll();
 
     if (serverState.isTerminal) {
-      setStatus('Game ended — presentation complete');
+      setStatus('Game ended --- presentation complete');
       break;
     }
 
@@ -841,7 +841,7 @@ function renderMoveList() {
 
       const isCurrent = i === currentIdx;
       const isDeploy = isPlacement;
-      const displayLabel = actionGAN || '—';
+      const displayLabel = actionGAN || '---';
       const isDone = actionGAN.endsWith('!');
 
       if (inBattle) {
@@ -927,7 +927,7 @@ function renderControls() {
       </div>
     `;
   } else if (pendingAction) {
-    // Confirm mode — battle phase pending action
+    // Confirm mode --- battle phase pending action
     html = `
       <button class="ctrl-btn confirm" id="btn-confirm">✓ Confirm</button>
       <button class="ctrl-btn undo" id="btn-cancel" style="flex:1;">↩ Undo</button>
@@ -942,7 +942,7 @@ function renderControls() {
     const canInteract = !isViewingPast && !playerDone;
 
     if (deployDonePending) {
-      // Done is pending — show Cancel
+      // Done is pending --- show Cancel
       html = `
         <button class="ctrl-btn done" id="btn-cancel-done" style="background:#5c2a2a;">✗ Cancel Done</button>
         <button class="ctrl-btn undo" id="btn-undo" ${s.canUndo && !isViewingPast ? '' : 'disabled'}>↩ Undo</button>

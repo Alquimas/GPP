@@ -1,7 +1,7 @@
 /**
  * Full-game integration tests for the Game class (Step 12).
  *
- * Exercises the complete public API: construction, deploy → battle
+ * Exercises the complete public API: construction, deploy -> battle
  * transition, action validation, state transitions, serialization,
  * and terminal detection.
  *
@@ -67,10 +67,10 @@ describe('Game constructor', () => {
 });
 
 /* ------------------------------------------------------------------ */
-/*  Deploy → Battle transition (full game)                             */
+/*  Deploy -> Battle transition (full game)                             */
 /* ------------------------------------------------------------------ */
 
-describe('full game: deploy → battle', () => {
+describe('full game: deploy -> battle', () => {
   it('plays through deploy and enters battle', () => {
     const game = new Game();
 
@@ -96,7 +96,7 @@ describe('full game: deploy → battle', () => {
     expect(r.state.turn.activePlayer).toBe('black');
     expect(r.state.turn.done).toBe('white');
 
-    // Black places Lieutenant, declares Done → both Done
+    // Black places Lieutenant, declares Done -> both Done
     r = game.applyAction(ganAction('L5-3!'));
     expect(r.state.turn.phase).toBe('battle');
     expect(r.state.turn.activePlayer).toBe('white');
@@ -135,7 +135,7 @@ describe('full game: deploy → battle', () => {
     expect(r.state).toStrictEqual(beforeState);
     expect(game.state).toStrictEqual(beforeState);
 
-    // Now place Marshal legally — should work
+    // Now place Marshal legally --- should work
     const accepted = game.applyAction(ganAction('M5-9'));
     expect(accepted.ok).toBe(true);
     expect(game.state).not.toStrictEqual(beforeState);

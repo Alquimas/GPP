@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * GSFEN CLI — validate and visualize GSFEN strings.
+ * GSFEN CLI --- validate and visualize GSFEN strings.
  *
  * Usage:
  *   gsfen check "<string>"
@@ -33,7 +33,7 @@ function printBoard(state: GameState): void {
   console.log(colHeader);
   for (let r = 0; r < 9; r++) {
     const cells: string[] = [];
-    // Columns 9→1 in standard diagram order, which is col index 8→0
+    // Columns 9->1 in standard diagram order, which is col index 8->0
     for (let c = 8; c >= 0; c--) {
       cells.push(encodeStack(state, r, c).padStart(3));
     }

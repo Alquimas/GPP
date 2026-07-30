@@ -45,10 +45,10 @@ function battleState(): GameState {
 }
 
 // ---------------------------------------------------------------------------
-// BR-GAN-VALID-001 — Phase match
+// BR-GAN-VALID-001 --- Phase match
 // ---------------------------------------------------------------------------
 
-describe('BR-GAN-VALID-001 — Phase match', () => {
+describe('BR-GAN-VALID-001 --- Phase match', () => {
   it('accepts placement in deploy phase', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState();
@@ -66,7 +66,7 @@ describe('BR-GAN-VALID-001 — Phase match', () => {
   });
 
   it('accepts move in battle phase', () => {
-    // Use MARSHAL_ALONE_BATTLE: White Marshal at (5,9) stepping left to (4,9) — valid move
+    // Use MARSHAL_ALONE_BATTLE: White Marshal at (5,9) stepping left to (4,9) --- valid move
     const state = parseGSFEN(MARSHAL_ALONE_BATTLE);
     if (!state.ok) throw new Error('parse failed');
     const action: Action = {
@@ -115,10 +115,10 @@ describe('BR-GAN-VALID-001 — Phase match', () => {
 });
 
 // ---------------------------------------------------------------------------
-// BR-GAN-VALID-002 — Placement legality
+// BR-GAN-VALID-002 --- Placement legality
 // ---------------------------------------------------------------------------
 
-describe('BR-GAN-VALID-002 — Placement legality', () => {
+describe('BR-GAN-VALID-002 --- Placement legality', () => {
   it('accepts a valid Marshal placement in deploy zone', () => {
     const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
     const state = deployState('white');
@@ -160,10 +160,10 @@ describe('BR-GAN-VALID-002 — Placement legality', () => {
 });
 
 // ---------------------------------------------------------------------------
-// BR-GAN-VALID-005 — Turncoat legality
+// BR-GAN-VALID-005 --- Turncoat legality
 // ---------------------------------------------------------------------------
 
-describe('BR-GAN-VALID-005 — Turncoat legality', () => {
+describe('BR-GAN-VALID-005 --- Turncoat legality', () => {
   it('rejects Captain turncoat when the selected level is friendly', () => {
     // ARATA_ZONE_TEST: White has Captain (T) in hand, General at (5,6).
     // T*5-6+1: arata onto friendly General (size 1 < 3, in zone rows 6-9).
@@ -227,10 +227,10 @@ describe('BR-GAN-VALID-005 — Turncoat legality', () => {
 });
 
 // ---------------------------------------------------------------------------
-// BR-GAN-VALID-006 — Done legality (enforced at parse level)
+// BR-GAN-VALID-006 --- Done legality (enforced at parse level)
 // ---------------------------------------------------------------------------
 
-describe('BR-GAN-VALID-006 — Done legality', () => {
+describe('BR-GAN-VALID-006 --- Done legality', () => {
   it('accepts placement with done=true', () => {
     // State: Black to place, Black's Marshal already on board at (5,3).
     // Place a General at a different deploy-zone square (5,1) with done=true.
@@ -300,7 +300,7 @@ describe('parse + validate integration', () => {
   it('rejects an illegal move through the parse+validate pipeline', () => {
     const state = parseGSFEN(MARSHAL_ALONE_BATTLE);
     if (!state.ok) throw new Error('parse failed');
-    // Marshal is at (5,9), (5,6) is 3 squares away — unreachable for a stepper
+    // Marshal is at (5,9), (5,6) is 3 squares away --- unreachable for a stepper
     const parseResult = parseGAN('5-9>5-6');
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;
@@ -314,7 +314,7 @@ describe('parse + validate integration', () => {
   it('rejects an illegal arata through the parse+validate pipeline', () => {
     const state = parseGSFEN(BATTLE_MID_VARIANT);
     if (!state.ok) throw new Error('parse failed');
-    // (5,9) has White's Marshal — cannot arata onto a Marshal
+    // (5,9) has White's Marshal --- cannot arata onto a Marshal
     const parseResult = parseGAN('P*5-9');
     expect(parseResult.ok).toBe(true);
     if (!parseResult.ok) return;

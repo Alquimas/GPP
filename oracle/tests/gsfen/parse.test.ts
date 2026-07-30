@@ -37,7 +37,7 @@ function assertOk(result: ParseResult): GameState {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('parseGSFEN — startpos keyword', () => {
+describe('parseGSFEN --- startpos keyword', () => {
   it('expands startpos to START_GSFEN', () => {
     const result = parseGSFEN('startpos');
     expect(result.ok).toBe(true);
@@ -66,7 +66,7 @@ describe('parseGSFEN — startpos keyword', () => {
   it('startpos with leading/trailing whitespace is rejected (BR-GSFEN-CANON-SEPARATOR-WHITESPACE)', () => {
     const result = parseGSFEN('  startpos  ');
     expect(result.ok).toBe(false);
-    if (result.ok) return; // unreachable — narrows type to error branch
+    if (result.ok) return; // unreachable --- narrows type to error branch
     expect(result.error.rule).toBe('BR-GSFEN-CANON-SEPARATOR-WHITESPACE');
   });
 
@@ -74,12 +74,12 @@ describe('parseGSFEN — startpos keyword', () => {
     const result = parseGSFEN('Startpos');
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    // "Startpos" has no spaces → split(' ') gives ['Startpos'] → length 1 ≠ 4
+    // "Startpos" has no spaces -> split(' ') gives ['Startpos'] -> length 1 ≠ 4
     expect(result.error.rule).toBe('BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT');
   });
 });
 
-describe('parseGSFEN — sample files', () => {
+describe('parseGSFEN --- sample files', () => {
   const samples: { name: string; phase: string; active: Player; expectedCounter: number }[] = [
     { name: 'startpos', phase: 'deploy', active: 'white', expectedCounter: 1 },
     { name: 'battle-start', phase: 'battle', active: 'white', expectedCounter: 1 },
@@ -118,7 +118,7 @@ describe('parseGSFEN — sample files', () => {
 
     // Row 1 (idx 0): 4 empty, Black Marshal (m) at Col 5, 4 empty
     // GSFEN: "4,m,4"
-    // position[0][col-1]: col 5 → idx 4 should have stack with Black Marshal
+    // position[0][col-1]: col 5 -> idx 4 should have stack with Black Marshal
     const row0col5 = state.position[0][4];
     expect(row0col5).not.toBeNull();
     if (row0col5) {
@@ -156,7 +156,7 @@ describe('parseGSFEN — sample files', () => {
   it('three-deep-stacks has stacks with 3 pieces', () => {
     const raw = FIXTURES['three-deep-stacks'];
     const state = assertOk(parseGSFEN(raw));
-    // Row 5 (idx 4), Col 5 (idx 4): "PYT" — White Pawn, White Spy, White Captain
+    // Row 5 (idx 4), Col 5 (idx 4): "PYT" --- White Pawn, White Spy, White Captain
     const stack = state.position[4][4];
     expect(stack).not.toBeNull();
     if (stack?.length === 3) {
@@ -170,8 +170,8 @@ describe('parseGSFEN — sample files', () => {
   });
 });
 
-describe('parseGSFEN — worked examples from GSFEN.md', () => {
-  // Example 1: Game start (startpos → expanded)
+describe('parseGSFEN --- worked examples from GSFEN.md', () => {
+  // Example 1: Game start (startpos -> expanded)
   it('Example 1: startpos expands correctly', () => {
     const state = assertOk(parseGSFEN('startpos'));
 
@@ -208,7 +208,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
   it('Example 3: Black done, White to place', () => {
     const state = assertOk(parseGSFEN(BLACK_DONE_DECLARED));
 
-    // Black Marshal at (row 2, col 5) → position[1][4]
+    // Black Marshal at (row 2, col 5) -> position[1][4]
     const blackM = state.position[1][4];
     expect(blackM).not.toBeNull();
     if (blackM) {
@@ -216,7 +216,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
       expect(blackM[0].owner).toBe('black');
     }
 
-    // White Marshal at (row 9, col 5) → position[8][4]
+    // White Marshal at (row 9, col 5) -> position[8][4]
     const whiteM = state.position[8][4];
     expect(whiteM).not.toBeNull();
     if (whiteM) {
@@ -234,7 +234,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
   it('Example 4: Mixed stack at 5-5', () => {
     const state = assertOk(parseGSFEN(EXAMPLE4_MIXED_STACK));
 
-    // Stack at (row 5, col 5) → position[4][4]
+    // Stack at (row 5, col 5) -> position[4][4]
     const stack = state.position[4][4];
     expect(stack).not.toBeNull();
     // Narrow tuple type via length check
@@ -259,7 +259,7 @@ describe('parseGSFEN — worked examples from GSFEN.md', () => {
   });
 });
 
-describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
+describe('parseGSFEN --- invalid spellings from GSFEN.md', () => {
   it('BR-GSFEN-CANON-POSITION-COMPRESSION: adjacent empty runs not merged (4,1 instead of 5)', () => {
     const result = parseGSFEN(C3_ADJACENT_EMPTY_RUNS);
     expect(result.ok).toBe(false);
@@ -274,7 +274,7 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
     expect(result.error.rule).toBe('BR-GSFEN-CANON-COUNTER-LEADING-ZERO');
   });
 
-  it('Black Marshal at row 1 (valid deploy zone) — parses correctly', () => {
+  it('Black Marshal at row 1 (valid deploy zone) --- parses correctly', () => {
     const result = parseGSFEN(DEPLOY_BLACK_MARSHAL_PLACED);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -287,7 +287,7 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
     }
   });
 
-  it('Marshal on top of Pawn stack — parses correctly', () => {
+  it('Marshal on top of Pawn stack --- parses correctly', () => {
     const result = parseGSFEN(DEPLOY_MARSHAL_ON_TOP);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -303,7 +303,7 @@ describe('parseGSFEN — invalid spellings from GSFEN.md', () => {
   });
 });
 
-describe('parseGSFEN — additional invalid cases', () => {
+describe('parseGSFEN --- additional invalid cases', () => {
   it('wrong number of fields (BR-GSFEN-CANON-SEPARATOR-FIELD-COUNT)', () => {
     const result = parseGSFEN('a b c');
     expect(result.ok).toBe(false);
@@ -375,11 +375,11 @@ describe('parseGSFEN — additional invalid cases', () => {
   });
 });
 
-describe('parseGSFEN — coordinate mapping', () => {
+describe('parseGSFEN --- coordinate mapping', () => {
   it('piece at Col 1 maps to position[row][0]', () => {
     // Row 9 has 8 empty squares then one piece at Col 1
     const state = assertOk(parseGSFEN(DEPLOY_MARSHAL_COL1));
-    const stack = state.position[8][0]; // Col 1 → idx 0
+    const stack = state.position[8][0]; // Col 1 -> idx 0
     expect(stack).not.toBeNull();
     if (stack) {
       expect(stack[0].type).toBe('M');
@@ -389,7 +389,7 @@ describe('parseGSFEN — coordinate mapping', () => {
   it('piece at Col 9 maps to position[row][8]', () => {
     // Row 9 has piece at Col 9 then 8 empty
     const state = assertOk(parseGSFEN(DEPLOY_MARSHAL_COL9));
-    const stack = state.position[8][8]; // Col 9 → idx 8
+    const stack = state.position[8][8]; // Col 9 -> idx 8
     expect(stack).not.toBeNull();
     if (stack) {
       expect(stack[0].type).toBe('M');

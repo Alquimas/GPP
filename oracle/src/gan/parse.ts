@@ -1,5 +1,5 @@
 /**
- * GAN parser — parses Gungi Action Notation strings into Action objects.
+ * GAN parser --- parses Gungi Action Notation strings into Action objects.
  *
  * Supports three action shapes distinguished by the first character:
  * - Placement (uppercase piece letter)  : `<piece><square>[!]`
@@ -63,7 +63,7 @@ export function parseSquare(s: string): Square {
   if (!sq) {
     // Defensive: regex should prevent this path from ever executing.
     throw new GameError(
-      `Invalid square "${s}" (internal — regex should have rejected)`,
+      `Invalid square "${s}" (internal --- regex should have rejected)`,
       'BR-GAN-GRAMMAR-004',
     );
   }
@@ -78,9 +78,9 @@ export function parseSquare(s: string): Square {
  * Parse a turncoat suffix: `+1`, `+2`, or `+12`.
  *
  * Returns the elected swap levels as a TurncoatLevels tuple.
- * - `+1`  → [1]
- * - `+2`  → [2]
- * - `+12` → [1, 2]
+ * - `+1`  -> [1]
+ * - `+2`  -> [2]
+ * - `+12` -> [1, 2]
  *
  * @param s - The turncoat string including the leading `+`.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-010' if levels are not valid.
@@ -145,7 +145,7 @@ export function parsePlacement(gan: string): Action {
     );
   }
 
-  // BR-GAN-GRAMMAR-011: Check for extra '!' — only one allowed, at end only
+  // BR-GAN-GRAMMAR-011: Check for extra '!' --- only one allowed, at end only
   const bangCount = (gan.match(/!/g) ?? []).length;
   if (bangCount > 1) {
     throw new GameError(
@@ -195,10 +195,10 @@ export function parsePlacement(gan: string): Action {
  * Parse a Move action: `<square>><square>[outcome][turncoat]`
  *
  * Examples:
- *   `2-7>2-6`       — plain move
- *   `3-3>3-2`       — forced capture, no outcome token
- *   `5-6>5-5=`      — chosen Stack
- *   `5-6>5-5=+2`    — chosen Stack + turncoat level 2
+ *   `2-7>2-6`       --- plain move
+ *   `3-3>3-2`       --- forced capture, no outcome token
+ *   `5-6>5-5=`      --- chosen Stack
+ *   `5-6>5-5=+2`    --- chosen Stack + turncoat level 2
  *
  * @param gan - The full GAN string.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-009' if whitespace present.
@@ -216,7 +216,7 @@ export function parseMove(gan: string): Action {
     );
   }
 
-  // BR-GAN-GRAMMAR-008: No unexpected characters — only allow digits, '-', '>', '=', 'x', '+'
+  // BR-GAN-GRAMMAR-008: No unexpected characters --- only allow digits, '-', '>', '=', 'x', '+'
   if (!/^[\d>=\-x+]+$/.test(gan)) {
     throw new GameError(
       `Move "${gan}" contains invalid characters (BR-GAN-GRAMMAR-008)`,
@@ -303,8 +303,8 @@ export function parseMove(gan: string): Action {
  * Parse an Arata action: `<piece>*<square>[turncoat]`
  *
  * Examples:
- *   `T*5-6`      — drop Captain at 5-6
- *   `T*5-6+1`    — drop Captain at 5-6 with turncoat level 1
+ *   `T*5-6`      --- drop Captain at 5-6
+ *   `T*5-6+1`    --- drop Captain at 5-6 with turncoat level 1
  *
  * @param gan - The full GAN string.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-007' if too short.
@@ -402,8 +402,8 @@ export function parseArata(gan: string): Action {
  * Parse a GAN string into an Action discriminated union.
  *
  * The parser determines the action shape by the first character:
- * - Uppercase letter → Placement or Arata (distinguished by second char)
- * - Digit           → Move
+ * - Uppercase letter -> Placement or Arata (distinguished by second char)
+ * - Digit           -> Move
  *
  * @param gan - The GAN string to parse.
  * @returns A ParseResult with either the parsed Action or a GameError.
@@ -433,7 +433,7 @@ export function parseGAN(gan: string): ParseResult {
 
     // Determine action shape by first character
     if (first >= 'A' && first <= 'Z') {
-      // Could be Placement or Arata — check second character
+      // Could be Placement or Arata --- check second character
       if (gan.length >= 2 && gan[1] === '*') {
         // Arata: piece followed by '*'
         return { ok: true, action: parseArata(gan) };

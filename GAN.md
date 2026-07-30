@@ -1,4 +1,4 @@
-# GAN — Gungi Action Notation
+# GAN --- Gungi Action Notation
 
 GAN is the canonical text serialization of a single
 [Action](BUSINESS_RULES.md#action) --- a
@@ -113,7 +113,7 @@ dashes in a row with no way to tell where the origin ends
 (`5-8-5-7` --- is that `(5,8)->(5,7)` or something else?). `>` removes the
 ambiguity and reads naturally as "moves to."
 
-**`outcome`** --- `=` (Stack) or `x` (Capture) — appears **iff** `dest` is
+**`outcome`** --- `=` (Stack) or `x` (Capture) --- appears **iff** `dest` is
 occupied by an enemy Stack **and** both outcomes are legal, i.e. target
 [Stack Size](BUSINESS_RULES.md#stack-size) < 3 **and** its top Piece is not
 a [Marshal](BUSINESS_RULES.md#marshal)
@@ -170,7 +170,7 @@ listed ascending, each at most once (`12`, never `21`).
 
 **Omission is the canonical way to decline.** Turncoat swaps are always
 optional (BR-STACK-006: "Each swap is optional"), so leaving the token off
-entirely is itself a fully legal, fully specified decision — "swap
+entirely is itself a fully legal, fully specified decision --- "swap
 nothing." A level is only eligible to appear if (a) it is occupied by an
 opposing Piece immediately before the swap and (b) the Player's Hand holds
 a matching replacement at the time of that swap; if two swapped levels
@@ -216,7 +216,7 @@ actionlist  = action *(SP action)
 
 Because `placement` starts `piece square`, `move` starts `square ">"`, and
 `arata` starts `piece "*"`, the three shapes are distinguishable from a
-one-character lookahead after the leading piece letter or digit — no
+one-character lookahead after the leading piece letter or digit --- no
 external tagging is needed, and the applicable Game Phase (Deploy vs.
 Battle) further disambiguates which grammar is even legal to attempt.
 
@@ -403,7 +403,7 @@ The Captain becomes the new top; the enemy Piece now at Level 2 is
 eligible for Turncoat, but no `+` token is present, so the swap is
 declined. This produces exactly the mixed-ownership stack shown in
 [GSFEN example 4](GSFEN.md#4-regular-play-with-a-mixed-ownership-stack-white-to-move-turn-12)
-(`PyT`, bottom→top: White Pawn, Black Spy, White Captain).
+(`PyT`, bottom->top: White Pawn, Black Spy, White Captain).
 
 ### 6. Same Move, Turncoat taken
 

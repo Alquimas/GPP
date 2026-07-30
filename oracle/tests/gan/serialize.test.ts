@@ -29,11 +29,11 @@ function assertParseOk(result: ParseResult): Action {
  * deeply equals action.
  */
 function assertRoundTrip(gan: string, action: Action): void {
-  // Serialize → string
+  // Serialize -> string
   const serialized = serializeGAN(action);
   expect(serialized).toBe(gan);
 
-  // Parse → action
+  // Parse -> action
   const parsed = assertParseOk(parseGAN(serialized));
   expect(parsed).toEqual(action);
 }
@@ -65,19 +65,19 @@ describe('serializeSquare', () => {
 // ---------------------------------------------------------------------------
 
 describe('serializeTurncoat', () => {
-  it('empty array → empty string', () => {
+  it('empty array -> empty string', () => {
     expect(serializeTurncoat([])).toBe('');
   });
 
-  it('[1] → +1', () => {
+  it('[1] -> +1', () => {
     expect(serializeTurncoat([1])).toBe('+1');
   });
 
-  it('[2] → +2', () => {
+  it('[2] -> +2', () => {
     expect(serializeTurncoat([2])).toBe('+2');
   });
 
-  it('[1, 2] → +12', () => {
+  it('[1, 2] -> +12', () => {
     expect(serializeTurncoat([1, 2])).toBe('+12');
   });
 });
@@ -305,7 +305,7 @@ describe('serializeArata', () => {
 });
 
 // ---------------------------------------------------------------------------
-// serializeGAN — dispatch
+// serializeGAN --- dispatch
 // ---------------------------------------------------------------------------
 
 describe('serializeGAN', () => {
@@ -345,9 +345,9 @@ describe('serializeGAN', () => {
 // Round-trip tests: Worked examples from GAN.md
 // ---------------------------------------------------------------------------
 
-describe('round-trip — worked examples from GAN.md', () => {
+describe('round-trip --- worked examples from GAN.md', () => {
   // Example 1: Opening Placement
-  // M5-9 → Placement: Marshal at 5-9, done=false
+  // M5-9 -> Placement: Marshal at 5-9, done=false
   it('Example 1: M5-9', () => {
     const action: Action = {
       kind: 'placement',
@@ -359,7 +359,7 @@ describe('round-trip — worked examples from GAN.md', () => {
   });
 
   // Example 2: Placement with Done
-  // G5-1! → Placement: General at 5-1, done=true
+  // G5-1! -> Placement: General at 5-1, done=true
   it('Example 2: G5-1!', () => {
     const action: Action = {
       kind: 'placement',
@@ -371,7 +371,7 @@ describe('round-trip — worked examples from GAN.md', () => {
   });
 
   // Example 3: Plain Move, no choice available
-  // 2-7>2-6 → Move: 2-7 to 2-6, outcome=null, turncoat=[]
+  // 2-7>2-6 -> Move: 2-7 to 2-6, outcome=null, turncoat=[]
   it('Example 3: 2-7>2-6', () => {
     const action: Action = {
       kind: 'move',
@@ -384,7 +384,7 @@ describe('round-trip — worked examples from GAN.md', () => {
   });
 
   // Example 4: Move with a forced Capture
-  // 3-3>3-2 → Move: 3-3 to 3-2, outcome=null, turncoat=[]
+  // 3-3>3-2 -> Move: 3-3 to 3-2, outcome=null, turncoat=[]
   it('Example 4: 3-3>3-2', () => {
     const action: Action = {
       kind: 'move',
@@ -397,7 +397,7 @@ describe('round-trip — worked examples from GAN.md', () => {
   });
 
   // Example 5: Move with Stack choice, Turncoat declined
-  // 5-6>5-5= → Move: 5-6 to 5-5, outcome='stack', turncoat=[]
+  // 5-6>5-5= -> Move: 5-6 to 5-5, outcome='stack', turncoat=[]
   it('Example 5: 5-6>5-5=', () => {
     const action: Action = {
       kind: 'move',
@@ -410,7 +410,7 @@ describe('round-trip — worked examples from GAN.md', () => {
   });
 
   // Example 6: Same Move, Turncoat taken
-  // 5-6>5-5=+2 → Move: 5-6 to 5-5, outcome='stack', turncoat=[2]
+  // 5-6>5-5=+2 -> Move: 5-6 to 5-5, outcome='stack', turncoat=[2]
   it('Example 6: 5-6>5-5=+2', () => {
     const action: Action = {
       kind: 'move',
@@ -423,7 +423,7 @@ describe('round-trip — worked examples from GAN.md', () => {
   });
 
   // Example 7: Arata with Turncoat
-  // T*5-6+1 → Arata: Captain at 5-6, turncoat=[1]
+  // T*5-6+1 -> Arata: Captain at 5-6, turncoat=[1]
   it('Example 7: T*5-6+1', () => {
     const action: Action = {
       kind: 'arata',
@@ -439,7 +439,7 @@ describe('round-trip — worked examples from GAN.md', () => {
 // Round-trip: Edge cases
 // ---------------------------------------------------------------------------
 
-describe('round-trip — edge cases', () => {
+describe('round-trip --- edge cases', () => {
   it('turncoat level 1 only (move)', () => {
     const action: Action = {
       kind: 'move',
@@ -588,7 +588,7 @@ describe('round-trip — edge cases', () => {
 // Round-trip: parse(serialize(action)) invariant for arbitrary canonical inputs
 // ---------------------------------------------------------------------------
 
-describe('round-trip — parse(serialize(action)) === action invariant', () => {
+describe('round-trip --- parse(serialize(action)) === action invariant', () => {
   // A set of diverse canonical Action objects that should round-trip perfectly.
   const canonicalActions: Action[] = [
     // Placements
@@ -699,9 +699,9 @@ describe('round-trip — parse(serialize(action)) === action invariant', () => {
 // Round-trip: serialize(parse(gan)) returns original for canonical inputs
 // ---------------------------------------------------------------------------
 
-describe('round-trip — serialize(parse(gan)) === gan invariant', () => {
+describe('round-trip --- serialize(parse(gan)) === gan invariant', () => {
   // This set only includes canonical GAN strings that the parser accepts
-  // (no strings that fail semantic validation — those still parse).
+  // (no strings that fail semantic validation --- those still parse).
   const canonicalGANs: string[] = [
     // Placements
     'M5-9',
@@ -742,10 +742,10 @@ describe('round-trip — serialize(parse(gan)) === gan invariant', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Property-based tests — GAN grammar compliance
+// Property-based tests --- GAN grammar compliance
 // ---------------------------------------------------------------------------
 
-describe('property-based — GAN grammar compliance', () => {
+describe('property-based --- GAN grammar compliance', () => {
   // GAN grammar regex patterns
   const SQUARE_PATTERN = '[1-9]-[1-9]';
   const PIECE_PATTERN = '[ACEFGJLMNPSTUY]';
@@ -848,10 +848,10 @@ describe('property-based — GAN grammar compliance', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Property-based tests — canonicity (CANON) and format (GRAMMAR) rules
+// Property-based tests --- canonicity (CANON) and format (GRAMMAR) rules
 // ---------------------------------------------------------------------------
 
-describe('property-based — canonicity rules', () => {
+describe('property-based --- canonicity rules', () => {
   const pieceArb = fc.constantFrom(
     'A',
     'C',
@@ -959,10 +959,10 @@ describe('property-based — canonicity rules', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Property-based tests — Inverse property (parse∘serialize = id)
+// Property-based tests --- Inverse property (parse∘serialize = id)
 // ---------------------------------------------------------------------------
 
-describe('property-based — inverse property', () => {
+describe('property-based --- inverse property', () => {
   const pieceArb = fc.constantFrom(
     'A',
     'C',

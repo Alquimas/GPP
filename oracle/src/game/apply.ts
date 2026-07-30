@@ -56,7 +56,7 @@ function cloneState(state: GameState): GameState {
 
 /** Remove the top piece from a stack and return both the new stack and the removed piece. */
 function detachTop(stack: ReturnType<typeof getStack>): { newStack: typeof stack; piece: Piece } {
-  if (!stack) throw new Error('detachTop called on null stack — caller must validate first');
+  if (!stack) throw new Error('detachTop called on null stack --- caller must validate first');
   const removed = topPiece(stack);
   if (stack.length === 1) {
     return { newStack: null, piece: removed };
@@ -90,7 +90,7 @@ function isHandEmpty(hand: Hand): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/*  applyPlacement — full deploy-phase placement                       */
+/*  applyPlacement --- full deploy-phase placement                       */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -102,7 +102,7 @@ function isHandEmpty(hand: Hand): boolean {
  * 3. Advance turn counter
  * 4. Handle Done declaration (BR-DEPLOY-007/008):
  *    - If current player declares Done, set their done flag
- *    - If both players Done → signal the Deploy Phase boundary
+ *    - If both players Done -> signal the Deploy Phase boundary
  *    - Otherwise, swap active player (BR-DEPLOY-002)
  * 5. If a player's hand becomes empty after placement, they are automatically Done
  *
@@ -139,23 +139,23 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
   const playerDone = declaredDone || isHandEmpty(newState.hands[player]);
 
   if (playerDone) {
-    // Current player is done — check if opponent is already done
+    // Current player is done --- check if opponent is already done
     if (newState.turn.done !== null) {
-      // Opponent already done → both done. The engine evaluates Exposure
+      // Opponent already done -> both done. The engine evaluates Exposure
       // before deciding whether the Battle Phase starts.
       return { state: newState, deployEnded: true };
     }
 
-    // Opponent not done yet — mark current player done, give turn to opponent
+    // Opponent not done yet --- mark current player done, give turn to opponent
     newState.turn.done = player;
     newState.turn.activePlayer = opponent(player);
   } else {
     // Player did NOT declare Done
     if (newState.turn.done !== null) {
-      // Opponent already done → non-done player keeps the turn
+      // Opponent already done -> non-done player keeps the turn
       // (activePlayer already is this player, so no change needed)
     } else {
-      // No done yet — alternate (BR-DEPLOY-002)
+      // No done yet --- alternate (BR-DEPLOY-002)
       newState.turn.activePlayer = opponent(player);
     }
   }
@@ -164,7 +164,7 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
 }
 
 /* ------------------------------------------------------------------ */
-/*  applyMove — compute the post-move state                            */
+/*  applyMove --- compute the post-move state                            */
 /* ------------------------------------------------------------------ */
 
 /* ------------------------------------------------------------------ */
@@ -183,7 +183,7 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
  * - Each level is occupied by an enemy piece.
  * - The hand contains a matching piece type for each swap.
  *
- * Levels are processed in ascending order (bottom→top). Swapping a
+ * Levels are processed in ascending order (bottom->top). Swapping a
  * lower level does not shift higher-level positions because each
  * replacement is in-place.
  *
@@ -214,7 +214,7 @@ function applyTurncoatSwaps(
 }
 
 /* ------------------------------------------------------------------ */
-/*  applyMove — full battle-phase state transition                     */
+/*  applyMove --- full battle-phase state transition                     */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -253,7 +253,7 @@ export function applyMove(state: GameState, action: MoveAction): GameState {
   let destStack: Stack | null;
 
   if (targetStack === null) {
-    // Empty square — place piece alone
+    // Empty square --- place piece alone
     destStack = createStack([movingPiece]);
   } else if (
     outcome === 'capture' ||
@@ -271,7 +271,7 @@ export function applyMove(state: GameState, action: MoveAction): GameState {
     // Stack: moving piece becomes new top
     const pieces = [...targetStack, movingPiece];
 
-    // 3. Turncoat swaps (BR-STACK-006) — only for Stack outcome
+    // 3. Turncoat swaps (BR-STACK-006) --- only for Stack outcome
     if (movingPiece.type === 'T' && action.turncoat.length > 0) {
       const result = applyTurncoatSwaps(
         createStack(pieces),
@@ -298,7 +298,7 @@ export function applyMove(state: GameState, action: MoveAction): GameState {
 }
 
 /* ------------------------------------------------------------------ */
-/*  applyArata — full battle-phase state transition                    */
+/*  applyArata --- full battle-phase state transition                    */
 /* ------------------------------------------------------------------ */
 
 /**

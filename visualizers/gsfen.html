@@ -696,13 +696,13 @@
         result.white[ch] = (result.white[ch] || 0) + 1;
         i++;
       } else if (ch >= '2' && ch <= '4') {
-        // Count prefix — peek at next character to determine section
+        // Count prefix --- peek at next character to determine section
         if (i + 1 >= len) {
           throw new Error('Expected piece letter after count at end of hands');
         }
         const next = handsStr[i + 1];
         if (next >= 'A' && next <= 'Z') {
-          // Uppercase → white piece with count
+          // Uppercase -> white piece with count
           const count = parseInt(ch, 10);
           if (!VALID_PIECES.has(next)) {
             throw new Error('Unknown piece letter "' + next + '" in hands');
@@ -710,11 +710,11 @@
           result.white[next] = (result.white[next] || 0) + count;
           i += 2;
         } else {
-          // Not uppercase → end of white section, leave digit for black section
+          // Not uppercase -> end of white section, leave digit for black section
           break;
         }
       } else {
-        // Not an uppercase letter or digit — end of white section
+        // Not an uppercase letter or digit --- end of white section
         break;
       }
     }
@@ -795,18 +795,18 @@
     let boardHTML = '<div class="board-container">';
     boardHTML += '<div class="board-frame"><div class="board">';
 
-    // Column labels: 9 → 1 (left to right)
+    // Column labels: 9 -> 1 (left to right)
     for (let col = 9; col >= 1; col--) {
       boardHTML += '<div class="label col-label">' + col + '</div>';
     }
     // Corner above the row-label column
     boardHTML += '<div class="label corner"></div>';
 
-    // Board rows: 1 (top) → 9 (bottom)
+    // Board rows: 1 (top) -> 9 (bottom)
     for (let rowIdx = 0; rowIdx < 9; rowIdx++) {
       const rowNum = rowIdx + 1;
       const cells = state.board[rowIdx];
-      // cells[0] = Col 9, cells[8] = Col 1 — display left to right
+      // cells[0] = Col 9, cells[8] = Col 1 --- display left to right
       for (let colIdx = 0; colIdx < 9; colIdx++) {
         const stack = cells[colIdx];
         const isEmpty = stack.length === 0;
@@ -913,7 +913,7 @@
       glossaryRows +=
         '<div class="glossary-row">' +
           '<span class="glossary-letter" title="White/Black">' + letter + '</span>' +
-          '<span class="glossary-sep">—</span>' +
+          '<span class="glossary-sep">---</span>' +
           '<span class="glossary-name">' + escapeHTML(name) + '</span>' +
           '<span class="glossary-count">×' + count + ' each</span>' +
         '</div>';

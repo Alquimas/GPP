@@ -1,5 +1,5 @@
 /**
- * Gungi — Server API Layer
+ * Gungi --- Server API Layer
  *
  * Lightweight fetch wrappers for all server endpoints.
  */

@@ -1,5 +1,5 @@
 /**
- * Attack & Check detection — determines if a square is under threat and if
+ * Attack & Check detection --- determines if a square is under threat and if
  * a Marshal is in check or exposed.
  *
  * Pure domain logic with no I/O.  Every function treats Position as immutable.
@@ -29,7 +29,7 @@ import { findPieceOnBoard, squareFromIndex, topPiece, stackSize } from './board.
  * Because `getLegalDestinations()` already permits landing on an enemy
  * Marshal (outcome = 'capture') and enforces BR-MOVE-005 via
  * `canLandOnStack`, the standard movement computation directly yields
- * the correct attack set — no separate attack-specific path is needed.
+ * the correct attack set --- no separate attack-specific path is needed.
  *
  * @param position       Current board position.
  * @param targetSquare   The square being tested for attack.
@@ -116,10 +116,10 @@ export function isInCheck(position: Position, player: Player): boolean {
 
 /**
  * Exposure evaluation (BR-DEPLOY-012): checks if each player's Marshal is
- * under attack at the Deploy→Battle boundary.
+ * under attack at the Deploy->Battle boundary.
  *
  * Returns a pair of booleans indicating whether each Marshal is exposed
- * (under attack).  Unlike Check, there is no escape attempt — exposure
+ * (under attack).  Unlike Check, there is no escape attempt --- exposure
  * immediately ends the game.
  *
  * @param position  Current board position.
