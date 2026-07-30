@@ -455,6 +455,21 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // ── Serve static files (JS, CSS, etc.) ────────────────────────
+    const ext = path.extname(url.pathname).toLowerCase();
+    if (ext === ".js" || ext === ".css") {
+      // Resolve relative to client/ directory
+      const filePath = path.join(__dirname, url.pathname.replace(/^\//, ""));
+      try {
+        const content = await fs.readFile(filePath, "utf-8");
+        res.writeHead(200, { "Content-Type": mimeType(filePath) });
+        res.end(content);
+        return;
+      } catch {
+        // fall through to index.html
+      }
+    }
+
     // ── Serve index.html ─────────────────────────────────────────
     const html = await fs.readFile(INDEX_HTML, "utf-8");
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
