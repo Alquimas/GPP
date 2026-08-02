@@ -31,7 +31,7 @@ describe('INITIAL_COUNTS', () => {
     expect(Object.keys(INITIAL_COUNTS).sort()).toEqual([...ALL_TYPES].sort());
   });
 
-  it('sums to 25 pieces per player (BUSINESS_RULES.md inventory, GSFEN startpos)', () => {
+  it('sums to 25 pieces per player (RULES.md inventory, GSFEN startpos)', () => {
     const total = Object.values(INITIAL_COUNTS).reduce((a, b) => a + b, 0);
     expect(total).toBe(25);
   });
@@ -51,7 +51,7 @@ describe('PIECE_MOVEMENT', () => {
     }
   });
 
-  it('spot-checks against BUSINESS_RULES.md piece reference', () => {
+  it('spot-checks against RULES.md piece reference', () => {
     // Marshal: step in all 8 directions
     expect(PIECE_MOVEMENT.M.step).toHaveLength(8);
     // General: range in 4 orthogonal, step in 4 diagonal

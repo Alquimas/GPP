@@ -78,8 +78,10 @@ at size 3 the bonus is +2. This bonus applies to all allowed
 [Movement](<#movement>) patterns.
 
 #### Deploy Phase
-The opening phase where [Players](<#player>) alternately place their unplaced
-[Pieces](<#piece>) on the [Board](<#board>) via **Placements**. Undeployed
+The opening phase where [Players](<#player>) alternately take
+[Actions](<#action>) --- either a [Placement](<#placement>) of one unplaced
+[Piece](<#piece>) on the [Board](<#board>) or a [Done](<#done>) declaration.
+Undeployed
 [Pieces](<#piece>) remain in the [Player's](<#player>) [Hand](<#hand>) and may
 be introduced later via [Arata](<#arata>). [Check](<#check>),
 [Self Check](<#self-check>), and [Terminal Conditions](<#terminal-condition>)
@@ -102,7 +104,10 @@ An [Action](<#action>) available only during the
 [Deploy Phase](<#deploy-phase>): placing one unplaced [Piece](<#piece>) on an
 empty [Square](<#square>) of the [Player's](<#player>) deploy zone, or on top
 of a friendly [Stack](<#stack>) there (never on a [Marshal](<#marshal>),
-[Stack Size](<#stack-size>) permitting). [Placements](<#placement>) are not
+[Stack Size](<#stack-size>) permitting). A [Placement](<#placement>) never
+declares [Done](<#done>) --- [Done](<#done>)
+is a standalone [Action](<#action>)
+([BR-DEPLOY-007](<#br-deploy-007---done-declaration>)). [Placements](<#placement>) are not
 [Plays](<#play>); [Self Check](<#self-check>) and
 [Terminal Condition](<#terminal-condition>) evaluation do not apply during
 the [Deploy Phase](<#deploy-phase>). See
@@ -110,8 +115,19 @@ the [Deploy Phase](<#deploy-phase>). See
 
 #### Action
 Any interaction that a [Player](<#player>) can have with the [Game](<#game>).
-An [Action](<#action>) is either a [Placement](<#placement>) or a
-[Play](<#play>).
+An [Action](<#action>) is either a [Placement](<#placement>), a
+[Done](<#done>) declaration, or a [Play](<#play>).
+
+#### Done
+A standalone [Action](<#action>) available only during the
+[Deploy Phase](<#deploy-phase>): declaring **Done** immediately ends that
+[Player's](<#player>) deploying --- no further [Placements](<#placement>) are
+allowed that phase. A [Done](<#done>) places no [Piece](<#piece>); undeployed
+[Pieces](<#piece>) remain in the [Player's](<#player>) [Hand](<#hand>) and may
+be introduced later via [Arata](<#arata>). A [Player](<#player>) may not
+declare [Done](<#done>) before their [Marshal](<#marshal>) is deployed
+([BR-DEPLOY-003](<#br-deploy-003---marshal-first>)). See
+[BR-DEPLOY-007](<#br-deploy-007---done-declaration>).
 
 #### Play
 An [Action](<#action>) that a [Player](<#player>) performs during their
@@ -228,13 +244,17 @@ not have any legal [Plays](<#play>) available. Results in the loss of the
 [Active Player](<#active player>).
 
 #### Repetition
-A draw declared when the same [Game State](<#game-state>) (same
-[Active Player](<#active player>), same [Position](<#position>) and same
-[Hands](<#hand>) contents) occurs for the fourth time in the
-[Battle Phase](<#battle-phase>) of a [Game](<#game>), not necessarily
-consecutively. [Deploy Phase](<#deploy-phase>) states are never counted.
-The initial [Game State](<#game-state>) at the start of the
-[Battle Phase](<#battle-phase>) counts as the first occurrence.
+A [Terminal Condition](<#terminal-condition>) declared when the same
+[Game State](<#game-state>) (same [Active Player](<#active player>), same
+[Position](<#position>) and same [Hands](<#hand>) contents) occurs for the
+fourth time in the [Battle Phase](<#battle-phase>) of a [Game](<#game>), not
+necessarily consecutively. [Deploy Phase](<#deploy-phase>) states are never
+counted. The initial [Game State](<#game-state>) at the start of the
+[Battle Phase](<#battle-phase>) counts as the first occurrence. When the
+fourth occurrence is reached, the **repeating player** --- the
+[Player](<#player>) whose [Action](<#action>) produced the fourth occurrence,
+i.e. the [Opponent](<#opponent>) of the [Active Player](<#active player>) ---
+loses the [Game](<#game>).
 
 #### Exposure
 A [Terminal Condition](<#terminal-condition>) evaluated once, immediately
@@ -533,13 +553,14 @@ the rules in the form of business rules.
 
 #### BR-DEPLOY-001 - Deploy phase start
 A [Game](<#game>) begins with the [Deploy Phase](<#deploy-phase>). During this
-phase, [Players](<#player>) alternately place their [Pieces](<#piece>) on the
-[Board](<#board>).
+phase, [Players](<#player>) alternately take [Actions](<#action>), each one
+either a [Placement](<#placement>) or a [Done](<#done>) declaration.
 
 #### BR-DEPLOY-002 - Placement order
-[White](<#player>) takes the first [Placement](<#placement>).
-[Players](<#player>) alternate thereafter, placing exactly one unplaced
-[Piece](<#piece>) per [Placement](<#placement>).
+[White](<#player>) takes the first Deploy-phase [Action](<#action>).
+[Players](<#player>) alternate thereafter, performing exactly one
+[Action](<#action>) per Deploy turn: a [Placement](<#placement>) (placing
+exactly one unplaced [Piece](<#piece>)) or a [Done](<#done>) declaration.
 
 #### BR-DEPLOY-003 - Marshal first
 Each [Player](<#player>) must deploy their [Marshal](<#marshal>) as their very
@@ -563,15 +584,21 @@ A [Piece](<#piece>) may also be placed on an empty [Square](<#square>) within
 the [Player's](<#player>) deploy zone.
 
 #### BR-DEPLOY-007 - Done declaration
-After placing a [Piece](<#piece>) during their [Placement](<#placement>), a
-[Player](<#player>) may declare themselves **Done**. A [Player](<#player>) who
-declares Done ceases deploying; any remaining unplaced [Pieces](<#piece>)
-remain in their [Hand](<#hand>) and may be used later via [Arata](<#arata>).
+**Done** is a standalone [Action](<#action>) that a [Player](<#player>) may
+perform during the [Deploy Phase](<#deploy-phase>) **instead** of a
+[Placement](<#placement>): declaring Done immediately ends that
+[Player's](<#player>) deploying. A [Done](<#done>) places no
+[Piece](<#piece>); any remaining unplaced [Pieces](<#piece>) stay in the
+[Player's](<#player>) [Hand](<#hand>) and may be used later via
+[Arata](<#arata>). A [Player](<#player>) cannot place a [Piece](<#piece>) and
+declare [Done](<#done>) in the same [Action](<#action>), and may not declare
+[Done](<#done>) before their [Marshal](<#marshal>) has been deployed
+([BR-DEPLOY-003](<#br-deploy-003---marshal-first>)).
 
 #### BR-DEPLOY-008 - Opponent continues after Done
 If a [Player](<#player>) declares Done, the [Opponent](<#opponent>) may
-continue deploying on their [Placements](<#placement>) until they also declare
-Done or have placed all their [Pieces](<#piece>).
+continue taking [Deploy Phase](<#deploy-phase>) [Actions](<#action>) until
+they also declare Done or have placed all their [Pieces](<#piece>).
 
 #### BR-DEPLOY-009 - Deploy phase end
 The [Deploy Phase](<#deploy-phase>) ends when both [Players](<#player>) have
@@ -664,6 +691,9 @@ For a [Play](<#play>) ([Move](<#move>) or [Arata](<#arata>)), the performing
 [Active Player](<#active player>) --- it is never carried in the
 [Play](<#play>) itself. For a [Placement](<#placement>), the performing
 [Player](<#player>) is inferred from the [Placement](<#placement>) order
+([BR-DEPLOY-002](<#br-deploy-002---placement-order>)). For a [Done](<#done>)
+declaration, the performing [Player](<#player>) is likewise inferred from the
+Deploy-phase [Action](<#action>) alternation
 ([BR-DEPLOY-002](<#br-deploy-002---placement-order>)).
 
 ### BR-PLAY - Play Rules
@@ -946,13 +976,16 @@ entirely and the [Move](<#move>) is [Illegal](<#illegal-play>).
 
 ### BR-REPETITION - Repetition Rules
 
-#### BR-REPETITION-001 - Repetition draw
+#### BR-REPETITION-001 - Repetition loss
 If the same [Game State](<#game-state>) (same
 [Active Player](<#active player>), same [Position](<#position>) and same
 [Hands](<#hand>) contents) occurs for the fourth time in the
 [Battle Phase](<#battle-phase>) of a [Game](<#game>), the [Game](<#game>) ends
-in a draw. Only [Battle Phase](<#battle-phase>) states count toward
-repetition; [Deploy Phase](<#deploy-phase>) states are excluded. The first
+with the loss of the **repeating player** --- the [Player](<#player>) whose
+[Action](<#action>) produced the fourth occurrence, i.e. the
+[Opponent](<#opponent>) of the [Active Player](<#active player>). Only
+[Battle Phase](<#battle-phase>) states count toward repetition;
+[Deploy Phase](<#deploy-phase>) states are excluded. The first
 [Game State](<#game-state>) at the start of the
 [Battle Phase](<#battle-phase>) counts as the first occurrence.
 
@@ -973,3 +1006,8 @@ If both [Players](<#player>) have only their [Marshal](<#marshal>) on the
 [Player](<#player>)) and no [Pieces](<#piece>) in either
 [Hand](<#hand>), the [Game](<#game>) ends in a draw --- no
 [Player](<#player>) can ever deliver [Checkmate](<#checkmate>).
+
+#### BR-TERMINATION-004 - Repetition
+If [Repetition](<#repetition>) occurs, the [Game](<#game>) ends with the loss
+of the repeating player
+([BR-REPETITION-001](<#br-repetition-001---repetition-loss>)).

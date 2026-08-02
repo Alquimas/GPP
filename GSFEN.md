@@ -1,12 +1,12 @@
 # GSFEN --- Gungi Stacking Forsyth-Edwards Notation
 
 GSFEN is the canonical text serialization of a Gungi
-[Game State](BUSINESS_RULES.md#game-state), modeled on SFEN (Shogi
+[Game State](RULES.md#game-state), modeled on SFEN (Shogi
 Forsyth-Edwards Notation). A single string covers both mid-
-[Deploy Phase](BUSINESS_RULES.md#deploy-phase) states and
-[Battle Phase](BUSINESS_RULES.md#battle-phase)
+[Deploy Phase](RULES.md#deploy-phase) states and
+[Battle Phase](RULES.md#battle-phase)
 Game States. This document is the normative specification of the
-notation; rule references (BR-xxx) point to `BUSINESS_RULES.md`.
+notation; rule references (BR-xxx) point to `RULES.md`.
 
 ## Design goals
 
@@ -14,10 +14,10 @@ notation; rule references (BR-xxx) point to `BUSINESS_RULES.md`.
   counter --- so the format is immediately familiar and tooling concepts
   carry over.
 - **Stack-native.** The Position field encodes
-  [Stacks](BUSINESS_RULES.md#stack) of 1–3
-  [Pieces](BUSINESS_RULES.md#piece) per
-  [Square](BUSINESS_RULES.md#square), preserving internal order
-  ([Levels](BUSINESS_RULES.md#level)) and mixed ownership.
+  [Stacks](RULES.md#stack) of 1–3
+  [Pieces](RULES.md#piece) per
+  [Square](RULES.md#square), preserving internal order
+  ([Levels](RULES.md#level)) and mixed ownership.
 - **Canonical.** Exactly one expanded spelling exists per state (the
   `startpos` keyword is an input-only shorthand). Parsers MUST reject
   non-canonical input (see [Canonicalization](#canonicalization)).
@@ -38,10 +38,10 @@ trailing whitespace. Alternatively, the reserved keyword `startpos`
 ## Field 1 --- Position
 
 The Position field transcribes the
-[Standard Diagram](BUSINESS_RULES.md#standard-diagram) exactly: 9
-[Rows](BUSINESS_RULES.md#row), separated by `/`, written Row 1 first
+[Standard Diagram](RULES.md#standard-diagram) exactly: 9
+[Rows](RULES.md#row), separated by `/`, written Row 1 first
 (topmost) through Row 9 (bottommost). Within each row, items are
-separated by `,` and cover [Columns](BUSINESS_RULES.md#column) 9 -> 1
+separated by `,` and cover [Columns](RULES.md#column) 9 -> 1
 (left to right in the diagram).
 
 An item is one of:
@@ -49,7 +49,7 @@ An item is one of:
 - **Empty run** --- a single digit `1`–`9`: that many consecutive empty
   Squares.
 - **Stack** --- 1 to 3 piece letters for one occupied Square, written
-  **bottom ([Level](BUSINESS_RULES.md#level) 1) first, top last**. A
+  **bottom ([Level](RULES.md#level) 1) first, top last**. A
   lone Piece is a single letter.
 
 Ownership is encoded by case: **uppercase = White, lowercase = Black**.
@@ -82,7 +82,7 @@ A single token encoding the phase and who acts next:
 
 | Token | Meaning |
 |-------|---------|
-| `w`   | Regular [Turn](BUSINESS_RULES.md#turn); White is the [Active Player](BUSINESS_RULES.md#active-player). |
+| `w`   | Regular [Turn](RULES.md#turn); White is the [Active Player](RULES.md#active-player). |
 | `b`   | Regular Turn; Black is the Active Player. |
 | `dw`  | Deploy Phase; White places next. |
 | `db`  | Deploy Phase; Black places next. |
@@ -91,13 +91,14 @@ A single token encoding the phase and who acts next:
 
 Tokens with both players Done, or with the placing player Done, cannot
 occur: the Deploy Phase ends at that boundary (BR-DEPLOY-009) and the
-resulting state is a [Battle Phase](BUSINESS_RULES.md#battle-phase)
-Game State. A player who has placed all 25
+resulting state is a [Battle Phase](RULES.md#battle-phase)
+Game State. A Done flag is set by a standalone Done Action (BR-DEPLOY-007)
+that places no Piece. A player who has placed all 25
 Pieces needs no flag --- that condition is derivable from an empty Hand.
 
 ## Field 3 --- Hands
 
-The contents of both [Hands](BUSINESS_RULES.md#hand): White's pieces
+The contents of both [Hands](RULES.md#hand): White's pieces
 first (uppercase), then Black's (lowercase). Within each section,
 letters appear in alphabetical order, each at most once, prefixed by a
 count which is **omitted when 1**. `-` when both Hands are empty.
@@ -111,16 +112,17 @@ Marshal) are listed in the Hands field.
 ## Field 4 --- Turn counter
 
 A positive integer: the turn number **within the current phase**,
-starting at 1. [Placements](BUSINESS_RULES.md#placement) count 1, 2, 3, …
-from White's first [Placement](BUSINESS_RULES.md#placement); the counter
-resets to 1 on White's first [Battle Phase](BUSINESS_RULES.md#battle-phase)
-turn.
+starting at 1. [Placements](RULES.md#placement) count 1, 2, 3, …
+from White's first [Placement](RULES.md#placement); the counter
+resets to 1 on White's first [Battle Phase](RULES.md#battle-phase)
+turn. A standalone Done Action does not advance the counter --- it counts
+[Placements](RULES.md#placement) only (BR-DEPLOY-007).
 
 ## startpos
 
 The reserved keyword `startpos` (lowercase, exact) is an input-only
 shorthand for the fixed game-start state --- empty board, full 25-piece
-Hands, White's first [Placement](BUSINESS_RULES.md#placement):
+Hands, White's first [Placement](RULES.md#placement):
 
 ```
 startpos
@@ -232,7 +234,7 @@ catch-all code for errors that fit the group but not a specific sub-code.
 A well-formed, canonical string denotes a **valid** state only if all of
 the following hold. This checklist is normative; it concerns the
 legality of the *arrangement*, not game progression (a string may
-denote a terminal Game State --- e.g. [Checkmate](BUSINESS_RULES.md#checkmate)
+denote a terminal Game State --- e.g. [Checkmate](RULES.md#checkmate)
 --- and still be valid).
 
 All rules in this section assume the string has already satisfied the
@@ -243,12 +245,12 @@ guarantee.
 - **BR-GSFEN-VALID-001 --- Marshal integrity** (BR-STACK-004, BR-DEPLOY-003, BR-DEPLOY-011)
   - **BR-GSFEN-VALID-001-TOP** --- A Marshal on the board is always the
     last (top) letter of its stack group (BR-STACK-004).
-  - **BR-GSFEN-VALID-001-COUNT** --- In [Battle Phase](BUSINESS_RULES.md#battle-phase)
+  - **BR-GSFEN-VALID-001-COUNT** --- In [Battle Phase](RULES.md#battle-phase)
     states (`w`/`b`), each player's Marshal appears exactly once on the
     board (BR-DEPLOY-003).
   - **BR-GSFEN-VALID-001-HAND** --- In Battle Phase, no player's Marshal
     ever appears in the Hand (BR-DEPLOY-011).
-  - **BR-GSFEN-VALID-001-BOTH** --- In [Deploy Phase](BUSINESS_RULES.md#deploy-phase),
+  - **BR-GSFEN-VALID-001-BOTH** --- In [Deploy Phase](RULES.md#deploy-phase),
     a player's Marshal is not simultaneously on the board and in the Hand
     (BR-DEPLOY-003).
   - **BR-GSFEN-VALID-001-FIRST** --- In Deploy Phase, if a player's
@@ -268,8 +270,9 @@ guarantee.
 - **BR-GSFEN-VALID-003 --- Done flags** (BR-DEPLOY-007)
   - At most one player has a Done flag, and the placing player never
     carries it.
-  - A Done player has at least their Marshal on the board (Done is
-    declared after a placement, BR-DEPLOY-007).
+  - A Done player has at least their Marshal on the board (Done is a
+    standalone Action that cannot be declared before the Marshal is
+    deployed, BR-DEPLOY-003).
 
 - **BR-GSFEN-VALID-004 --- Deploy-phase constraints** (BR-DEPLOY-004, BR-DEPLOY-005)
   In deploy states (`dw`/`db`/`dwB`/`dbW`):
@@ -284,7 +287,7 @@ guarantee.
 
 ### Repetition and string equality
 
-[Repetition](BUSINESS_RULES.md#repetition) (BR-REPETITION-001) compares
+[Repetition](RULES.md#repetition) (BR-REPETITION-001) compares
 Game States --- Active Player, Position, and Hands. Because GSFEN is
 canonical, two Game States are equal **if and only if their `position`,
 `turn`, and `hands` fields are identical strings**. The counter field is
@@ -319,7 +322,7 @@ pieces (no `M`).
 ```
 
 Black's Marshal at 5-2 and General at 5-1; White's General at 5-8 and
-Marshal at 5-9. Four [Placements](BUSINESS_RULES.md#placement) have been
+Marshal at 5-9. Four [Placements](RULES.md#placement) have been
 made, so White's Placement is Placement 5.
 
 ### 4. Regular play with a mixed-ownership stack; White to move, turn 12
@@ -329,7 +332,7 @@ made, so White's Placement is Placement 5.
 ```
 
 The stack at 5-5 reads bottom->top: White Pawn, Black Spy (left behind
-by a [Capture](BUSINESS_RULES.md#capture) sequence, BR-CAPTURE-004),
+by a [Capture](RULES.md#capture) sequence, BR-CAPTURE-004),
 White Captain on top.
 
 ### Invalid spellings (all rejected by a conforming parser)

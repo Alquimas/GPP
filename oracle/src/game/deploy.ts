@@ -2,7 +2,7 @@
  * Deploy-phase action validation (Step 8).
  *
  * Validates Placement actions against a Deploy Phase GameState.
- * Each rule check corresponds to a BR-xxx reference from BUSINESS_RULES.md.
+ * Each rule check corresponds to a BR-xxx reference from RULES.md.
  *
  * @module
  */

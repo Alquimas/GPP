@@ -2,7 +2,7 @@
 # browse-rule.sh --- T2 Rule Browser (Phase 3)
 #
 # Given a BR-xxx or GSFEN rule code, returns:
-#   - The rule text from BUSINESS_RULES.md or GSFEN.md
+#   - The rule text from RULES.md or GSFEN.md
 #   - Source files that enforce it
 #   - Tests that exercise it
 #   - ORACLE.md step reference
@@ -21,7 +21,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ORACLE_DIR="$PROJECT_DIR/oracle"
-BUSINESS_RULES="$PROJECT_DIR/BUSINESS_RULES.md"
+RULES="$PROJECT_DIR/RULES.md"
 ORACLE_DOC="$PROJECT_DIR/ORACLE.md"
 REFINING_DOC="$PROJECT_DIR/REFINING.md"
 TEST_DOC="$PROJECT_DIR/TEST.md"
@@ -41,24 +41,24 @@ fi
 has_rg=false
 command -v rg &>/dev/null && has_rg=true
 
-# ── extract rule text from BUSINESS_RULES.md ────────────────────────
+# ── extract rule text from RULES.md ────────────────────────
 
 extract_rule_text() {
   local code="$1"
 
-  # GSFEN codes are defined in GSFEN.md, not BUSINESS_RULES.md
+  # GSFEN codes are defined in GSFEN.md, not RULES.md
   if [[ "$code" == BR-GSFEN-* ]]; then
     extract_gsfen_rule_text "$code"
     return
   fi
 
-  # GAN codes are defined in GAN.md, not BUSINESS_RULES.md
+  # GAN codes are defined in GAN.md, not RULES.md
   if [[ "$code" == BR-GAN-* ]]; then
     extract_gan_rule_text "$code"
     return
   fi
 
-  local rule_file="$BUSINESS_RULES"
+  local rule_file="$RULES"
 
   # Find the heading line
   local heading_line
@@ -70,7 +70,7 @@ extract_rule_text() {
   fi
 
   if [[ -z "$heading_line" ]]; then
-    echo "  (not found in BUSINESS_RULES.md)"
+    echo "  (not found in RULES.md)"
     return
   fi
 
@@ -176,9 +176,9 @@ find_related_rules() {
 
   # Find all rules in the same group
   if $has_rg; then
-    group_section="$($has_rg && rg "^#### ${group}-" "$BUSINESS_RULES" || grep "^#### ${group}-" "$BUSINESS_RULES")" || true
+    group_section="$($has_rg && rg "^#### ${group}-" "$RULES" || grep "^#### ${group}-" "$RULES")" || true
   else
-    group_section="$(grep "^#### ${group}-" "$BUSINESS_RULES")" || true
+    group_section="$(grep "^#### ${group}-" "$RULES")" || true
   fi
 
   if [[ -n "$group_section" ]]; then
@@ -199,9 +199,9 @@ find_related_rules() {
   echo ""
   echo "  ${bold}Cross-referenced in rule text:${reset}"
   local start_line
-  start_line="$($has_rg && rg -n "^#### $code " "$BUSINESS_RULES" || grep -n "^#### $code " "$BUSINESS_RULES")" || true
+  start_line="$($has_rg && rg -n "^#### $code " "$RULES" || grep -n "^#### $code " "$RULES")" || true
   if [[ -z "$start_line" ]]; then
-    start_line="$($has_rg && rg -n "^#### $code" "$BUSINESS_RULES" || grep -n "^#### $code" "$BUSINESS_RULES")" || true
+    start_line="$($has_rg && rg -n "^#### $code" "$RULES" || grep -n "^#### $code" "$RULES")" || true
   fi
   if [[ -n "$start_line" ]]; then
     local line_num="${start_line%%:*}"
@@ -216,7 +216,7 @@ find_related_rules() {
           $0 = substr($0, RSTART + RLENGTH)
         }
       }
-    ' "$BUSINESS_RULES" | sort -u)"
+    ' "$RULES" | sort -u)"
 
     if [[ -n "$refs" ]]; then
       echo "$refs" | while IFS= read -r ref; do
@@ -395,15 +395,15 @@ find_refining_refs() {
 # ── list all known BR-xxx codes ────────────────────────────────────
 
 list_all_codes() {
-  echo "${bold}All BR-xxx codes in BUSINESS_RULES.md:${reset}"
+  echo "${bold}All BR-xxx codes in RULES.md:${reset}"
   echo ""
 
   # Group by prefix
   local current_group=""
   if $has_rg; then
-    $has_rg && rg "^#### BR-" "$BUSINESS_RULES" || grep "^#### BR-" "$BUSINESS_RULES" || true
+    $has_rg && rg "^#### BR-" "$RULES" || grep "^#### BR-" "$RULES" || true
   else
-    grep "^#### BR-" "$BUSINESS_RULES" || true
+    grep "^#### BR-" "$RULES" || true
   fi | while IFS= read -r line; do
     local code
     code="$(echo "$line" | sed -E 's/^#+ +//' | awk '{print $1}')"
@@ -419,7 +419,7 @@ list_all_codes() {
   done
 
   local total
-  total="$($has_rg && rg -c "^#### BR-" "$BUSINESS_RULES" || grep -c "^#### BR-" "$BUSINESS_RULES")" || true
+  total="$($has_rg && rg -c "^#### BR-" "$RULES" || grep -c "^#### BR-" "$RULES")" || true
   echo ""
   echo "  ${bold}Total: ${total} BR-xxx codes${reset}"
 
@@ -518,19 +518,19 @@ show_rule() {
     exit 1
   fi
 
-  # Check if code exists --- search BUSINESS_RULES.md, GAN.md, or GSFEN.md as appropriate
+  # Check if code exists --- search RULES.md, GAN.md, or GSFEN.md as appropriate
   local exists=0
   if [[ "$code" == BR-GSFEN-* ]]; then
     exists="$($has_rg && rg -qF "$code" "$GSFEN_DOC" && echo 1 || grep -qF "$code" "$GSFEN_DOC" 2>/dev/null && echo 1 || echo 0)" || true
   elif [[ "$code" == BR-GAN-* ]]; then
     exists="$($has_rg && rg -qF "$code" "$GAN_DOC" && echo 1 || grep -qF "$code" "$GAN_DOC" 2>/dev/null && echo 1 || echo 0)" || true
   else
-    exists="$($has_rg && rg -q "^#### $code " "$BUSINESS_RULES" && echo 1 || echo 0)" || true
+    exists="$($has_rg && rg -q "^#### $code " "$RULES" && echo 1 || echo 0)" || true
     if [[ "$exists" != 1 ]]; then
-      exists="$($has_rg && rg -q "^#### $code" "$BUSINESS_RULES" && echo 1 || echo 0)" || true
+      exists="$($has_rg && rg -q "^#### $code" "$RULES" && echo 1 || echo 0)" || true
     fi
     if [[ "$exists" != 1 ]]; then
-      exists="$(grep -q "^#### $code" "$BUSINESS_RULES" 2>/dev/null && echo 1 || echo 0)" || true
+      exists="$(grep -q "^#### $code" "$RULES" 2>/dev/null && echo 1 || echo 0)" || true
     fi
   fi
 
@@ -560,9 +560,9 @@ show_rule() {
     local group_title
     group_title="$(echo "$code" | sed -E 's/^(BR-[A-Z]+).*/\1/')"
     local group_heading
-    group_heading="$($has_rg && rg "^### $group_title " "$BUSINESS_RULES" || grep "^### $group_title " "$BUSINESS_RULES")" || true
+    group_heading="$($has_rg && rg "^### $group_title " "$RULES" || grep "^### $group_title " "$RULES")" || true
     if [[ -z "$group_heading" ]]; then
-      group_heading="$($has_rg && rg "^### $group_title -" "$BUSINESS_RULES" || grep "^### $group_title -" "$BUSINESS_RULES")" || true
+      group_heading="$($has_rg && rg "^### $group_title -" "$RULES" || grep "^### $group_title -" "$RULES")" || true
     fi
     if [[ -n "$group_heading" ]]; then
       echo "  $(echo "$group_heading" | sed -E 's/^#+ +//')"

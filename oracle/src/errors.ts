@@ -2,7 +2,7 @@
  * Typed error hierarchy for the Gungi rule engine.
  *
  * Every game rule violation returns a typed error carrying the BR-xxx
- * rule reference from BUSINESS_RULES.md, rather than throwing.
+ * rule reference from RULES.md, rather than throwing.
  *
  * ## Error classes
  * - {@link GameError} --- base class for all rule violations.

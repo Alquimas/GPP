@@ -164,7 +164,7 @@ export type Direction = 'F' | 'B' | 'L' | 'R' | 'FL' | 'FR' | 'BL' | 'BR';
 
 /**
  * A raw coordinate delta in player-relative coordinates:
- * positive row = forward, positive col = left (BUSINESS_RULES.md, Jump
+ * positive row = forward, positive col = left (RULES.md, Jump
  * Movement). Negate both components for the opponent's perspective.
  */
 export type CoordDelta = {

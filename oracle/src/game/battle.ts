@@ -2,7 +2,7 @@
  * Battle-phase action validation (Step 8).
  *
  * Validates Move and Arata actions against a Battle Phase GameState.
- * Each rule check corresponds to a BR-xxx reference from BUSINESS_RULES.md.
+ * Each rule check corresponds to a BR-xxx reference from RULES.md.
  *
  * @module
  */
