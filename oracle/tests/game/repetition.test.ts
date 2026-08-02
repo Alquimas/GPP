@@ -2,6 +2,8 @@
  * Repetition detection tests (BR-REPETITION-001).
  *
  * Step 11: checkTerminal evaluates Repetition before each Battle Phase Turn.
+ * Repetition is a LOSS for the repeating player (the OPPONENT of the active
+ * player whose identical state has recurred 4 times).
  *
  * @module
  */
@@ -77,12 +79,16 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
     expect(r.kind).toBe('ongoing');
   });
 
-  it('returns repetition when the same state appears 4 times', () => {
+  it('returns repetition loss when the same state appears 4 times', () => {
     const state = makeState('white', null, null);
     const history = [state, state, state]; // 3 prior matching states
-    // 3 in history + current = 4 -> repetition draw
+    // 3 in history + current = 4 -> repetition: active player (White) repeats,
+    // so Black wins and White loses.
     const r = checkTerminal(state, history);
     expect(r.kind).toBe('repetition');
+    if (r.kind === 'repetition') {
+      expect(r.loser).toBe('black'); // opponent of the active (repeating) player
+    }
   });
 
   it('returns ongoing when state matches but active player differs', () => {
@@ -127,16 +133,19 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
     expect(r.kind).toBe('ongoing');
   });
 
-  it('returns repetition with 3 prior battle-phase matches and 1 deploy-phase mismatch', () => {
-    // 3 battle-phase matches (same as current) + current = 4 -> repetition
-    // even if there are also deploy-phase non-matching states
-    const state = makeState('white', null, null);
+  it('returns repetition loss with 3 prior battle-phase matches and 1 deploy-phase mismatch', () => {
+    // 3 battle-phase matches (same as current) + current = 4 -> repetition.
+    // Black is the active (repeating) player -> Black loses, White wins.
+    const state = makeState('black', null, null);
     const deployState: GameState = {
       ...state,
-      turn: { ...state.turn, phase: 'deploy', activePlayer: 'black' },
+      turn: { ...state.turn, phase: 'deploy', activePlayer: 'white' },
     };
     const history = [state, state, state, deployState];
     const r = checkTerminal(state, history);
     expect(r.kind).toBe('repetition');
+    if (r.kind === 'repetition') {
+      expect(r.loser).toBe('white'); // opponent of the active (repeating) player
+    }
   });
 });

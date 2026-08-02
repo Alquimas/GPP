@@ -51,7 +51,7 @@ export type { ValidationResult };
  *   - 'BR-GSFEN-VALID-001-BOTH'  --- Deploy: Marshal on board AND in Hand (BR-DEPLOY-003)
  *   - 'BR-GSFEN-VALID-001-FIRST' --- Deploy: Marshal in Hand but player has pieces on board (BR-DEPLOY-003)
  *   - 'BR-GSFEN-VALID-002'       --- Inventory conservation violated (BR-CAPTURE-004)
- *   - 'BR-GSFEN-VALID-003'       --- Done flags inconsistent (BR-DEPLOY-007)
+ *   - 'BR-GSFEN-VALID-003'       --- Done flags inconsistent (BR-DEPLOY-003)
  *   - 'BR-GSFEN-VALID-004'       --- Deploy-phase constraints violated (BR-DEPLOY-004, BR-DEPLOY-005)
  *   - 'BR-GSFEN-VALID-005'       --- Counter bounds violated (BR-DEPLOY-002)
  */
@@ -173,12 +173,13 @@ export function validateState(state: GameState): ValidationResult {
   }
 
   // -----------------------------------------------------------------------
-  // BR-GSFEN-VALID-003 --- Done flags consistency (BR-DEPLOY-007)
+  // BR-GSFEN-VALID-003 --- Done flags consistency (BR-DEPLOY-003)
   //
   // At most one player has a Done flag (enforced by the Turn token grammar).
   // The placing player never carries the flag.
-  // A Done player has at least their Marshal on the board (Done is declared
-  // after a placement, BR-DEPLOY-007).
+  // A Done player has at least their Marshal on the board: Done is a
+  // standalone Action that cannot be declared before the Marshal is deployed
+  // (BR-DEPLOY-003).
   // -----------------------------------------------------------------------
   const { done, activePlayer, phase } = state.turn;
 
@@ -188,7 +189,7 @@ export function validateState(state: GameState): ValidationResult {
       return {
         ok: false,
         error: new GameError(
-          `Done flag set on the placing player (${activePlayer}) (BR-GSFEN-VALID-003) --- the placing player never carries the done flag (BR-DEPLOY-007)`,
+          `Done flag set on the placing player (${activePlayer}) (BR-GSFEN-VALID-003) --- the placing player never carries the done flag (BR-DEPLOY-003)`,
           'BR-GSFEN-VALID-003',
         ),
       };
@@ -200,7 +201,7 @@ export function validateState(state: GameState): ValidationResult {
       return {
         ok: false,
         error: new GameError(
-          `${done === 'white' ? 'White' : 'Black'} has declared Done but does not have a Marshal on the board (BR-GSFEN-VALID-003) --- Done requires Marshal placed (BR-DEPLOY-007)`,
+          `${done === 'white' ? 'White' : 'Black'} has declared Done but does not have a Marshal on the board (BR-GSFEN-VALID-003) --- Done cannot be declared before the Marshal is deployed (BR-DEPLOY-003)`,
           'BR-GSFEN-VALID-003',
         ),
       };

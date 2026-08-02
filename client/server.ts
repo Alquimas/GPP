@@ -133,7 +133,7 @@ function actionLabel(action: Action): string {
   switch (action.kind) {
     case "placement": {
       const pn = PIECE_NAMES[action.piece] ?? action.piece;
-      return `Place ${pn} ${action.dest.col}-${action.dest.row}${action.done ? " ✓" : ""}`;
+      return `Place ${pn} ${action.dest.col}-${action.dest.row}`;
     }
     case "move": {
       let label = `Move ${action.origin.col}-${action.origin.row}->${action.dest.col}-${action.dest.row}`;
@@ -149,6 +149,8 @@ function actionLabel(action: Action): string {
       if (action.turncoat.length > 0) label += ` TC[${action.turncoat}]`;
       return label;
     }
+    case "done":
+      return "Declare Done";
     default:
       return "Unknown action";
   }
@@ -166,7 +168,6 @@ interface ActionDTO {
   kind: string;
   piece?: string;
   dest?: { col: number; row: number };
-  done?: boolean;
   origin?: { col: number; row: number };
   outcome?: string | null;
   turncoat: number[];
@@ -541,8 +542,9 @@ function buildActionFromDTO(dto: any): Action | null {
           kind: "placement",
           piece: dto.piece,
           dest: dto.dest,
-          done: !!dto.done,
         };
+      case "done":
+        return { kind: "done" };
       case "move":
         return {
           kind: "move",

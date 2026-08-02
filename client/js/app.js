@@ -26,7 +26,6 @@ let serverState = null;            // full state from server
 let selectedCell = null;           // { col, row } | null
 let selectedHandPiece = null;      // { color, type } | null
 let pendingAction = null;          // action awaiting confirmation (battle phase)
-let deployDonePending = false;     // next placement in deploy includes done:true
 let currentViewIndex = -1;         // history index currently viewing
 let statusTimer = null;
 let presenting = false;            // presentation mode active
@@ -125,7 +124,6 @@ async function doReset(gsfen) {
     selectedCell = null;
     selectedHandPiece = null;
     pendingAction = null;
-    deployDonePending = false;
     renderAll();
     return true;
   } catch {
@@ -428,18 +426,13 @@ async function onCellClick(el) {
         return;
       }
 
-      // If deployDonePending, pick one with done:true
-      let chosen = placements[0];
-      if (deployDonePending) {
-        const withDone = placements.find(a => a.done === true);
-        if (withDone) chosen = withDone;
-        else chosen = { ...placements[0], done: true };
-      }
+      // Deploy placements are always plain { kind:'placement', piece, dest };
+      // declaring Done is a separate standalone action (the Done button).
+      const chosen = placements[0];
 
       const ok = await doSendAction(chosen);
       if (ok) {
         selectedHandPiece = null;
-        deployDonePending = false;
         renderAll();
         setStatus(`Placed ${PIECE_LABELS[chosen.piece]}`);
       }
@@ -677,8 +670,7 @@ function onHandPieceClick(color, type) {
   renderAll();
 
   if (serverState.phase === 'deploy') {
-    const msg = deployDonePending ? `Final placement: ${PIECE_LABELS[type]} (will declare Done)` : `Selected ${PIECE_LABELS[type]} --- click deploy zone`;
-    setStatus(msg);
+    setStatus(`Selected ${PIECE_LABELS[type]} --- click deploy zone`);
   } else {
     setStatus(`Selected ${PIECE_LABELS[type]} from hand --- click destination`);
   }
@@ -781,26 +773,23 @@ function stopPresentation() {
 
 /* ── Done button (deploy phase) ──────────────────────────────────────── */
 
-function onDeployDone() {
+async function onDeployDone() {
   if (!serverState || serverState.phase !== 'deploy' || serverState.isTerminal) return;
   if (pendingAction || presenting) return;
 
-  // Check if this player has already declared done
+  // No-op if this player has already declared done. (The engine enforces
+  // that the declaring player's Marshal is on the board before accepting.)
   if (serverState.done === serverState.activePlayer) return;
 
-  // If the player is already done (from server state), this is a no-op
-  // Otherwise, set deployDonePending so the next placement includes done:true
-  deployDonePending = true;
   selectedHandPiece = null;
   selectedCell = null;
-  renderAll();
-  setStatus('Next piece placed will declare Done. Cancel to undo.');
-}
 
-function onDeployCancelDone() {
-  deployDonePending = false;
-  renderAll();
-  setStatus('Done declaration cancelled');
+  // Declare Done immediately via the normal action endpoint.
+  const ok = await doSendAction({ kind: 'done' });
+  if (ok) {
+    renderAll();
+    setStatus('Done declared --- turn passed');
+  }
 }
 
 /* ── Move List ───────────────────────────────────────────────────────── */
@@ -830,19 +819,22 @@ function renderMoveList() {
     for (let i = 1; i < history.length; i++) {
       const entry = history[i];
       const actionGAN = entry.actionGAN || '';
-      const isPlacement = entry.action && entry.action.startsWith('Place');
+
+      // Battle actions are moves/arata: GAN contains '>' (move) or '*' (arata).
+      // Placements (e.g. 'M5-9') and standalone Done ('!') are deploy actions.
+      const isBattleAction = actionGAN.includes('>') || actionGAN.includes('*');
 
       // Transition from deploy to battle
-      if (!isPlacement && !inBattle) {
+      if (isBattleAction && !inBattle) {
         inBattle = true;
         html += '<div class="ml-sep"><span>Battle</span></div>';
         isWhiteTurn = true; // first battle action is always White
       }
 
       const isCurrent = i === currentIdx;
-      const isDeploy = isPlacement;
+      const isDeploy = !isBattleAction;
       const displayLabel = actionGAN || '---';
-      const isDone = actionGAN.endsWith('!');
+      const isDone = actionGAN === '!';
 
       if (inBattle) {
         // Battle: strictly alternate every action.
@@ -937,24 +929,15 @@ function renderControls() {
       <button class="ctrl-btn newgame" id="btn-newgame" style="flex:2;">⟳ New Game</button>
     `;
   } else if (isDeploy) {
-    // Deploy phase
+    // Deploy phase --- Done is a standalone action, always available
     const playerDone = s.done === s.activePlayer;
     const canInteract = !isViewingPast && !playerDone;
 
-    if (deployDonePending) {
-      // Done is pending --- show Cancel
-      html = `
-        <button class="ctrl-btn done" id="btn-cancel-done" style="background:#5c2a2a;">✗ Cancel Done</button>
-        <button class="ctrl-btn undo" id="btn-undo" ${s.canUndo && !isViewingPast ? '' : 'disabled'}>↩ Undo</button>
-        <button class="ctrl-btn newgame" id="btn-newgame">⟳ New</button>
-      `;
-    } else {
-      html = `
-        <button class="ctrl-btn done" id="btn-done" ${canInteract ? '' : 'disabled'}>✓ Done</button>
-        <button class="ctrl-btn undo" id="btn-undo" ${s.canUndo && !isViewingPast ? '' : 'disabled'}>↩ Undo</button>
-        <button class="ctrl-btn newgame" id="btn-newgame">⟳ New</button>
-      `;
-    }
+    html = `
+      <button class="ctrl-btn done" id="btn-done" ${canInteract ? '' : 'disabled'}>✓ Done</button>
+      <button class="ctrl-btn undo" id="btn-undo" ${s.canUndo && !isViewingPast ? '' : 'disabled'}>↩ Undo</button>
+      <button class="ctrl-btn newgame" id="btn-newgame">⟳ New</button>
+    `;
   } else {
     // Battle phase controls (no pending action)
     html = `
@@ -983,7 +966,6 @@ function renderControls() {
   };
 
   bind('btn-done', onDeployDone);
-  bind('btn-cancel-done', onDeployCancelDone);
   bind('btn-undo', async () => {
     if (pendingAction || presenting) return;
     if (selectedCell || selectedHandPiece) {
@@ -1074,7 +1056,6 @@ async function confirmNewGame() {
   const input = $('newgame-dialog').querySelector('input').value.trim();
   closeNewGameDialog();
   pendingAction = null;
-  deployDonePending = false;
   await doReset(input || undefined);
 }
 
@@ -1096,7 +1077,6 @@ document.addEventListener('keydown', function (e) {
     case 'Escape':
       if (ocVisible) { dismissOutcomeChooser(); selectedCell = null; selectedHandPiece = null; renderAll(); e.preventDefault(); }
       else if (pendingAction) { onCancelUndo(); e.preventDefault(); }
-      else if (deployDonePending) { onDeployCancelDone(); e.preventDefault(); }
       else if (selectedCell || selectedHandPiece) {
         selectedCell = null; selectedHandPiece = null; renderAll(); e.preventDefault();
       }

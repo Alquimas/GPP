@@ -108,7 +108,9 @@ export type GlobalState = {
  * - checkmate / stalemate: `loser` is the player who lost
  * - exposure: exactly one Marshal exposed -> that player loses
  * - exposure-draw: both Marshals exposed -> draw
- * - repetition: four identical game states -> draw
+ * - repetition: four identical game states -> the repeating player (the one
+ *   whose Action produced the 4th occurrence, i.e. the OPPONENT of the active
+ *   player) loses (BR-REPETITION-001, BR-TERMINATION-004)
  * - insufficient-material: both players have only their Marshals -> draw
  */
 export type GameResult =
@@ -117,7 +119,7 @@ export type GameResult =
   | { kind: 'stalemate'; loser: Player }
   | { kind: 'exposure'; loser: Player }
   | { kind: 'exposure-draw' }
-  | { kind: 'repetition' }
+  | { kind: 'repetition'; loser: Player }
   | { kind: 'insufficient-material' };
 
 /**
@@ -133,8 +135,6 @@ export type Action =
       kind: 'placement';
       piece: PieceType;
       dest: Square;
-      /** Player declaring Done after this placement? */
-      done: boolean;
     }
   | {
       kind: 'move';
@@ -151,7 +151,8 @@ export type Action =
       dest: Square;
       /** Elected turncoat swap levels (empty = none). */
       turncoat: TurncoatLevels;
-    };
+    }
+  | { kind: 'done' };
 
 /** Classification of a piece's movement type. */
 export type MoveClass = 'step' | 'limited-range' | 'range' | 'jump';

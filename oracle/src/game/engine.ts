@@ -1,8 +1,8 @@
 import type { Action, GameResult, GameState, GlobalState } from '../types.js';
 import { GameError } from '../errors.js';
-import { validatePlacement } from './deploy.js';
+import { validatePlacement, validateDone } from './deploy.js';
 import { validatePlay } from './battle.js';
-import { applyPlacement } from './apply.js';
+import { applyPlacement, applyDone } from './apply.js';
 import { evaluateExposure, checkTerminal } from './terminal.js';
 import { placementCandidates, playCandidates } from './candidates.js';
 
@@ -40,13 +40,17 @@ export function step(global: GlobalState, action: Action): StepResult {
   }
 
   if (global.current.turn.phase === 'deploy') {
-    const validation = validatePlacement(global.current, action);
+    // Deploy-Phase actions: Placement or standalone Done.
+    const validation =
+      action.kind === 'done'
+        ? validateDone(global.current)
+        : validatePlacement(global.current, action);
     if (!validation.ok) return { ok: false, state: global, error: validation.error };
 
-    const applied = applyPlacement(
-      global.current,
-      action as Extract<Action, { kind: 'placement' }>,
-    );
+    const applied =
+      action.kind === 'done'
+        ? applyDone(global.current)
+        : applyPlacement(global.current, action as Extract<Action, { kind: 'placement' }>);
     if (!applied.deployEnded) {
       return { ok: true, state: withCurrent(global, applied.state) };
     }
@@ -73,9 +77,14 @@ export function legalActions(global: GlobalState): Action[] {
   if (global.result.kind !== 'ongoing') return [];
 
   if (global.current.turn.phase === 'deploy') {
-    return placementCandidates(global.current).filter(
+    const placements = placementCandidates(global.current).filter(
       (action) => validatePlacement(global.current, action).ok,
     );
+    // Standalone Done is legal once the active player's Marshal is deployed.
+    if (validateDone(global.current).ok) {
+      return [...placements, { kind: 'done' }];
+    }
+    return placements;
   }
 
   return playCandidates(global.current).filter((action) => validatePlay(global.current, action).ok);

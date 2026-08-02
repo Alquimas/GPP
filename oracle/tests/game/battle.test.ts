@@ -86,12 +86,11 @@ function arata(piece: PieceType, dc: number, dr: number, turncoat: TurncoatLevel
   };
 }
 
-function placement(piece: PieceType, dc: number, dr: number, done = false): Action {
+function placement(piece: PieceType, dc: number, dr: number): Action {
   return {
     kind: 'placement',
     piece,
     dest: { col: dc as Square['col'], row: dr as Square['row'] },
-    done,
   };
 }
 
@@ -836,7 +835,6 @@ describe('validatePlay', () => {
         kind: 'placement',
         piece: 'Y',
         dest: { col: 3, row: 1 },
-        done: false,
       };
       const { result } = game.applyAction(placeSpy);
       expect(result.kind).toBe('ongoing');

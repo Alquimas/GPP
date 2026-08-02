@@ -7,6 +7,7 @@ import {
   serializePlacement,
   serializeMove,
   serializeArata,
+  serializeDone,
 } from '../../src/gan/serialize.js';
 import { parseGAN, type ParseResult } from '../../src/gan/parse.js';
 import type { Action, TurncoatLevels, BoardCoord } from '../../src/types.js';
@@ -87,24 +88,22 @@ describe('serializeTurncoat', () => {
 // ---------------------------------------------------------------------------
 
 describe('serializePlacement', () => {
-  it('basic placement without done', () => {
+  it('basic placement', () => {
     const action: Action = {
       kind: 'placement',
       piece: 'M',
       dest: { col: 5, row: 9 },
-      done: false,
     };
     expect(serializePlacement(action)).toBe('M5-9');
   });
 
-  it('placement with done', () => {
+  it('placement never serializes a done suffix', () => {
     const action: Action = {
       kind: 'placement',
       piece: 'G',
       dest: { col: 5, row: 1 },
-      done: true,
     };
-    expect(serializePlacement(action)).toBe('G5-1!');
+    expect(serializePlacement(action)).toBe('G5-1');
   });
 
   it('all 14 piece types', () => {
@@ -114,7 +113,6 @@ describe('serializePlacement', () => {
         kind: 'placement',
         piece: p,
         dest: { col: 5, row: 9 },
-        done: false,
       };
       expect(serializePlacement(action)).toBe(`${p}5-9`);
     }
@@ -125,7 +123,6 @@ describe('serializePlacement', () => {
       kind: 'placement',
       piece: 'P',
       dest: { col: 1, row: 1 },
-      done: false,
     };
     expect(serializePlacement(action)).toBe('P1-1');
   });
@@ -135,9 +132,18 @@ describe('serializePlacement', () => {
       kind: 'placement',
       piece: 'P',
       dest: { col: 9, row: 9 },
-      done: false,
     };
     expect(serializePlacement(action)).toBe('P9-9');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// serializeDone
+// ---------------------------------------------------------------------------
+
+describe('serializeDone', () => {
+  it('serializes to !', () => {
+    expect(serializeDone()).toBe('!');
   });
 });
 
@@ -314,7 +320,6 @@ describe('serializeGAN', () => {
       kind: 'placement',
       piece: 'M',
       dest: { col: 5, row: 9 },
-      done: false,
     };
     expect(serializeGAN(action)).toBe('M5-9');
   });
@@ -339,6 +344,11 @@ describe('serializeGAN', () => {
     };
     expect(serializeGAN(action)).toBe('T*5-6');
   });
+
+  it('dispatches done', () => {
+    const action: Action = { kind: 'done' };
+    expect(serializeGAN(action)).toBe('!');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -347,27 +357,21 @@ describe('serializeGAN', () => {
 
 describe('round-trip --- worked examples from GAN.md', () => {
   // Example 1: Opening Placement
-  // M5-9 -> Placement: Marshal at 5-9, done=false
+  // M5-9 -> Placement: Marshal at 5-9
   it('Example 1: M5-9', () => {
     const action: Action = {
       kind: 'placement',
       piece: 'M',
       dest: { col: 5, row: 9 },
-      done: false,
     };
     assertRoundTrip('M5-9', action);
   });
 
-  // Example 2: Placement with Done
-  // G5-1! -> Placement: General at 5-1, done=true
-  it('Example 2: G5-1!', () => {
-    const action: Action = {
-      kind: 'placement',
-      piece: 'G',
-      dest: { col: 5, row: 1 },
-      done: true,
-    };
-    assertRoundTrip('G5-1!', action);
+  // Example 2: Done
+  // ! -> Done: standalone action token
+  it('Example 2: !', () => {
+    const action: Action = { kind: 'done' };
+    assertRoundTrip('!', action);
   });
 
   // Example 3: Plain Move, no choice available
@@ -522,7 +526,6 @@ describe('round-trip --- edge cases', () => {
         kind: 'placement',
         piece: p,
         dest: { col: 5, row: 9 },
-        done: false,
       };
       assertRoundTrip(`${p}5-9`, action);
     }
@@ -563,14 +566,18 @@ describe('round-trip --- edge cases', () => {
     assertRoundTrip('5-5>9-9', action);
   });
 
-  it('placement at 9-9 with done', () => {
+  it('done round-trips as !', () => {
+    const action: Action = { kind: 'done' };
+    assertRoundTrip('!', action);
+  });
+
+  it('placement at 9-9 without done', () => {
     const action: Action = {
       kind: 'placement',
       piece: 'P',
       dest: { col: 9, row: 9 },
-      done: true,
     };
-    assertRoundTrip('P9-9!', action);
+    assertRoundTrip('P9-9', action);
   });
 
   it('placement at 1-1 without done', () => {
@@ -578,7 +585,6 @@ describe('round-trip --- edge cases', () => {
       kind: 'placement',
       piece: 'P',
       dest: { col: 1, row: 1 },
-      done: false,
     };
     assertRoundTrip('P1-1', action);
   });
@@ -592,12 +598,13 @@ describe('round-trip --- parse(serialize(action)) === action invariant', () => {
   // A set of diverse canonical Action objects that should round-trip perfectly.
   const canonicalActions: Action[] = [
     // Placements
-    { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false },
-    { kind: 'placement', piece: 'G', dest: { col: 5, row: 1 }, done: true },
-    { kind: 'placement', piece: 'P', dest: { col: 3, row: 8 }, done: false },
-    { kind: 'placement', piece: 'P', dest: { col: 3, row: 8 }, done: true },
-    { kind: 'placement', piece: 'A', dest: { col: 1, row: 1 }, done: false },
-    { kind: 'placement', piece: 'Y', dest: { col: 9, row: 9 }, done: true },
+    { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 } },
+    { kind: 'placement', piece: 'G', dest: { col: 5, row: 1 } },
+    { kind: 'placement', piece: 'P', dest: { col: 3, row: 8 } },
+    { kind: 'placement', piece: 'A', dest: { col: 1, row: 1 } },
+    { kind: 'placement', piece: 'Y', dest: { col: 9, row: 9 } },
+    // Done
+    { kind: 'done' },
     // Moves
     {
       kind: 'move',
@@ -705,11 +712,12 @@ describe('round-trip --- serialize(parse(gan)) === gan invariant', () => {
   const canonicalGANs: string[] = [
     // Placements
     'M5-9',
-    'G5-1!',
+    'G5-1',
     'P3-8',
-    'P3-8!',
     'A1-1',
-    'Y9-9!',
+    'Y9-9',
+    // Done
+    '!',
     // Moves
     '2-7>2-6',
     '3-3>3-2',
@@ -752,9 +760,10 @@ describe('property-based --- GAN grammar compliance', () => {
   const OUTCOME_PATTERN = '[=x]?';
   const TURNCOAT_PATTERN = '(\\+1|\\+2|\\+12)?';
 
-  const PLACEMENT_PATTERN = `^${PIECE_PATTERN}${SQUARE_PATTERN}!?$`;
+  const PLACEMENT_PATTERN = `^${PIECE_PATTERN}${SQUARE_PATTERN}$`;
   const MOVE_PATTERN = `^${SQUARE_PATTERN}>${SQUARE_PATTERN}${OUTCOME_PATTERN}${TURNCOAT_PATTERN}$`;
   const ARATA_PATTERN = `^${PIECE_PATTERN}\\*${SQUARE_PATTERN}${TURNCOAT_PATTERN}$`;
+  const DONE_PATTERN = '^!$';
 
   // Arbitraries for generating random actions
   const pieceArb = fc.constantFrom(
@@ -782,8 +791,9 @@ describe('property-based --- GAN grammar compliance', () => {
     kind: fc.constant('placement' as const),
     piece: pieceArb,
     dest: squareArb,
-    done: fc.boolean(),
   });
+
+  const doneArb: fc.Arbitrary<Action> = fc.constant({ kind: 'done' } as const);
 
   const moveArb: fc.Arbitrary<Action> = fc.record({
     kind: fc.constant('move' as const),
@@ -800,7 +810,7 @@ describe('property-based --- GAN grammar compliance', () => {
     turncoat: turncoatArb,
   });
 
-  const actionArb = fc.oneof(placementArb, moveArb, arataArb);
+  const actionArb = fc.oneof(placementArb, moveArb, arataArb, doneArb);
 
   it('serialized output always matches GAN grammar', () => {
     fc.assert(
@@ -814,6 +824,8 @@ describe('property-based --- GAN grammar compliance', () => {
           expect(serialized).toMatch(new RegExp(MOVE_PATTERN));
         } else if (action.kind === 'arata') {
           expect(serialized).toMatch(new RegExp(ARATA_PATTERN));
+        } else if (action.kind === 'done') {
+          expect(serialized).toMatch(new RegExp(DONE_PATTERN));
         }
       }),
       { numRuns: 100 },
@@ -837,8 +849,8 @@ describe('property-based --- GAN grammar compliance', () => {
         // No check/checkmate marks, move numbers, or comments
         // Note: + is valid for turncoat notation, so we only check for other symbols
         expect(serialized).not.toMatch(/#|[()[\]{}]/);
-        // ! only allowed at end of placement
-        if (action.kind !== 'placement' || !action.done) {
+        // ! is a standalone Done Action token --- only done serializes it
+        if (action.kind !== 'done') {
           expect(serialized).not.toContain('!');
         }
       }),
@@ -932,24 +944,25 @@ describe('property-based --- canonicity rules', () => {
     );
   });
 
-  it('BR-GAN-GRAMMAR-011: ! only appears on placements with done=true', () => {
+  it('BR-GAN-GRAMMAR-011: ! is a standalone Done Action token', () => {
     const placementArb: fc.Arbitrary<Action> = fc.record({
       kind: fc.constant('placement' as const),
       piece: pieceArb,
       dest: squareArb,
-      done: fc.boolean(),
     });
 
-    fc.assert(
-      fc.property(fc.oneof(placementArb, moveArb, arataArb), (action: Action) => {
-        const serialized = serializeGAN(action);
-        const hasBang = serialized.endsWith('!');
+    const doneArb: fc.Arbitrary<Action> = fc.constant({ kind: 'done' } as const);
 
-        if (action.kind === 'placement') {
-          // Placement: ! iff done=true
-          expect(hasBang).toBe(action.done);
+    fc.assert(
+      fc.property(fc.oneof(placementArb, moveArb, arataArb, doneArb), (action: Action) => {
+        const serialized = serializeGAN(action);
+        const hasBang = serialized.includes('!');
+
+        if (action.kind === 'done') {
+          // Done: exactly "!"
+          expect(serialized).toBe('!');
         } else {
-          // Move/Arata: never has !
+          // Placement/Move/Arata: never contains !
           expect(hasBang).toBe(false);
         }
       }),
@@ -988,8 +1001,9 @@ describe('property-based --- inverse property', () => {
     kind: fc.constant('placement' as const),
     piece: pieceArb,
     dest: squareArb,
-    done: fc.boolean(),
   });
+
+  const doneArb: fc.Arbitrary<Action> = fc.constant({ kind: 'done' } as const);
 
   const moveArb: fc.Arbitrary<Action> = fc.record({
     kind: fc.constant('move' as const),
@@ -1006,7 +1020,7 @@ describe('property-based --- inverse property', () => {
     turncoat: turncoatArb,
   });
 
-  const actionArb = fc.oneof(placementArb, moveArb, arataArb);
+  const actionArb = fc.oneof(placementArb, moveArb, arataArb, doneArb);
 
   it('parse(serialize(action)) === action (round-trip identity)', () => {
     fc.assert(

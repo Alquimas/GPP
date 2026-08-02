@@ -1,8 +1,9 @@
 /**
  * GAN parser --- parses Gungi Action Notation strings into Action objects.
  *
- * Supports three action shapes distinguished by the first character:
- * - Placement (uppercase piece letter)  : `<piece><square>[!]`
+ * Supports four action shapes distinguished by the first character:
+ * - Done       (`!`)                          : `!`
+ * - Placement (uppercase piece letter)  : `<piece><square>`
  * - Move      (digit, square start)      : `<square>><square>[outcome][turncoat]`
  * - Arata     (uppercase piece letter)   : `<piece>*<square>[turncoat]`
  *
@@ -108,16 +109,38 @@ export function parseTurncoat(s: string): TurncoatLevels {
 // ---------------------------------------------------------------------------
 
 /**
- * Parse a Placement action: `<piece><square>[!]`
+ * Parse a standalone Done Action: exactly `!`.
  *
- * Examples: `M5-9`, `P3-8!`
+ * Done is a standalone Action token (BR-GAN-GRAMMAR-011) that ends the
+ * declaring player's deploying (BR-DEPLOY-007). No other characters may
+ * accompany it.
+ *
+ * @param gan - The full GAN string.
+ * @throws {GameError} with rule 'BR-GAN-GRAMMAR-007' unless `gan === '!'`.
+ */
+export function parseDone(gan: string): Action {
+  if (gan !== '!') {
+    throw new GameError(
+      `Done Action must be exactly "!", got "${gan}" (BR-GAN-GRAMMAR-007)`,
+      'BR-GAN-GRAMMAR-007',
+    );
+  }
+  return { kind: 'done' };
+}
+
+/**
+ * Parse a Placement action: `<piece><square>`
+ *
+ * Examples: `M5-9`, `P3-8`
+ *
+ * `!` is a standalone Done Action token (BR-GAN-GRAMMAR-011) and is NOT a
+ * valid suffix or interior character of a Placement.
  *
  * @param gan - The full GAN string.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-007' if too short.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-003' on invalid piece letter.
- * @throws {GameError} with rule 'BR-GAN-GRAMMAR-011' on misplaced '!'.
+ * @throws {GameError} with rule 'BR-GAN-GRAMMAR-011' if the string contains '!'.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-009' if whitespace present.
- * @throws {GameError} with rule 'BR-GAN-GRAMMAR-008' on trailing characters.
  */
 export function parsePlacement(gan: string): Action {
   // BR-GAN-GRAMMAR-007: Must have at least: piece (1) + square (3 chars like "5-9") = 4 chars
@@ -145,49 +168,23 @@ export function parsePlacement(gan: string): Action {
     );
   }
 
-  // BR-GAN-GRAMMAR-011: Check for extra '!' --- only one allowed, at end only
-  const bangCount = (gan.match(/!/g) ?? []).length;
-  if (bangCount > 1) {
+  // BR-GAN-GRAMMAR-011: Done is a standalone Action token. Any '!' anywhere
+  // in a placement string is illegal.
+  if (gan.includes('!')) {
     throw new GameError(
-      `Placement "${gan}" has multiple "!" markers (BR-GAN-GRAMMAR-011)`,
+      `Placement "${gan}" contains "!" --- Done is a standalone Action token (BR-GAN-GRAMMAR-011)`,
       'BR-GAN-GRAMMAR-011',
     );
   }
 
-  const hasDone = bangCount === 1;
-
-  // The square is the part between piece letter and optional '!'
-  let squareStr: string;
-  if (hasDone) {
-    // Remove trailing '!'
-    squareStr = gan.slice(1, -1);
-  } else {
-    squareStr = gan.slice(1);
-  }
-
-  // BR-GAN-GRAMMAR-011: '!' must be at the very end if present
-  if (hasDone && gan[gan.length - 1] !== '!') {
-    throw new GameError(
-      `Placement "${gan}" has "!" not at the end (BR-GAN-GRAMMAR-011)`,
-      'BR-GAN-GRAMMAR-011',
-    );
-  }
-
-  // BR-GAN-GRAMMAR-008: No trailing characters after '!'
-  if (hasDone && squareStr.length + 2 !== gan.length) {
-    throw new GameError(
-      `Placement "${gan}" has trailing characters after "!" (BR-GAN-GRAMMAR-008)`,
-      'BR-GAN-GRAMMAR-008',
-    );
-  }
-
+  // The square is the entire remainder after the piece letter.
+  const squareStr = gan.slice(1);
   const dest = parseSquare(squareStr);
 
   return {
     kind: 'placement',
     piece,
     dest,
-    done: hasDone,
   };
 }
 
@@ -402,6 +399,7 @@ export function parseArata(gan: string): Action {
  * Parse a GAN string into an Action discriminated union.
  *
  * The parser determines the action shape by the first character:
+ * - `!`              -> Done
  * - Uppercase letter -> Placement or Arata (distinguished by second char)
  * - Digit           -> Move
  *
@@ -432,13 +430,16 @@ export function parseGAN(gan: string): ParseResult {
     const first = gan[0];
 
     // Determine action shape by first character
-    if (first >= 'A' && first <= 'Z') {
+    if (first === '!') {
+      // Done: standalone action token
+      return { ok: true, action: parseDone(gan) };
+    } else if (first >= 'A' && first <= 'Z') {
       // Could be Placement or Arata --- check second character
       if (gan.length >= 2 && gan[1] === '*') {
         // Arata: piece followed by '*'
         return { ok: true, action: parseArata(gan) };
       }
-      // Placement: second char is part of the square or '!'
+      // Placement: second char is part of the square
       return { ok: true, action: parsePlacement(gan) };
     } else if (first >= '1' && first <= '9') {
       // Move: starts with a digit (square notation)
@@ -449,7 +450,7 @@ export function parseGAN(gan: string): ParseResult {
     return {
       ok: false,
       error: new GameError(
-        `GAN string must start with a piece letter (A-Z) for placement/arata or a digit (1-9) for move, got "${first}"`,
+        `GAN string must start with "!" for done, a piece letter (A-Z) for placement/arata, or a digit (1-9) for move, got "${first}"`,
         'BR-GAN-GRAMMAR-002',
       ),
     };

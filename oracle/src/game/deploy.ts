@@ -48,7 +48,6 @@ function isInDeployZone(row: number, player: Player): boolean {
  * 4. BR-DEPLOY-004: Destination within deploy zone
  * 5. BR-DEPLOY-005/006: Target is empty or friendly-topped stack under size 3
  * 6. BR-STACK-004: No stacking on a Marshal-topped target
- * 7. BR-DEPLOY-007: Done declaration (syntactically valid if present)
  *
  * @param state - Current GameState.
  * @param action - The Placement action to validate.
@@ -139,8 +138,45 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
     }
   }
 
-  // BR-DEPLOY-007: Done declaration is syntactically valid
-  // (always OK --- done=true is allowed on any valid placement)
+  return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/*  validateDone                                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Validate a standalone Done Action against the current GameState.
+ *
+ * Done is a standalone Action (`!`) legal only in the Deploy Phase and only
+ * after the declaring player's Marshal is deployed (BR-DEPLOY-003). It ends
+ * that player's deploying (BR-DEPLOY-007) without changing position or hands
+ * and without advancing the turn counter.
+ *
+ * Checks (in order):
+ * 1. BR-GAN-VALID-001 / BR-DEPLOY-001: Must be in Deploy Phase
+ * 2. BR-DEPLOY-003: The active player's Marshal must already be on the board
+ *
+ * @param state - Current GameState.
+ * @returns ValidationResult.
+ */
+export function validateDone(state: GameState): ValidationResult {
+  // 1. Phase check
+  if (state.turn.phase !== 'deploy') {
+    return {
+      ok: false,
+      error: new GameError('Done is only valid during the Deploy Phase', 'BR-GAN-VALID-001'),
+    };
+  }
+
+  // 2. BR-DEPLOY-003: Marshal must be deployed before declaring Done
+  const player = state.turn.activePlayer;
+  if (!hasPlacedMarshal(state.position, player)) {
+    return {
+      ok: false,
+      error: new GameError('Cannot declare Done before the Marshal is deployed', 'BR-DEPLOY-003'),
+    };
+  }
 
   return { ok: true };
 }

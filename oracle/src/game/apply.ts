@@ -100,11 +100,13 @@ function isHandEmpty(hand: Hand): boolean {
  * 1. Deduct piece from the active player's hand
  * 2. Place piece on the destination square (empty or friendly stack)
  * 3. Advance turn counter
- * 4. Handle Done declaration (BR-DEPLOY-007/008):
- *    - If current player declares Done, set their done flag
- *    - If both players Done -> signal the Deploy Phase boundary
- *    - Otherwise, swap active player (BR-DEPLOY-002)
- * 5. If a player's hand becomes empty after placement, they are automatically Done
+ * 4. Auto-Done when the player's hand empties (derived per GSFEN --- the
+ *    player is done with deploying; NOT a Done declaration)
+ * 5. Turn management (BR-DEPLOY-002):
+ *    - If the player is auto-Done and the opponent is already Done -> signal
+ *      the Deploy Phase boundary
+ *    - Otherwise, swap active player (BR-DEPLOY-002), except when the
+ *      opponent is already Done and this player keeps placing
  *
  * Marshal-first enforcement is handled by validatePlacement and
  * is not re-checked here.
@@ -115,7 +117,7 @@ function isHandEmpty(hand: Hand): boolean {
  */
 export function applyPlacement(state: GameState, action: PlacementAction): PlacementResult {
   const newState: GameState = cloneState(state);
-  const { piece, dest, done: declaredDone } = action;
+  const { piece, dest } = action;
   const player = newState.turn.activePlayer;
   const pieceObj: Piece = { type: piece, owner: player };
 
@@ -135,9 +137,10 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
   // 3. Advance turn counter
   newState.turn.counter++;
 
-  // 4. Handle Done declaration and turn management
-  const playerDone = declaredDone || isHandEmpty(newState.hands[player]);
+  // 4. Auto-Done when the hand empties (derived, not a Done declaration)
+  const playerDone = isHandEmpty(newState.hands[player]);
 
+  // 5. Turn management
   if (playerDone) {
     // Current player is done --- check if opponent is already done
     if (newState.turn.done !== null) {
@@ -150,7 +153,7 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
     newState.turn.done = player;
     newState.turn.activePlayer = opponent(player);
   } else {
-    // Player did NOT declare Done
+    // Player is NOT done
     if (newState.turn.done !== null) {
       // Opponent already done -> non-done player keeps the turn
       // (activePlayer already is this player, so no change needed)
@@ -160,6 +163,37 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
     }
   }
 
+  return { state: newState, deployEnded: false };
+}
+
+/**
+ * Apply a standalone Done Action to the current GameState.
+ *
+ * Done ends the declaring player's deploying (BR-DEPLOY-007): it sets their
+ * GSFEN Done flag, changes NO position and NO hands, and does NOT advance the
+ * turn counter (GSFEN Field 4 counts Placements only).
+ *
+ * - If the opponent already declared Done, both players are Done -> the
+ *   Deploy Phase boundary is signaled (deployEnded).
+ * - Otherwise the turn passes to the opponent (BR-DEPLOY-002).
+ *
+ * @param state - The current GameState (must be Deploy Phase, validated).
+ * @returns The new state and whether both players are Done.
+ */
+export function applyDone(state: GameState): PlacementResult {
+  const newState: GameState = cloneState(state);
+  const player = newState.turn.activePlayer;
+
+  // Set the GSFEN Done flag; no position/hands/counter changes.
+  newState.turn.done = player;
+
+  if (state.turn.done !== null) {
+    // Opponent already done -> both done -> Deploy Phase boundary.
+    return { state: newState, deployEnded: true };
+  }
+
+  // Pass the turn to the opponent.
+  newState.turn.activePlayer = opponent(player);
   return { state: newState, deployEnded: false };
 }
 

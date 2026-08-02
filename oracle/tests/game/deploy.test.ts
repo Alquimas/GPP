@@ -1,8 +1,9 @@
 /**
  * Deploy-phase action validation tests (Step 8).
  *
- * Covers validatePlacement --- BR-DEPLOY-001 through BR-DEPLOY-007,
- * including Marshal-first, deploy zone, stacking, and Done.
+ * Covers validatePlacement --- BR-DEPLOY-001 through BR-DEPLOY-006,
+ * including Marshal-first, deploy zone, and stacking; plus the standalone
+ * Done action (validateDone / applyDone).
  *
  * TDD: tests define expected behaviour before implementation.
  */
@@ -11,8 +12,8 @@ import { describe, it, expect } from 'vitest';
 import type { Action, GameState, PieceType, Square } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
-import { validatePlacement } from '../../src/game/deploy.js';
-import { applyPlacement } from '../../src/game/apply.js';
+import { validatePlacement, validateDone } from '../../src/game/deploy.js';
+import { applyPlacement, applyDone } from '../../src/game/apply.js';
 import { step } from '../../src/game/engine.js';
 import { getStack, topPiece } from '../../src/board/board.js';
 import {
@@ -44,21 +45,15 @@ function gsfenState(gsfen: string): GameState {
   return result.state;
 }
 
-function placement(
-  piece: PieceType,
-  dc: number,
-  dr: number,
-  done = false,
-): Extract<Action, { kind: 'placement' }> {
+function placement(piece: PieceType, dc: number, dr: number): Extract<Action, { kind: 'placement' }> {
   return {
     kind: 'placement',
     piece,
     dest: { col: dc as Square['col'], row: dr as Square['row'] },
-    done,
   };
 }
 
-function applyThroughEngine(state: GameState, action: Extract<Action, { kind: 'placement' }>) {
+function applyThroughEngine(state: GameState, action: Action) {
   const result = step({ current: state, history: [], result: { kind: 'ongoing' } }, action);
   if (!result.ok) throw result.error;
   return {
@@ -143,15 +138,14 @@ describe('validatePlacement', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-STACK-004');
   });
 
-  it('accepts placement with done=true on valid square', () => {
-    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 9, true));
+  it('accepts placement on a valid square', () => {
+    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 9));
     expect(r.ok).toBe(true);
   });
 
-  it('rejects placement with done=true on invalid square (BR-DEPLOY-007 + BR-DEPLOY-004)', () => {
-    // Done=true doesn't bypass other validation rules.
-    // Placing outside deploy zone must still be rejected even if done=true.
-    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 5, true));
+  it('rejects placement outside deploy zone (BR-DEPLOY-004)', () => {
+    // Placing outside the deploy zone must still be rejected.
+    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 5));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-004');
   });
@@ -251,29 +245,34 @@ describe('applyPlacement', () => {
   });
 
   it('sets done flag and gives opponent the turn when declaring Done', () => {
-    const state = gsfenState(STARTPOS);
+    let state = gsfenState(STARTPOS);
 
-    // White places Marshal, declares Done
-    const r = applyPlacement(state, placement('M', 5, 9, true));
+    // White places Marshal, Black places Marshal (both on their own turns),
+    // then White declares Done as a standalone action.
+    let r = applyPlacement(state, placement('M', 5, 9));
+    r = applyPlacement(r.state, placement('M', 5, 1));
+    r = applyDone(r.state);
     expect(r.state.turn.done).toBe('white');
     expect(r.state.turn.activePlayer).toBe('black');
-    expect(r.state.turn.counter).toBe(2);
+    expect(r.state.turn.counter).toBe(3);
   });
 
   it('keeps turn with non-done player when opponent already done', () => {
     let state = gsfenState(STARTPOS);
 
-    // White places Marshal, declares Done
-    let r = applyPlacement(state, placement('M', 5, 9, true));
+    // White places Marshal, Black places Marshal, then White declares Done
+    let r = applyPlacement(state, placement('M', 5, 9));
+    r = applyPlacement(r.state, placement('M', 5, 1));
+    r = applyDone(r.state);
     expect(r.state.turn.done).toBe('white');
     expect(r.state.turn.activePlayer).toBe('black');
 
-    // Black places Marshal, does NOT declare Done --- should keep turn
+    // Black places Lieutenant, does NOT declare Done --- should keep turn
     state = r.state;
-    r = applyPlacement(state, placement('M', 5, 1));
+    r = applyPlacement(state, placement('L', 5, 2));
     expect(r.state.turn.done).toBe('white');
     expect(r.state.turn.activePlayer).toBe('black');
-    expect(r.state.turn.counter).toBe(3);
+    expect(r.state.turn.counter).toBe(4);
   });
 
   it('transitions to battle phase when both players declare Done (no exposure)', () => {
@@ -287,14 +286,22 @@ describe('applyPlacement', () => {
     r = applyPlacement(state, placement('M', 5, 1));
     state = r.state;
 
-    // White places Pawn at (5,8), declares Done
-    r = applyPlacement(state, placement('P', 5, 8, true));
+    // White places Pawn at (5,8)
+    r = applyPlacement(state, placement('P', 5, 8));
+    state = r.state;
+
+    // Black places Pawn at (5,2)
+    r = applyPlacement(state, placement('P', 5, 2));
+    state = r.state;
+
+    // White declares Done -> Black's turn, White done
+    r = applyDone(state);
     state = r.state;
     expect(state.turn.done).toBe('white');
     expect(state.turn.activePlayer).toBe('black');
 
-    // Black places Pawn at (5,2), declares Done -> both done
-    const final = applyThroughEngine(state, placement('P', 5, 2, true));
+    // Black declares Done -> both done -> battle begins
+    const final = applyThroughEngine(state, { kind: 'done' });
 
     // No exposure expected (Marshals safely away from enemy pieces)
     expect(final.result.kind).toBe('ongoing');
@@ -383,8 +390,11 @@ describe('applyPlacement', () => {
     expect(state.turn.activePlayer).toBe('black');
     expect(state.turn.done).toBe('white'); // White already Done
 
-    // Black places a piece at column 2 (avoids cols 1 and 5, within Black's deploy zone)
-    const r = applyThroughEngine(state, placement('P', 2, 2, true));
+    // Black places a piece at column 2 (avoids cols 1 and 5, within Black's deploy zone),
+    // then declares Done -> both players Done -> Exposure -> both exposed -> draw.
+    let r = applyThroughEngine(state, placement('P', 2, 2));
+    const stateAfterPlace = r.state;
+    r = applyThroughEngine(stateAfterPlace, { kind: 'done' });
 
     // Black's Pawn should be at (2,2)
     const stack = getStack(r.state.position, { col: 2, row: 2 });
@@ -478,5 +488,62 @@ describe('applyPlacement', () => {
     if (r.result.kind === 'exposure') {
       expect(r.result.loser).toBe('black');
     }
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  validateDone                                                       */
+/* ------------------------------------------------------------------ */
+
+describe('validateDone', () => {
+  it('rejects Done during battle phase', () => {
+    const state = gsfenState(BOTH_MARSHALS_BATTLE_NOHANDS);
+    const r = validateDone(state);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.rule).toBe('BR-GAN-VALID-001');
+  });
+
+  it('rejects Done before the active player Marshal is deployed (BR-DEPLOY-003)', () => {
+    const r = validateDone(gsfenState(STARTPOS));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-003');
+  });
+
+  it('accepts Done once the active player Marshal is deployed', () => {
+    // DEPLOY_PHASE_CTR3: White's Marshal already on board (White to place).
+    const r = validateDone(gsfenState(DEPLOY_PHASE_CTR3));
+    expect(r.ok).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  applyDone                                                          */
+/* ------------------------------------------------------------------ */
+
+describe('applyDone', () => {
+  it('sets the done flag, passes the turn, and does NOT change counter/position/hands', () => {
+    // DEPLOY_PHASE_CTR3: White's Marshal on board, White to place.
+    const state = gsfenState(DEPLOY_PHASE_CTR3);
+    const before = structuredClone(state);
+
+    const r = applyDone(state);
+    expect(r.deployEnded).toBe(false);
+    expect(r.state.turn.done).toBe('white');
+    expect(r.state.turn.activePlayer).toBe('black');
+    expect(r.state.turn.counter).toBe(before.turn.counter);
+    expect(r.state.position).toStrictEqual(before.position);
+    expect(r.state.hands).toStrictEqual(before.hands);
+  });
+
+  it('signals deployEnded when the opponent already declared Done', () => {
+    // DEPLOY_AUTO_DONE: Black already Done (dwB), White to place.
+    const state = gsfenState(DEPLOY_AUTO_DONE);
+    expect(state.turn.done).toBe('black');
+
+    const r = applyDone(state);
+    expect(r.deployEnded).toBe(true);
+    expect(r.state.turn.done).toBe('white');
+    expect(r.state.turn.activePlayer).toBe('white');
+    expect(r.state.turn.counter).toBe(state.turn.counter);
   });
 });

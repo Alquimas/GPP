@@ -50,14 +50,14 @@ function battleState(): GameState {
 
 describe('BR-GAN-VALID-001 --- Phase match', () => {
   it('accepts placement in deploy phase', () => {
-    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
+    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 } };
     const state = deployState();
     const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 
   it('rejects placement in battle phase', () => {
-    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
+    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 } };
     const state = battleState();
     const result = validateAction(action, state);
     expect(result.ok).toBe(false);
@@ -120,14 +120,14 @@ describe('BR-GAN-VALID-001 --- Phase match', () => {
 
 describe('BR-GAN-VALID-002 --- Placement legality', () => {
   it('accepts a valid Marshal placement in deploy zone', () => {
-    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
+    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 } };
     const state = deployState('white');
     const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 
   it('rejects placement of a piece not in hand', () => {
-    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
+    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 } };
     const state = deployState('white');
     // Remove Marshal from White's hand to simulate it's already placed
     state.hands.white.M = 0;
@@ -138,7 +138,7 @@ describe('BR-GAN-VALID-002 --- Placement legality', () => {
   });
 
   it('rejects placement outside deploy zone', () => {
-    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 5 }, done: false };
+    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 5 } };
     const state = deployState('white');
     const result = validateAction(action, state);
     expect(result.ok).toBe(false);
@@ -151,7 +151,7 @@ describe('BR-GAN-VALID-002 --- Placement legality', () => {
     // Placing General on top should fail.
     const state = parseGSFEN(DEPLOY_FULL_STACK_PAWNS);
     if (!state.ok) throw new Error('parse failed');
-    const action: Action = { kind: 'placement', piece: 'G', dest: { col: 5, row: 9 }, done: false };
+    const action: Action = { kind: 'placement', piece: 'G', dest: { col: 5, row: 9 } };
     const result = validateAction(action, state.state);
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -227,13 +227,12 @@ describe('BR-GAN-VALID-005 --- Turncoat legality', () => {
 });
 
 // ---------------------------------------------------------------------------
-// BR-GAN-VALID-006 --- Done legality (enforced at parse level)
+// BR-GAN-VALID-006 --- Done legality (deploy-phase, Marshal deployed)
 // ---------------------------------------------------------------------------
 
 describe('BR-GAN-VALID-006 --- Done legality', () => {
-  it('accepts placement with done=true', () => {
+  it('accepts done in deploy phase when Marshal is deployed', () => {
     // State: Black to place, Black's Marshal already on board at (5,3).
-    // Place a General at a different deploy-zone square (5,1) with done=true.
     const state = deployState('black');
     state.position = setStack(
       state.position,
@@ -241,17 +240,28 @@ describe('BR-GAN-VALID-006 --- Done legality', () => {
       createStack([{ type: 'M', owner: 'black' }]),
     );
     state.hands.black.M = 0; // Marshal no longer in hand
-    state.hands.black.G = 1; // General still in hand
-    const action: Action = { kind: 'placement', piece: 'G', dest: { col: 5, row: 1 }, done: true };
+    const action: Action = { kind: 'done' };
     const result = validateAction(action, state);
     expect(result.ok).toBe(true);
   });
 
-  it('accepts placement with done=false', () => {
-    const action: Action = { kind: 'placement', piece: 'M', dest: { col: 5, row: 9 }, done: false };
+  it('rejects done before the Marshal is deployed (BR-DEPLOY-003)', () => {
+    // startpos: White's Marshal is still in hand.
     const state = deployState('white');
+    const action: Action = { kind: 'done' };
     const result = validateAction(action, state);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-DEPLOY-003');
+  });
+
+  it('rejects done in battle phase (BR-GAN-VALID-001)', () => {
+    const action: Action = { kind: 'done' };
+    const state = battleState();
+    const result = validateAction(action, state);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GAN-VALID-001');
   });
 });
 

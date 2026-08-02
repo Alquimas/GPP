@@ -1,8 +1,9 @@
 /**
  * GAN serializer --- converts Action objects into canonical GAN strings.
  *
- * Supports three action shapes:
- * - Placement (Deploy Phase) : `<piece><square>[!]`
+ * Supports four action shapes:
+ * - Done      (Deploy Phase) : `!`
+ * - Placement (Deploy Phase) : `<piece><square>`
  * - Move      (Battle Phase) : `<square>><square>[outcome][turncoat]`
  * - Arata     (Battle Phase) : `<piece>*<square>[turncoat]`
  *
@@ -10,7 +11,7 @@
  * - BR-GAN-CANON-001: outcome token only when choice exists (omitted for forced outcomes)
  * - BR-GAN-CANON-002: turncoat levels only when elected (omitted when declined)
  * - BR-GAN-GRAMMAR-010: levels ascending, no duplicates (inputs must already satisfy this)
- * - BR-GAN-GRAMMAR-011: `!` only as placement suffix
+ * - BR-GAN-GRAMMAR-011: `!` is a standalone Done Action token; placements never carry it
  * - BR-GAN-GRAMMAR-009: no whitespace within a single action
  * - BR-GAN-GRAMMAR-008: no annotation tokens beyond the grammar
  *
@@ -80,19 +81,31 @@ export function serializeOutcome(outcome: 'stack' | 'capture' | null): string {
 /**
  * Serialize a Placement action to its canonical GAN string.
  *
- * Format: `<piece><square>[!]`
+ * Format: `<piece><square>`
  *
  * BR-GAN-CANON-001: Outcome token is not applicable to placements.
- * BR-GAN-GRAMMAR-011: `!` suffix only when `action.done === true`.
+ * BR-GAN-GRAMMAR-011: `!` is a standalone Done Action token; a Placement
+ * never serializes a `!` suffix.
  * BR-GAN-GRAMMAR-009: No whitespace (guaranteed by construction).
  *
  * @param action - The placement action.
  * @returns The canonical GAN string.
  */
 export function serializePlacement(action: Action & { kind: 'placement' }): string {
-  // BR-GAN-GRAMMAR-011: Done suffix
-  const doneToken = action.done ? '!' : '';
-  return `${action.piece}${serializeSquare(action.dest)}${doneToken}`;
+  return `${action.piece}${serializeSquare(action.dest)}`;
+}
+
+/**
+ * Serialize a Done action to its canonical GAN string.
+ *
+ * Format: `!`
+ *
+ * BR-GAN-GRAMMAR-011: Done is a standalone Action token.
+ *
+ * @returns The canonical GAN string (`'!'`).
+ */
+export function serializeDone(): string {
+  return '!';
 }
 
 /**
@@ -144,8 +157,7 @@ export function serializeArata(action: Action & { kind: 'arata' }): string {
  *
  * @param action - The action to serialize.
  * @returns The canonical GAN string representation.
- */
-export function serializeGAN(action: Action): string {
+ */export function serializeGAN(action: Action): string {
   switch (action.kind) {
     case 'placement':
       return serializePlacement(action);
@@ -153,6 +165,8 @@ export function serializeGAN(action: Action): string {
       return serializeMove(action);
     case 'arata':
       return serializeArata(action);
+    case 'done':
+      return serializeDone();
     default: {
       const _exhaustive: never = action;
       void _exhaustive;

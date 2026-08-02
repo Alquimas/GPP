@@ -78,8 +78,10 @@ function describeAction(action: Action, state: GameState): string {
 
   switch (action.kind) {
     case 'placement': {
-      const done = action.done ? '!' : '';
-      return `${label} ${pieceName(action.piece)} ${action.piece}${action.dest.col}-${action.dest.row}${done}`;
+      return `${label} ${pieceName(action.piece)} ${action.piece}${action.dest.col}-${action.dest.row}`;
+    }
+    case 'done': {
+      return `${label} Declare Done`;
     }
     case 'move': {
       const originStack = state.position[action.origin.row - 1][action.origin.col - 1];
@@ -166,6 +168,7 @@ function main(): void {
   const placements = actions.filter((a) => a.kind === 'placement');
   const moves = actions.filter((a) => a.kind === 'move');
   const aratas = actions.filter((a) => a.kind === 'arata');
+  const dones = actions.filter((a) => a.kind === 'done');
 
   if (placements.length > 0) {
     console.log(`Placements (${placements.length}):`);
@@ -190,6 +193,16 @@ function main(): void {
   if (aratas.length > 0) {
     console.log(`Aratas (${aratas.length}):`);
     for (const a of aratas) {
+      const desc = describeAction(a, state);
+      const gan = ganString(a);
+      console.log(`  ${gan.padEnd(12)}  ${desc}`);
+    }
+    console.log('');
+  }
+
+  if (dones.length > 0) {
+    console.log(`Done (${dones.length}):`);
+    for (const a of dones) {
       const desc = describeAction(a, state);
       const gan = ganString(a);
       console.log(`  ${gan.padEnd(12)}  ${desc}`);

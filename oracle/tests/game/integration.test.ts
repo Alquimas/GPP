@@ -85,19 +85,26 @@ describe('full game: deploy -> battle', () => {
     expect(r.state.turn.activePlayer).toBe('white');
     expect(r.state.turn.counter).toBe(3);
 
-    // White places General, declares Done
-    r = game.applyAction(ganAction('G5-8!'));
+    // White places General
+    r = game.applyAction(ganAction('G5-8'));
     expect(r.state.turn.activePlayer).toBe('black');
-    expect(r.state.turn.done).toBe('white');
 
     // Black places General
     r = game.applyAction(ganAction('G5-2'));
-    // Black did NOT declare Done, so keeps turn (White already Done)
+    expect(r.state.turn.activePlayer).toBe('white');
+
+    // White declares Done as a standalone action
+    r = game.applyAction(ganAction('!'));
     expect(r.state.turn.activePlayer).toBe('black');
     expect(r.state.turn.done).toBe('white');
 
-    // Black places Lieutenant, declares Done -> both Done
-    r = game.applyAction(ganAction('L5-3!'));
+    // Black places Lieutenant (White already Done, so Black keeps the turn)
+    r = game.applyAction(ganAction('L5-3'));
+    expect(r.state.turn.activePlayer).toBe('black');
+    expect(r.state.turn.done).toBe('white');
+
+    // Black declares Done -> both Done
+    r = game.applyAction(ganAction('!'));
     expect(r.state.turn.phase).toBe('battle');
     expect(r.state.turn.activePlayer).toBe('white');
     expect(r.state.turn.counter).toBe(1);
@@ -153,8 +160,8 @@ describe('legalActions', () => {
     // At startpos, White has 25 pieces to place.
     // Deploy zone: rows 7-9 (3 rows × 9 cols = 27 squares).
     // Marshal must be first, so only M placements are legal.
-    // Each valid (piece, dest) produces two actions (done=false, done=true).
-    // M at any of 27 squares = 27 × 2 = 54 placement actions.
+    // Each valid (piece, dest) produces one placement action.
+    // M at any of 27 squares = 27 placement actions (Done is not legal yet).
     expect(actions.length).toBeGreaterThan(0);
     expect(actions.every((a) => a.kind === 'placement')).toBe(true);
   });
@@ -166,8 +173,10 @@ describe('legalActions', () => {
     // We need a battle-phase state. Let's just place both Marshals and done.
     game.applyAction(ganAction('M5-9'));
     game.applyAction(ganAction('M5-1'));
-    game.applyAction(ganAction('P5-8!'));
-    game.applyAction(ganAction('P5-2!'));
+    game.applyAction(ganAction('P5-8'));
+    game.applyAction(ganAction('!'));
+    game.applyAction(ganAction('P5-2'));
+    game.applyAction(ganAction('!'));
 
     expect(game.state.turn.phase).toBe('battle');
     const actions = game.legalActions;
@@ -217,8 +226,10 @@ describe('history and terminal', () => {
     // Deploy
     game.applyAction(ganAction('M5-9'));
     game.applyAction(ganAction('M5-1'));
-    game.applyAction(ganAction('P5-8!'));
-    game.applyAction(ganAction('P5-2!'));
+    game.applyAction(ganAction('P5-8'));
+    game.applyAction(ganAction('!'));
+    game.applyAction(ganAction('P5-2'));
+    game.applyAction(ganAction('!'));
 
     expect(game.state.turn.phase).toBe('battle');
 

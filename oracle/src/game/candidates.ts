@@ -17,8 +17,9 @@ export function placementCandidates(state: GameState): Action[] {
       for (let col = 1; col <= 9; col++) {
         const dest = trySquare(col, row);
         if (dest === null) continue;
-        candidates.push({ kind: 'placement', piece, dest, done: false });
-        candidates.push({ kind: 'placement', piece, dest, done: true });
+        // One candidate per (piece, dest). Done is a standalone Action and is
+        // added separately by the engine's legalActions().
+        candidates.push({ kind: 'placement', piece, dest });
       }
     }
   }

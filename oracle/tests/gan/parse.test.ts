@@ -106,25 +106,20 @@ describe('parseTurncoat', () => {
 
 describe('parseGAN --- worked examples from GAN.md', () => {
   // Example 1: Opening Placement
-  // M5-9 -> Placement: Marshal at 5-9, done=false
+  // M5-9 -> Placement: Marshal at 5-9
   it('Example 1: M5-9', () => {
     const action = assertOk(parseGAN('M5-9'));
     expect(action.kind).toBe('placement');
     if (action.kind !== 'placement') return;
     expect(action.piece).toBe('M');
     expect(action.dest).toEqual({ col: 5, row: 9 });
-    expect(action.done).toBe(false);
   });
 
-  // Example 2: Placement with Done
-  // G5-1! -> Placement: General at 5-1, done=true
-  it('Example 2: G5-1!', () => {
-    const action = assertOk(parseGAN('G5-1!'));
-    expect(action.kind).toBe('placement');
-    if (action.kind !== 'placement') return;
-    expect(action.piece).toBe('G');
-    expect(action.dest).toEqual({ col: 5, row: 1 });
-    expect(action.done).toBe(true);
+  // Example 2: Done
+  // ! -> Done: standalone action token
+  it('Example 2: !', () => {
+    const action = assertOk(parseGAN('!'));
+    expect(action.kind).toBe('done');
   });
 
   // Example 3: Plain Move, no choice available
@@ -231,11 +226,35 @@ describe('parseGAN --- invalid strings from GAN.md', () => {
     assertError(result, 'BR-GAN-GRAMMAR-010');
   });
 
-  // M5-9!! --- multiple "!" (BR-GAN-GRAMMAR-011 violation)
+  // M5-9!! --- '!' is a standalone Done token; multiple '!' are illegal (BR-GAN-GRAMMAR-011)
   it('rejects M5-9!! (multiple !)', () => {
     const result = parseGAN('M5-9!!');
-    // This has two '!' marks --- the parser should reject it
+    // '!' is a standalone Done Action token, never part of a placement.
     assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // G5-1! --- placement with a trailing '!' is now invalid (BR-GAN-GRAMMAR-011)
+  it('rejects G5-1! (placement cannot carry Done)', () => {
+    const result = parseGAN('G5-1!');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // P3-8! --- placement with a trailing '!' is now invalid (BR-GAN-GRAMMAR-011)
+  it('rejects P3-8! (placement cannot carry Done)', () => {
+    const result = parseGAN('P3-8!');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // M!5-9 --- '!' in the middle of a placement is also invalid (BR-GAN-GRAMMAR-011)
+  it('rejects M!5-9 (interior !)', () => {
+    const result = parseGAN('M!5-9');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // !! --- Done takes exactly one '!'
+  it('rejects !! (Done takes exactly one !)', () => {
+    const result = parseGAN('!!');
+    assertError(result, 'BR-GAN-GRAMMAR-007');
   });
 });
 
@@ -265,14 +284,13 @@ describe('parseGAN --- additional edge cases', () => {
     expect(action.turncoat).toEqual([]);
   });
 
-  // Placement without Done: P3-8 -> done=false
+  // Placement without Done: P3-8
   it('parses placement without done', () => {
     const action = assertOk(parseGAN('P3-8'));
     expect(action.kind).toBe('placement');
     if (action.kind !== 'placement') return;
     expect(action.piece).toBe('P');
     expect(action.dest).toEqual({ col: 3, row: 8 });
-    expect(action.done).toBe(false);
   });
 
   // All 14 piece types in placements
@@ -285,7 +303,6 @@ describe('parseGAN --- additional edge cases', () => {
       if (action.kind !== 'placement') return;
       expect(action.piece).toBe(p);
       expect(action.dest).toEqual({ col: 5, row: 9 });
-      expect(action.done).toBe(false);
     });
   }
 

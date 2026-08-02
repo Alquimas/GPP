@@ -7,11 +7,16 @@
  * @module
  */
 
-import type { GameResult, GameState, Position } from '../types.js';
+import type { GameResult, GameState, Player, Position } from '../types.js';
 import { isExposed, isInCheck } from '../board/attack.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
 import { playCandidates } from './candidates.js';
 import { validatePlay } from './battle.js';
+
+/** Return the opponent of a player. */
+function opponent(player: Player): Player {
+  return player === 'white' ? 'black' : 'white';
+}
 
 /* ------------------------------------------------------------------ */
 /*  evaluateExposure                                                   */
@@ -157,7 +162,9 @@ export function hasInsufficientMaterial(state: GameState): boolean {
  *
  * 1. Checkmate (BR-TERMINATION-001) --- in Check + no legal plays.
  * 2. Stalemate (BR-TERMINATION-002) --- not in Check + no legal plays.
- * 3. Repetition (BR-REPETITION-001) --- same state 4× in battle history.
+ * 3. Repetition (BR-REPETITION-001 / BR-TERMINATION-004) --- same state 4×
+ *    in battle history; the repeating player (the one whose Action produced
+ *    the 4th occurrence, i.e. the OPPONENT of the active player) loses.
  * 4. Insufficient Material (BR-TERMINATION-003) --- both players have
  *    only their Marshals (no other pieces, empty hands).
  *
@@ -177,9 +184,11 @@ export function checkTerminal(state: GameState, history: GameState[]): GameResul
   }
 
   // 3. Repetition (only after confirming the game is not already over
-  //    via checkmate/stalemate, per BR-GAME-004 ordering).
+  //    via checkmate/stalemate, per BR-GAME-004 ordering). The repeating
+  //    player --- the one whose Action produced the 4th occurrence --- is the
+  //    OPPONENT of the active player (BR-REPETITION-001, BR-TERMINATION-004).
   if (countRepetitions(state, history) >= 4) {
-    return { kind: 'repetition' };
+    return { kind: 'repetition', loser: opponent(state.turn.activePlayer) };
   }
 
   // 4. Insufficient Material (BR-TERMINATION-003).

@@ -505,6 +505,13 @@ export function validatePlay(state: GameState, action: Action): PlayValidation {
     };
   }
 
+  if (action.kind === 'done') {
+    return {
+      ok: false,
+      error: new GameError('Done is only valid during the Deploy Phase', 'BR-GAN-VALID-001'),
+    };
+  }
+
   if (action.kind === 'move') {
     return validateMove(state, action);
   }
