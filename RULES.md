@@ -244,17 +244,16 @@ not have any legal [Plays](<#play>) available. Results in the loss of the
 [Active Player](<#active player>).
 
 #### Repetition
-A [Terminal Condition](<#terminal-condition>) declared when the same
-[Game State](<#game-state>) (same [Active Player](<#active player>), same
-[Position](<#position>) and same [Hands](<#hand>) contents) occurs for the
-fourth time in the [Battle Phase](<#battle-phase>) of a [Game](<#game>), not
-necessarily consecutively. [Deploy Phase](<#deploy-phase>) states are never
-counted. The initial [Game State](<#game-state>) at the start of the
-[Battle Phase](<#battle-phase>) counts as the first occurrence. When the
-fourth occurrence is reached, the **repeating player** --- the
-[Player](<#player>) whose [Action](<#action>) produced the fourth occurrence,
-i.e. the [Opponent](<#opponent>) of the [Active Player](<#active player>) ---
-loses the [Game](<#game>).
+A [Terminal Condition](<#terminal-condition>) declared when a [Player's](<#player>)
+[Play](<#play>) produces a [Game State](<#game-state>) (same
+[Active Player](<#active player>), same [Position](<#position>) and same
+[Hands](<#hand>) contents) that has already occurred three times in the
+[Battle Phase](<#battle-phase>) of a [Game](<#game>), not necessarily
+consecutively. The **repeating player** --- the [Player](<#player>) whose
+[Play](<#play>) produced the fourth occurrence --- loses the [Game](<#game>)
+immediately. [Deploy Phase](<#deploy-phase>) states are never counted. The
+initial [Game State](<#game-state>) at the start of the
+[Battle Phase](<#battle-phase>) counts as the first occurrence.
 
 #### Exposure
 A [Terminal Condition](<#terminal-condition>) evaluated once, immediately
@@ -577,7 +576,11 @@ During the [Deploy Phase](<#deploy-phase>), a [Player](<#player>) may place a
 [Piece](<#piece>) on top of one of their own already-placed
 [Pieces](<#piece>), creating a [Stack](<#stack>). This is subject to the
 [Stack Size](<#stack-size>) limit of 3 and the restriction that no
-[Piece](<#piece>) may ever be stacked on top of a [Marshal](<#marshal>).
+[Piece](<#piece>) may ever be stacked on top of a [Marshal](<#marshal>). The
+stack size landing restriction
+([BR-MOVE-005](<#br-move-005---stack-size-landing-restriction>)) does not
+apply to [Placements](<#placement>): a [Piece](<#piece>) placed from the
+[Hand](<#hand>) may top a friendly [Stack](<#stack>) of any size up to 3.
 
 #### BR-DEPLOY-006 - Deploy on empty squares
 A [Piece](<#piece>) may also be placed on an empty [Square](<#square>) within
@@ -746,7 +749,11 @@ An [Arata](<#arata>) may place a [Piece](<#piece>) on any empty
 An [Arata](<#arata>) may stack the placed [Piece](<#piece>) on top of a
 friendly [Stack](<#stack>) within the placement zone, subject to the normal
 [Stack Size](<#stack-size>) limit of 3 and the restriction that no
-[Piece](<#piece>) may ever be stacked on top of a [Marshal](<#marshal>). If
+[Piece](<#piece>) may ever be stacked on top of a [Marshal](<#marshal>). The
+stack size landing restriction
+([BR-MOVE-005](<#br-move-005---stack-size-landing-restriction>)) does not
+apply to [Arata](<#arata>): a [Piece](<#piece>) placed from the
+[Hand](<#hand>) may top a friendly [Stack](<#stack>) of any size up to 3. If
 the placed [Piece](<#piece>) is a [Captain](<#captain>) and the target
 [Stack](<#stack>) contains enemy [Pieces](<#piece>) below its friendly top,
 [Turncoat](<#br-stack-006---captain-turncoat>) swaps may apply.
@@ -977,16 +984,15 @@ entirely and the [Move](<#move>) is [Illegal](<#illegal-play>).
 ### BR-REPETITION - Repetition Rules
 
 #### BR-REPETITION-001 - Repetition loss
-If the same [Game State](<#game-state>) (same
-[Active Player](<#active player>), same [Position](<#position>) and same
-[Hands](<#hand>) contents) occurs for the fourth time in the
-[Battle Phase](<#battle-phase>) of a [Game](<#game>), the [Game](<#game>) ends
-with the loss of the **repeating player** --- the [Player](<#player>) whose
-[Action](<#action>) produced the fourth occurrence, i.e. the
-[Opponent](<#opponent>) of the [Active Player](<#active player>). Only
-[Battle Phase](<#battle-phase>) states count toward repetition;
-[Deploy Phase](<#deploy-phase>) states are excluded. The first
-[Game State](<#game-state>) at the start of the
+If a [Player's](<#player>) [Play](<#play>) produces a
+[Game State](<#game-state>) (same [Active Player](<#active player>), same
+[Position](<#position>) and same [Hands](<#hand>) contents) that has already
+occurred three times in the [Battle Phase](<#battle-phase>) of a
+[Game](<#game>), the [Game](<#game>) ends with the immediate loss of the
+**repeating player** --- the [Player](<#player>) whose [Play](<#play>)
+produced the fourth occurrence. Only [Battle Phase](<#battle-phase>) states
+count toward repetition; [Deploy Phase](<#deploy-phase>) states are excluded.
+The first [Game State](<#game-state>) at the start of the
 [Battle Phase](<#battle-phase>) counts as the first occurrence.
 
 ### BR-TERMINATION - Game Termination Rules
