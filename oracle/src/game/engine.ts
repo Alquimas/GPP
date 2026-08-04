@@ -55,12 +55,20 @@ export function step(global: GlobalState, action: Action): StepResult {
       return { ok: true, state: withCurrent(global, applied.state) };
     }
 
-    const exposure = evaluateExposure(applied.state.position);
+    // The Deploy Phase is over (BR-DEPLOY-009): the Battle Phase begins with
+    // White's first Turn (BR-DEPLOY-010), and Exposure is evaluated exactly
+    // once, on that turn-1 battle state (BR-DEPLOY-012). Transitioning before
+    // the evaluation keeps exposure-terminal states ordinary battle states
+    // (valid GSFEN round-trips; the deploy-phase counter bound of 50 is never
+    // exceeded). The position is unchanged by the transition, so the exposure
+    // result is identical to evaluating on the deploy state.
+    const battleState = beginBattle(applied.state);
+    const exposure = evaluateExposure(battleState.position);
     if (exposure.kind !== 'ongoing') {
-      return { ok: true, state: withCurrent(global, applied.state, exposure) };
+      return { ok: true, state: withCurrent(global, battleState, exposure) };
     }
 
-    return { ok: true, state: withCurrent(global, beginBattle(applied.state)) };
+    return { ok: true, state: withCurrent(global, battleState) };
   }
 
   const validation = validatePlay(global.current, action);

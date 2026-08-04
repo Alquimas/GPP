@@ -15,6 +15,7 @@ import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { validatePlacement, validateDone } from '../../src/game/deploy.js';
 import { applyPlacement, applyDone } from '../../src/game/apply.js';
+import { Game } from '../../src/game/game.js';
 import { step } from '../../src/game/engine.js';
 import { createStack, getStack, setStack, topPiece } from '../../src/board/board.js';
 import { EMPTY_HAND } from '../../src/constants.js';
@@ -594,5 +595,77 @@ describe('applyDone', () => {
     expect(r.state.turn.done).toBe('white');
     expect(r.state.turn.activePlayer).toBe('white');
     expect(r.state.turn.counter).toBe(state.turn.counter);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  BR-GSFEN-VALID-005: deploy-phase counter bound                     */
+/* ------------------------------------------------------------------ */
+
+describe('deploy -> battle boundary (BR-DEPLOY-010/012)', () => {
+  it('a full-deploy exposure ending transitions to a round-trippable turn-1 battle state', () => {
+    // Regression: exposure-terminal states previously remained in the deploy
+    // phase with counter 51 (50 placements + start value 1), failing the
+    // oracle's own validator ("Counter 51 exceeds maximum 50 for deploy
+    // phase"). Exposure is now evaluated on the turn-1 battle state, so
+    // terminal states are ordinary battle states with counter 1.
+    //
+    // Scripted game: both players place all 25 pieces (alternating), with a
+    // White General at (5,8) attacking the Black Marshal at (5,1) and column
+    // 5 otherwise avoided so the attack line stays clear.
+    const game = new Game('startpos');
+
+    const pieceOrder: PieceType[] = [
+      'M', 'G',
+      'A', 'A', 'C', 'E', 'E', 'E', 'F', 'F', 'J', 'J', 'L', 'N', 'N',
+      'P', 'P', 'P', 'P', 'S', 'S', 'T', 'U', 'Y', 'Y',
+    ]; // 25 pieces: M first, then G, then the remaining 23
+
+    // White: M at (5,9), G at (5,8), then rows 7-9 avoiding column 5.
+    const whiteSquares: { col: number; row: number }[] = [];
+    for (let row = 7; row <= 9; row++) {
+      for (let col = 1; col <= 9; col++) {
+        if (col === 5) continue;
+        whiteSquares.push({ col, row });
+      }
+    }
+    // Black: m at (5,1), then rows 1-3 avoiding column 5.
+    const blackSquares: { col: number; row: number }[] = [];
+    for (let row = 1; row <= 3; row++) {
+      for (let col = 1; col <= 9; col++) {
+        if (col === 5) continue;
+        blackSquares.push({ col, row });
+      }
+    }
+
+    for (let i = 0; i < 25; i++) {
+      const whiteDest = i === 0 ? { col: 5, row: 9 } : i === 1 ? { col: 5, row: 8 } : whiteSquares[i - 2];
+      const blackDest = i === 0 ? { col: 5, row: 1 } : blackSquares[i - 1];
+      const wr = game.applyAction({ kind: 'placement', piece: pieceOrder[i], dest: whiteDest });
+      expect(wr.ok).toBe(true);
+      const br = game.applyAction({ kind: 'placement', piece: pieceOrder[i], dest: blackDest });
+      expect(br.ok).toBe(true);
+    }
+
+    // Both hands empty -> deploy ends -> battle begins (BR-DEPLOY-010) ->
+    // exposure evaluated on the turn-1 battle state: Black's Marshal at (5,1)
+    // is attacked by White's General at (5,8).
+    expect(game.result.kind).toBe('exposure');
+    expect(game.result).toEqual({ kind: 'exposure', loser: 'black' });
+    expect(game.state.turn.phase).toBe('battle');
+    expect(game.state.turn.activePlayer).toBe('white');
+    expect(game.state.turn.counter).toBe(1);
+
+    // The oracle's own terminal state must round-trip (and the deploy-phase
+    // counter bound of 50 is never violated by an engine-produced state).
+    const gsfen = game.toGsfen();
+    expect(gsfen.split(' ')[1]).toBe('w');
+    expect(gsfen.split(' ')[3]).toBe('1');
+    expect(() => new Game(gsfen)).not.toThrow();
+    const parsed = parseGSFEN(gsfen);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(validateState(parsed.state).ok).toBe(true);
+    }
   });
 });
