@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { getLegalDestinations, getLegalMoves, getScaledJumps } from '../../src/board/movement.js';
+import { isSquareUnderAttack } from '../../src/board/attack.js';
 import { PIECE_MOVEMENT } from '../../src/constants.js';
 import { emptyPosition } from '../../src/board/board.js';
 import type { BoardCoord, PieceType, Player, Position, Square, Stack } from '../../src/types.js';
@@ -137,14 +138,17 @@ describe('Step movement --- size 1 (BR-MOVEMENT-001)', () => {
     expect(fwdMove!.outcome).toBe('stack'); // size 1 enemy, not Marshal -> choice
   });
 
-  it('Step onto enemy Marshal --- capture forced', () => {
+  it('Step onto enemy Marshal --- square excluded from destinations (BR-STACK-004)', () => {
     const pos = emptyPosition();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'M', 'black');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
-    expect(fwdMove).toBeDefined();
-    expect(fwdMove!.outcome).toBe('capture');
+    // BR-STACK-004: no piece may be moved on top of a Marshal, and the
+    // Marshal is never actually captured --- the square is not landable.
+    expect(fwdMove).toBeUndefined();
+    // The piece is not paralyzed: the other step direction still works.
+    expect(allDests(pos, 5, 5, 'white')).toContain('5,6');
   });
 
   it('Step onto enemy stack of size 3 --- capture forced (source size >= target)', () => {
@@ -750,7 +754,9 @@ describe('All 14 piece types × 3 stack sizes --- movement count sanity', () => 
     ]);
     const dests1 = allDests(pos1, 5, 5, 'white');
     const dests2 = allDests(pos2, 5, 5, 'white');
-    expect(dests2.length).toBeGreaterThanOrEqual(dests1.length);
+    // Size 2 strictly extends every step direction by one square on an
+    // empty board, so the destination count strictly grows.
+    expect(dests2.length).toBeGreaterThan(dests1.length);
   });
 
   it.each(ALL_TYPES)('%s at centre size 3 --- more moves than size 2', (type) => {
@@ -767,7 +773,9 @@ describe('All 14 piece types × 3 stack sizes --- movement count sanity', () => 
     ]);
     const dests2 = allDests(pos2, 5, 5, 'white');
     const dests3 = allDests(pos3, 5, 5, 'white');
-    expect(dests3.length).toBeGreaterThanOrEqual(dests2.length);
+    // Size 3 strictly extends step/limited-range traces and adds a jump
+    // level, so the destination count strictly grows.
+    expect(dests3.length).toBeGreaterThan(dests2.length);
   });
 });
 
@@ -793,7 +801,7 @@ describe('getLegalMoves --- aggregate', () => {
   it('Finds moves for only the specified player', () => {
     const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
-    putPiece(pos, 5, 6, 'M', 'black');
+    putPiece(pos, 5, 6, 'P', 'black');
     const whiteMoves = getLegalMoves(pos, 'white');
     const blackMoves = getLegalMoves(pos, 'black');
     expect(whiteMoves.length).toBeGreaterThan(0);
@@ -859,6 +867,11 @@ describe('BR-MOVE-005 --- stack size landing restriction', () => {
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
     expect(fwdMove).toBeUndefined();
+    // BR-PATH-001: the un-landable blocker at (5,4) still stops the trace;
+    // squares beyond it are not reachable.
+    const dests = allDests(pos, 5, 5, 'white');
+    expect(dests).not.toContain('5,3');
+    expect(dests).not.toContain('5,2');
   });
 
   it('Range: source=1, target=2 --- illegal', () => {
@@ -871,6 +884,11 @@ describe('BR-MOVE-005 --- stack size landing restriction', () => {
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
     expect(fwdMove).toBeUndefined();
+    // BR-PATH-001: the un-landable blocker at (5,4) still stops the trace;
+    // squares beyond it are not reachable.
+    const dests = allDests(pos, 5, 5, 'white');
+    expect(dests).not.toContain('5,3');
+    expect(dests).not.toContain('5,2');
   });
 
   it('Jump: source=1, target=2 --- illegal (via BR-MOVE-005 check on dest)', () => {
@@ -883,6 +901,11 @@ describe('BR-MOVE-005 --- stack size landing restriction', () => {
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const jumpMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 2);
     expect(jumpMove).toBeUndefined();
+    // The un-landable jump destination is not pass-through: the jump
+    // cannot extend beyond it to (5,1) (level 2 does not exist at size 1
+    // anyway, and a blocked landing never yields a farther square).
+    const dests = allDests(pos, 5, 5, 'white');
+    expect(dests).not.toContain('5,1');
   });
 });
 
@@ -1229,11 +1252,9 @@ describe('Move outcome determination', () => {
     const pos = emptyPosition();
     putPiece(pos, 5, 5, 'M', 'white');
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
-    for (const m of moves) {
-      if (m.dest.col === 5 && m.dest.row === 4) {
-        expect(m.outcome).toBeNull();
-      }
-    }
+    const move = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
+    expect(move).toBeDefined();
+    expect(move!.outcome).toBeNull();
   });
 
   it('Friendly dest -> outcome null', () => {
@@ -1254,7 +1275,7 @@ describe('Move outcome determination', () => {
     expect(move!.outcome).toBe('stack');
   });
 
-  it('Enemy dest top is Marshal -> outcome capture (forced)', () => {
+  it('Enemy dest top is Marshal -> square excluded from destinations (BR-STACK-004)', () => {
     const pos = emptyPosition();
     putStack(pos, 5, 5, [
       { type: 'P', owner: 'white' },
@@ -1266,7 +1287,12 @@ describe('Move outcome determination', () => {
     ]); // size 2 top is Marshal
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const move = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
-    expect(move!.outcome).toBe('capture');
+    // BR-STACK-004: the Marshal-topped square is not landable, even though
+    // the source size (2) satisfies BR-MOVE-005 (2 >= 2).
+    expect(move).toBeUndefined();
+    // The excluded square still stops the trace (BR-PATH-001): (5,3) is
+    // beyond it and must not be reachable.
+    expect(allDests(pos, 5, 5, 'white')).not.toContain('5,3');
   });
 
   it('Enemy dest size 3 top not Marshal -> outcome capture (forced)', () => {
@@ -1284,6 +1310,196 @@ describe('Move outcome determination', () => {
     const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
     const move = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
     expect(move!.outcome).toBe('capture');
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  20b. BR-STACK-003 / BR-STACK-004 --- landing prohibitions            */
+/*      are enforced by the movement engine                             */
+/* ------------------------------------------------------------------ */
+
+describe('BR-STACK-003 / BR-STACK-004 --- landing prohibitions in the movement engine', () => {
+  it('Friendly stack of size 3 --- square excluded from destinations (BR-STACK-003)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'J', owner: 'white' },
+    ]); // size 3 source (satisfies BR-MOVE-005: 3 >= 3)
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+    ]); // friendly size 3 target
+    const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
+    const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
+    // The stack size limit of 3 cannot be exceeded on a friendly square.
+    expect(fwdMove).toBeUndefined();
+    // The excluded square still stops the trace (BR-PATH-001): (5,3) is
+    // beyond it and must not be reachable.
+    expect(allDests(pos, 5, 5, 'white')).not.toContain('5,3');
+  });
+
+  it('Friendly stack of size 2 --- square still reachable (auto stack)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'J', owner: 'white' },
+    ]); // size 2 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+    ]); // friendly size 2 target
+    const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
+    const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
+    expect(fwdMove).toBeDefined();
+    expect(fwdMove!.outcome).toBeNull(); // friendly -> auto stack
+  });
+
+  it('Friendly Marshal-top stack --- square excluded from destinations (BR-STACK-004)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'J', owner: 'white' },
+    ]); // size 2 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'white' },
+      { type: 'M', owner: 'white' },
+    ]); // friendly stack topped by a Marshal
+    const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
+    const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
+    // BR-STACK-004: no piece may be placed on top of a Marshal, even a
+    // friendly one.
+    expect(fwdMove).toBeUndefined();
+    // The excluded square still stops the trace (BR-PATH-001).
+    expect(allDests(pos, 5, 5, 'white')).not.toContain('5,3');
+  });
+
+  it('Enemy Marshal-top stack --- square excluded from destinations (BR-STACK-004)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'J', owner: 'white' },
+    ]); // size 2 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'black' },
+      { type: 'M', owner: 'black' },
+    ]); // enemy stack topped by a Marshal
+    const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
+    const fwdMove = moves.find((m) => m.dest.col === 5 && m.dest.row === 4);
+    // BR-STACK-004: the Marshal is never actually captured, so its square
+    // is not a landable destination for the opponent either.
+    expect(fwdMove).toBeUndefined();
+    // The excluded square still stops the trace (BR-PATH-001).
+    expect(allDests(pos, 5, 5, 'white')).not.toContain('5,3');
+  });
+
+  it('Excluded squares still stop traces (BR-PATH-001 --- no pass-through)', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'G', owner: 'white' },
+    ]); // size 3 General source --- range F runs to the board edge
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+    ]); // friendly size 3 blocker at F1
+    const dests = allDests(pos, 5, 5, 'white');
+    // The blocker itself is excluded as a landing square...
+    expect(dests).not.toContain('5,4');
+    // ...and everything beyond it is unreachable (no pass-through).
+    expect(dests).not.toContain('5,3');
+    expect(dests).not.toContain('5,2');
+    expect(dests).not.toContain('5,1');
+    // The backward range direction is unaffected.
+    expect(dests).toContain('5,9');
+  });
+
+  it('Enemy stacks of size 1-2 and enemy size-3 forced captures remain reachable', () => {
+    // Enemy size 2 with non-Marshal top: reachable as a stacking choice.
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'J', owner: 'white' },
+    ]); // size 2 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]); // enemy size 2
+    let move = getLegalDestinations(pos, { col: 5, row: 5 }, 'white').find(
+      (m) => m.dest.col === 5 && m.dest.row === 4,
+    );
+    expect(move).toBeDefined();
+    expect(move!.outcome).toBe('stack'); // enemy size < 3, top not Marshal -> choice
+
+    // Enemy size 3: reachable as a forced capture (source must also be 3).
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'J', owner: 'white' },
+    ]); // size 3 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+      { type: 'P', owner: 'black' },
+    ]); // enemy size 3
+    move = getLegalDestinations(pos, { col: 5, row: 5 }, 'white').find(
+      (m) => m.dest.col === 5 && m.dest.row === 4,
+    );
+    expect(move).toBeDefined();
+    expect(move!.outcome).toBe('capture'); // forced capture
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  20c. Attack reachability ignores BR-STACK-003/004                   */
+/* ------------------------------------------------------------------ */
+
+describe('Attack reachability --- BR-STACK-003/004 landing prohibitions skipped', () => {
+  it('isSquareUnderAttack still sees a friendly size-3 stack square', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+    ]); // size 3 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+    ]); // friendly size 3 target
+    expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
+  });
+
+  it('isSquareUnderAttack still sees a friendly Marshal-top stack square', () => {
+    const pos = emptyPosition();
+    putStack(pos, 5, 5, [
+      { type: 'P', owner: 'white' },
+      { type: 'P', owner: 'white' },
+    ]); // size 2 source
+    putStack(pos, 5, 4, [
+      { type: 'P', owner: 'white' },
+      { type: 'M', owner: 'white' },
+    ]); // friendly Marshal-top target
+    expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
+  });
+
+  it('isSquareUnderAttack still sees an enemy Marshal square', () => {
+    const pos = emptyPosition();
+    putPiece(pos, 5, 5, 'P', 'white'); // size 1 source
+    putPiece(pos, 5, 4, 'M', 'black'); // enemy Marshal
+    expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
+  });
+
+  it('while getLegalDestinations excludes the same squares (default path)', () => {
+    const pos = emptyPosition();
+    putPiece(pos, 5, 5, 'P', 'white');
+    putPiece(pos, 5, 4, 'M', 'black');
+    const dests = allDests(pos, 5, 5, 'white');
+    expect(dests).not.toContain('5,4');
+    expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 });
 

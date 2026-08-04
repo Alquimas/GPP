@@ -85,6 +85,7 @@ export const STARTPOS = readValid('startpos');
 export const STARTPOS_EXPANDED = readValid('startpos-expanded');
 export const THREE_DEEP_STACKS = readValid('three-deep-stacks');
 export const TRIPLE_STACK_BATTLEFIELD = readValid('triple-stack-battlefield');
+export const TURNCOAT_INSUFFICIENT_HAND = readValid('turncoat-insufficient-hand');
 export const WHITE_DONE_DECLARED = readValid('white-done-declared');
 export const WHITE_DONE_MULTI_COUNT_HAND = readValid('white-done-multi-count-hand');
 export const WHITE_MARSHAL_AT_5_9 = readValid('white-marshal-at-5-9');
@@ -159,6 +160,7 @@ export const FIXTURES: Record<string, string> = {
   'startpos-expanded': STARTPOS_EXPANDED,
   'three-deep-stacks': THREE_DEEP_STACKS,
   'triple-stack-battlefield': TRIPLE_STACK_BATTLEFIELD,
+  'turncoat-insufficient-hand': TURNCOAT_INSUFFICIENT_HAND,
   'white-done-declared': WHITE_DONE_DECLARED,
   'white-done-multi-count-hand': WHITE_DONE_MULTI_COUNT_HAND,
   'white-marshal-at-5-9': WHITE_MARSHAL_AT_5_9,

@@ -400,6 +400,158 @@ describe('checkTerminal', () => {
     if (r.kind === 'stalemate') expect(r.loser).toBe('white');
   });
 
+  it('returns ongoing when Marshal is in check but has a legal escape', () => {
+    // White Marshal at (5,5) is attacked by a Black Pawn at (5,4)
+    // (Pawn F for Black = row+1 -> (5,5)). The Marshal can step out to
+    // any of the surrounding EMPTY squares (e.g. (5,6), (4,5), (6,5)) or
+    // capture the Pawn, so hasLegalPlays is true and checkTerminal must
+    // NOT report checkmate merely because isInCheck is true.
+    const state = emptyBattleState('white');
+    let pos = state.position;
+    pos = setStack(
+      pos,
+      { col: 5 as any, row: 5 as any },
+      createStack([{ type: 'M', owner: 'white' }]),
+    );
+    pos = setStack(
+      pos,
+      { col: 5 as any, row: 4 as any },
+      createStack([{ type: 'P', owner: 'black' }]),
+    );
+    const testState: GameState = { ...state, position: pos };
+
+    // Sanity: the Marshal IS in check
+    expect(isInCheck(testState.position, 'white')).toBe(true);
+    // Sanity: the Marshal has at least one legal escape square
+    const marshalMoves = getLegalDestinations(
+      testState.position,
+      { col: 5 as any, row: 5 as any },
+      'white',
+    );
+    expect(marshalMoves.length).toBeGreaterThan(0);
+
+    const r = checkTerminal(testState, []);
+    expect(r.kind).toBe('ongoing');
+  });
+
+  it('returns checkmate for a Black Marshal in the (1,1) corner mirror', () => {
+    // Mirror of the White (1,9) checkmate: Black Marshal at (1,1).
+    // All three reachable squares are blocked by White size-3 stacks
+    // so BR-MOVE-005 prevents landing (source size 1 < target size 3).
+    //   (1,2) = size-3 White stack
+    //   (2,1) = size-3 White stack
+    //   (2,2) = size-3 stack topped by White Marshal (step-FR attacks (1,1))
+    const state = emptyBattleState('black');
+    let pos = state.position;
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 1 as any },
+      createStack([{ type: 'M', owner: 'black' }]),
+    );
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 2 as any },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+        { type: 'M', owner: 'white' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 2 as any },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+      ]),
+    );
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 1 as any },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+      ]),
+    );
+    const testState: GameState = { ...state, position: pos };
+
+    // Sanity: is the Marshal in check?
+    expect(isInCheck(testState.position, 'black')).toBe(true);
+    // Sanity: no legal destinations (all size 3 > source size 1)
+    const marshalMoves = getLegalDestinations(
+      testState.position,
+      { col: 1 as any, row: 1 as any },
+      'black',
+    );
+    expect(marshalMoves.length).toBe(0);
+
+    const r = checkTerminal(testState, []);
+    expect(r.kind).toBe('checkmate');
+    if (r.kind === 'checkmate') expect(r.loser).toBe('black');
+  });
+
+  it('returns stalemate for a Black Marshal in the (1,1) corner mirror', () => {
+    // Mirror of the White (1,9) stalemate: Black Marshal at (1,1).
+    // All three escape squares blocked by White size-3 stacks. The top
+    // of (1,2) is a Spy so it does NOT attack (1,1) (Spy has diagonal-only
+    // movement). (2,1) and (2,2) tops are Pawns --- Pawn F from (2,1) is
+    // off-board, from (2,2) -> (2,1). None attack (1,1).
+    const state = emptyBattleState('black');
+    let pos = state.position;
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 1 as any },
+      createStack([{ type: 'M', owner: 'black' }]),
+    );
+    // (1,2): Spy top --- Spy never attacks (1,1) (diagonals only)
+    pos = setStack(
+      pos,
+      { col: 1 as any, row: 2 as any },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+        { type: 'Y', owner: 'white' },
+      ]),
+    );
+    // (2,1): Pawn top --- Pawn F from (2,1) is off-board
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 1 as any },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+      ]),
+    );
+    // (2,2): Pawn top --- Pawn F from (2,2) = (2,1), not (1,1)
+    pos = setStack(
+      pos,
+      { col: 2 as any, row: 2 as any },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'white' },
+      ]),
+    );
+    const testState: GameState = { ...state, position: pos };
+
+    // Sanity: Marshal NOT in check
+    expect(isInCheck(testState.position, 'black')).toBe(false);
+    // Sanity: no legal destinations (all size 3 > source size 1)
+    const marshalMoves = getLegalDestinations(
+      testState.position,
+      { col: 1 as any, row: 1 as any },
+      'black',
+    );
+    expect(marshalMoves.length).toBe(0);
+
+    const r = checkTerminal(testState, []);
+    expect(r.kind).toBe('stalemate');
+    if (r.kind === 'stalemate') expect(r.loser).toBe('black');
+  });
+
   it('returns ongoing when the game continues', () => {
     // MARSHAL_ALONE_BATTLE would trigger insufficient-material --- add a
     // Pawn to White's hand to give both players mating potential.

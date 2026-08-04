@@ -14,8 +14,16 @@
  * @module
  */
 
-import { type GameState, type PieceType, type Position, type TurnState } from '../types.js';
+import {
+  type GameState,
+  type Hand,
+  type PieceType,
+  type Position,
+  type TurnState,
+} from '../types.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
+import { GameError } from '../errors.js';
+import { validatePosition } from '../board/board.js';
 
 // ---------------------------------------------------------------------------
 // Field serializers
@@ -80,8 +88,14 @@ function serializePosition(position: Position): string {
  * | db    | deploy     | black  | null   |
  * | dwB   | deploy     | white  | black  |
  * | dbW   | deploy     | black  | white  |
+ *
+ * The done flag is omitted when it is derivable: a player whose hand is
+ * empty is done by rule (auto-Done after placing the last piece, GSFEN.md
+ * §Turn), so the canonical token for that state is the plain `dw`/`db`.
+ * The flag is emitted only for a genuine Done declaration, i.e. when the
+ * done-flagged player still holds pieces in hand.
  */
-function serializeTurn(turn: TurnState): string {
+function serializeTurn(turn: TurnState, hands: GameState['hands']): string {
   const { phase, activePlayer, done } = turn;
 
   if (phase === 'battle') {
@@ -92,12 +106,22 @@ function serializeTurn(turn: TurnState): string {
   if (done === null) {
     return activePlayer === 'white' ? 'dw' : 'db';
   }
-  // A done flag exists --- the non-active player has declared Done
+  // A done flag exists --- the non-active player is done. If their hand is
+  // empty the flag is derivable (auto-Done), so it is omitted from the
+  // canonical token.
+  if (handIsEmpty(hands[done])) {
+    return activePlayer === 'white' ? 'dw' : 'db';
+  }
+  // Genuine Done declaration --- the player still has pieces in hand.
   if (done === 'black') {
     return 'dwB'; // White places next, Black has declared Done
   }
-  // done === 'white'
   return 'dbW'; // Black places next, White has declared Done
+}
+
+/** True when every piece count in the hand is 0. */
+function handIsEmpty(hand: Hand): boolean {
+  return ALL_PIECE_TYPES.every((t) => hand[t] === 0);
 }
 
 /**
@@ -114,8 +138,8 @@ function serializeHands(hands: {
   white: Record<PieceType, number>;
   black: Record<PieceType, number>;
 }): string {
-  const whiteEmpty = ALL_PIECE_TYPES.every((t) => hands.white[t] === 0);
-  const blackEmpty = ALL_PIECE_TYPES.every((t) => hands.black[t] === 0);
+  const whiteEmpty = handIsEmpty(hands.white);
+  const blackEmpty = handIsEmpty(hands.black);
 
   if (whiteEmpty && blackEmpty) {
     return '-';
@@ -148,15 +172,68 @@ function serializeHands(hands: {
 
 /**
  * Serialize a GameState into a canonical GSFEN string.
- * Assumes the GameState is valid (passes validateState).
- * No validation is performed --- invalid input produces invalid output.
+ *
+ * The state must satisfy the serialization contract: a 9×9 Position, hand
+ * counts that are integers 0–4, and a counter ≥ 1. Out-of-contract states
+ * (which would otherwise crash with a raw TypeError or serialize to a
+ * string the parser rejects) raise a GameError instead.
  *
  * @param state - The GameState to serialize.
+ * @throws {GameError} with rule:
+ *   - 'BR-GSFEN-CANON-POSITION-ROW-COUNT'   --- position has ≠ 9 rows
+ *   - 'BR-GSFEN-CANON-POSITION-SQUARE-COUNT' --- a row has ≠ 9 squares
+ *   - 'BR-GSFEN-VALID-002'                  --- hand count not an integer 0–4
+ *   - 'BR-GSFEN-CANON-COUNTER-LEADING-ZERO' --- counter < 1 (same rule the parser reports)
  * @returns A canonical GSFEN string (always expanded --- never the `startpos` keyword).
  */
 export function serializeGSFEN(state: GameState): string {
+  // Position shape: a row shorter than 9 makes serializePosition crash on
+  // undefined; report a GameError instead (BR-GSFEN-CANON-POSITION-*).
+  try {
+    validatePosition(state.position);
+  } catch (e) {
+    const msg = (e as Error).message;
+    const rule = msg.includes('9 rows')
+      ? 'BR-GSFEN-CANON-POSITION-ROW-COUNT'
+      : 'BR-GSFEN-CANON-POSITION-SQUARE-COUNT';
+    throw new GameError(`Cannot serialize position: ${msg} (${rule})`, rule);
+  }
+
+  // Hand counts: non-integer or out-of-range counts serialize to strings
+  // the parser rejects (e.g. "1.5P", "5P"); a count > 4 can never satisfy
+  // inventory conservation (BR-GSFEN-VALID-002).
+  for (const player of ['white', 'black'] as const) {
+    const hand = state.hands[player];
+    for (const type of ALL_PIECE_TYPES) {
+      const count = hand[type];
+      if (!Number.isInteger(count) || count < 0 || count > 4) {
+        throw new GameError(
+          `Cannot serialize: ${player} hand count for ${type} is ${count} (must be an integer 0-4) (BR-GSFEN-VALID-002 --- inventory conservation)`,
+          'BR-GSFEN-VALID-002',
+        );
+      }
+    }
+  }
+
+  // Counter: 0 or negative serializes to a string the parser rejects
+  // ("0" fails /^[1-9]\d*$/, reported as BR-GSFEN-CANON-COUNTER-LEADING-ZERO).
+  if (!Number.isInteger(state.turn.counter) || state.turn.counter < 1) {
+    throw new GameError(
+      `Cannot serialize: turn counter must be a positive integer >= 1, got ${state.turn.counter} (BR-GSFEN-CANON-COUNTER-LEADING-ZERO)`,
+      'BR-GSFEN-CANON-COUNTER-LEADING-ZERO',
+    );
+  }
+  // Upper bound mirrors the parser's precision cap (parseCounter rejects
+  // > 7 digits) so the writer never emits a string its own parser rejects.
+  if (state.turn.counter > 9_999_999) {
+    throw new GameError(
+      `Cannot serialize: turn counter ${state.turn.counter} exceeds the 7-digit canonical limit (BR-GSFEN-CANON-COUNTER-LENGTH)`,
+      'BR-GSFEN-CANON-COUNTER-LENGTH',
+    );
+  }
+
   const pos = serializePosition(state.position);
-  const turn = serializeTurn(state.turn);
+  const turn = serializeTurn(state.turn, state.hands);
   const hands = serializeHands(state.hands);
   const counter = String(state.turn.counter);
 

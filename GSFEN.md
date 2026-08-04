@@ -95,6 +95,14 @@ resulting state is a [Battle Phase](RULES.md#battle-phase)
 Game State. A Done flag is set by a standalone Done Action (BR-DEPLOY-007)
 that places no Piece. A player who has placed all 25
 Pieces needs no flag --- that condition is derivable from an empty Hand.
+The canonical form therefore omits the flag whenever the done player's
+Hand is empty (the auto-Done condition after the last Placement): a state
+with an empty done-player Hand MUST be written as `dw`/`db`, never
+`dwB`/`dbW`. A `dwB`/`dbW` token implies a genuine Done declaration, i.e.
+the flagged player still holds pieces in Hand. For compatibility, parsers
+SHOULD still accept a redundant `dwB`/`dbW` token on an empty Hand (the
+engine derives the Done condition from the Hand, so behavior is
+identical either way).
 
 ## Field 3 --- Hands
 

@@ -13,6 +13,21 @@ export async function api(method, path, body) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(BASE + path, opts);
+
+  if (!res.ok) {
+    // Non-2xx response: surface the server's error message when the body is
+    // parseable JSON, otherwise fall back to the HTTP status text.
+    let message = `${res.status} ${res.statusText}`;
+    try {
+      const errBody = await res.json();
+      if (errBody && typeof errBody.error === 'string') message = errBody.error;
+      else if (errBody && typeof errBody.message === 'string') message = errBody.message;
+    } catch {
+      // Body was not JSON (e.g. an HTML error page) — keep the status text.
+    }
+    throw new Error(message);
+  }
+
   return res.json();
 }
 

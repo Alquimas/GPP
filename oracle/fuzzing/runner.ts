@@ -1,6 +1,7 @@
 import { Game } from '../src/game/game.js';
 import { serializeGAN } from '../src/gan/serialize.js';
-import type { Action } from '../src/types.js';
+import { getStack, topPiece } from '../src/board/board.js';
+import type { Action, GameState } from '../src/types.js';
 import { Logger } from './logger.js';
 import { getStrategy } from './strategies.js';
 import type { FuzzerConfig, RunResult } from './types.js';
@@ -13,6 +14,31 @@ export function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/**
+ * Apply config-driven filtering to the legal action list before it reaches
+ * the strategy. With `noCapture`, move actions that would capture are
+ * removed: both explicit `outcome: 'capture'` moves and the canonical
+ * forced-capture form (`outcome === null` landing on an enemy top).
+ * Strategies fall back to the remaining actions, or return null when
+ * nothing is left.
+ */
+export function filterActionsForConfig(
+  config: FuzzerConfig,
+  actions: Action[],
+  state: GameState,
+): Action[] {
+  if (!config.noCapture) return actions;
+  return actions.filter((a) => {
+    if (a.kind !== 'move') return true;
+    if (a.outcome === 'capture') return false;
+    if (a.outcome !== null) return true;
+    // Canonical forced capture: outcome null on an enemy-controlled square.
+    const target = getStack(state.position, a.dest);
+    if (target === null) return true;
+    return topPiece(target).owner === state.turn.activePlayer;
+  });
 }
 
 export function playGame(
@@ -62,6 +88,7 @@ export function playGame(
 
     if (Date.now() > moveDeadline) {
       logger.appendLine(`${lastKnownGsfen} | TIMEOUT`);
+      crashes++;
       resultStr = 'crash:move-timeout';
       break;
     }
@@ -75,7 +102,9 @@ export function playGame(
       break;
     }
 
-    const action = strategy(actions, game.state, rng);
+    const filteredActions = filterActionsForConfig(config, actions, game.state);
+
+    const action = strategy(filteredActions, game.state, rng);
     if (action === null) {
       resultStr = 'no-legal-action-selected';
       break;
@@ -130,8 +159,13 @@ export function playGame(
   }
 
   if (Date.now() >= gameDeadline && game.result.kind === 'ongoing') {
-    resultStr = 'crash:game-timeout';
+    crashes++;
     logger.appendLine(`${lastKnownGsfen} | TIMEOUT`);
+    // Don't overwrite a more specific result (e.g. a crash or
+    // no-legal-action-selected) with the generic game-timeout label.
+    if (resultStr === 'ongoing') {
+      resultStr = 'crash:game-timeout';
+    }
   }
 
   const duration = Date.now() - startTime;

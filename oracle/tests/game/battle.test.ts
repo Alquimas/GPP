@@ -144,6 +144,22 @@ describe('validateMove', () => {
     });
   });
 
+  describe('out-of-bounds coordinates (BR-PLAY-001 safety)', () => {
+    it('rejects a move with an out-of-bounds origin (BR-MOVE-002)', () => {
+      // Origin comes from the untrusted Action; getStack would throw a bare
+      // Error on an out-of-bounds square. validateMove must fail closed.
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(0, 9, 5, 8));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-002');
+    });
+
+    it('rejects a move with an out-of-bounds destination (BR-MOVE-003)', () => {
+      const r = validateMove(gsfenState(MARSHAL_ALONE_BATTLE), move(5, 9, 0, 9));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
+    });
+  });
+
   describe('outcome validation', () => {
     it('requires outcome=null when landing on empty square', () => {
       const state = gsfenState(MARSHAL_ALONE_BATTLE);
@@ -187,6 +203,51 @@ describe('validateMove', () => {
     });
   });
 
+  describe('GAN canonicity at validation level (BR-STACK-002 / BR-CAPTURE-002)', () => {
+    it('rejects outcome=null when an enemy size-2 target offers both outcomes (token is mandatory in canonical GAN)', () => {
+      // GAN.md: when both stack and capture are legal, the action MUST carry
+      // an outcome token --- a null outcome is not canonical. Position:
+      // White [P,M] size-2 at (5,9), Black [p,p] size-2 at (5,8): enemy top,
+      // size < 3, not a Marshal, source 2 >= target 2 --- both outcomes legal.
+      const base = gsfenState(FRIENDLY_STACK_WITH_HANDS);
+      const state: GameState = {
+        ...base,
+        position: setStack(
+          setStack(
+            base.position,
+            { col: 5, row: 8 },
+            createStack([
+              { type: 'P', owner: 'black' },
+              { type: 'P', owner: 'black' },
+            ]),
+          ),
+          { col: 5, row: 9 },
+          createStack([
+            { type: 'P', owner: 'white' },
+            { type: 'M', owner: 'white' },
+          ]),
+        ),
+      };
+      const r = validateMove(state, move(5, 9, 5, 8, null));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-002');
+    });
+
+    it('rejects an explicit capture token when capture is forced (enemy size-3 target --- BR-CAPTURE-002)', () => {
+      // GAN.md: forced captures OMIT the outcome token, so carrying 'capture'
+      // on a forced capture is not canonical. FORCED_CAPTURE: White [P,P,P]
+      // size-3 at (5,9), Black [p,p,p] size-3 at (5,8) --- capture is forced.
+      const state = gsfenState(FORCED_CAPTURE);
+      const r = validateMove(state, move(5, 9, 5, 8, 'capture'));
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.error.rule).toBe('BR-CAPTURE-002');
+    });
+
+    // Note: the other forced-capture variant (enemy target with source size <
+    // target size) cannot be exercised at validation level --- BR-MOVE-005
+    // (source >= target) rejects such moves before outcome classification.
+  });
+
   describe('BR-MOVE-005 --- stack size landing restriction', () => {
     it('rejects move when source size < target size', () => {
       // Marshal size 1 at (5,9), friendly AFG size 3 at (5,7) --- blocked
@@ -199,11 +260,12 @@ describe('validateMove', () => {
     });
   });
 
-  describe('BR-CAPTURE-003 --- source size < target enemy stack size', () => {
+  describe('BR-MOVE-005 --- stack size landing restriction (enemy variant; the constraint is shared with BR-CAPTURE-003)', () => {
     it('rejects move when source size < target enemy stack size', () => {
       // Marshal size 1 at (5,9), change the size-3 stack at (5,7) to enemy-owned.
-      // BR-MOVE-005 (source >= target) is now checked explicitly in validateMove,
-      // so the rejection carries the correct rule code.
+      // The size check (BR-MOVE-005, source >= target) runs BEFORE outcome
+      // classification, so even a would-be forced capture (BR-CAPTURE-003)
+      // dies here with BR-MOVE-005 --- this pins the shared constraint.
       const base = gsfenState(SIZE_MISMATCH_AFG);
       const stack = getStack(base.position, { col: 5, row: 7 })!;
       const blackStack = createStack(
@@ -239,24 +301,29 @@ describe('validateMove', () => {
   });
 
   describe('BR-STACK-004 --- no stacking on friendly Marshal', () => {
-    it('rejects a move that would land on a friendly Marshal', () => {
+    it('rejects a move that would land on a friendly Marshal (destination unreachable --- BR-STACK-004)', () => {
       // White Pawn at (5,8), White Marshal at (5,9).
       // Move Pawn north to (5,9) would stack onto the friendly Marshal --- illegal.
+      // The movement engine now EXCLUDES Marshal-topped targets from
+      // getLegalDestinations (BR-STACK-004 enforced in movement.ts), so
+      // validateMove reports the destination as unreachable (BR-MOVE-003).
       const state = gsfenState(FRIENDLY_STACK_TEST);
       const r = validateMove(state, move(5, 8, 5, 9));
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-004');
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
     });
 
-    it('rejects a move that would land on an enemy Marshal', () => {
+    it('rejects a move that would land on an enemy Marshal (destination unreachable --- BR-STACK-004)', () => {
       // White size-2 stack at (5,9), Black Marshal at (5,8).
       // BR-STACK-004 prohibits ANY piece from being placed or moved on top of
       // a Marshal --- friendly or enemy. The Marshal is never actually captured;
-      // Checkmate ends the Game before Capture resolves.
+      // Checkmate ends the Game before Capture resolves. The movement engine
+      // excludes the Marshal-topped target from the destination set, so the
+      // move dies at the reachability check (BR-MOVE-003).
       const state = gsfenState(ENEMY_MARSHAL_STACK_TEST);
       const r = validateMove(state, move(5, 9, 5, 8, null));
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.error.rule).toBe('BR-STACK-004');
+      if (!r.ok) expect(r.error.rule).toBe('BR-MOVE-003');
     });
   });
 
@@ -516,6 +583,14 @@ describe('validateArata', () => {
   it('rejects arata beyond most advanced piece (BR-ARATA-003)', () => {
     // Row 3 is forward of row 4 (most advanced White piece) --- outside zone
     const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 5, 3));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-003');
+  });
+
+  it('rejects arata with an out-of-bounds destination (BR-ARATA-003)', () => {
+    // Dest comes from the untrusted Action; getStack would throw a bare
+    // Error on an out-of-bounds square. validateArata must fail closed.
+    const r = validateArata(gsfenState(BATTLE_MID_VARIANT), arata('P', 0, 7));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-003');
   });

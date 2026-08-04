@@ -793,19 +793,20 @@ describe('GSFEN integration --- attack/check/exposure states', () => {
   });
 
   it('dense-engagement --- complex position with stacks', () => {
-    // Board layout (row 1 = top):
+    // Board layout (row 1 = top; lowercase = black, UPPERCASE = white):
     //   Row 1: p at (3,1), e at (7,1)
-    //   Row 2: GN stack at (5,2) [G bottom, N top]
-    //   Row 3: A at (3,3), M at (5,3), A at (7,3)
-    //   Row 5: f at (3,5), YN stack at (5,5)
+    //   Row 2: gn stack at (5,2) [g bottom, n top]
+    //   Row 3: a at (3,3), m at (5,3), a at (7,3)
+    //   Row 5: F at (3,5), YN stack at (7,5) [n bottom, y top]
     //   Row 6: EP stack at (5,6)
-    //   Row 7: PS stack at (4,7), PU stack at (6,7)
-    //   Row 8: S at (3,8), g at (4,8), S at (7,8)
-    //   Row 9: m at (5,9)
-    // White Marshal at (5,9) --- no black piece threatens it (nearest black pieces
-    // are at rows 1-3, too far for step movement, and row 8 has only white pieces).
-    // Black Marshal at (5,3) --- no white piece reaches it (white pieces on rows 5-9
-    // are blocked or out of range).
+    //   Row 7: PU stack at (3,7), PS stack at (6,7)
+    //   Row 8: s at (3,8), G at (4,8), s at (7,8)
+    //   Row 9: M at (5,9)
+    // White Marshal at (5,9) --- no black piece threatens it: the farthest
+    // black reach (black Marshal steps at (5,3), black Spy diagonals at
+    // (7,5), black Knight at (5,2)) never covers (5,9).
+    // Black Marshal at (5,3) --- no white piece reaches it: white pieces on
+    // rows 5-9 are blocked or out of range.
     const pos = gsfenPos(DENSE_ENGAGEMENT);
     expect(isInCheck(pos, 'white')).toBe(false);
     expect(isInCheck(pos, 'black')).toBe(false);
@@ -818,9 +819,9 @@ describe('GSFEN integration --- attack/check/exposure states', () => {
     expect(isSquareUnderAttack(pos, { col: 5, row: 3 }, 'white')).toBe(false);
 
     // Sanity: white pieces DO attack some squares (the position is not dead)
-    // g (white General) at (4,8) has range movement --- attacks along orthogonals
+    // G (white General) at (4,8) --- range F attacks (4,7)
     expect(isSquareUnderAttack(pos, { col: 4, row: 7 }, 'white')).toBe(true);
-    // Y (black Spy) at top of (5,5) stack --- attacks diagonals
+    // Black Marshal at (5,3) --- step FR attacks (4,4)
     expect(isSquareUnderAttack(pos, { col: 4, row: 4 }, 'black')).toBe(true);
   });
 });
@@ -861,11 +862,11 @@ describe('Edge cases', () => {
     expect(isInCheck(pos, 'black')).toBe(true);
   });
 
-  it('Friendly pieces do not attack each other', () => {
+  it('Friendly occupation does not block attack (BR-Attack disregards ownership)', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'P', 'white');
     putPiece(pos, 5, 4, 'P', 'white'); // friendly
-    // White asking if white attacks a friendly square --- still true
+    // White asking if white attacks a friendly-occupied square --- still true
     // (Attack disregards friendly occupation per BR-Attack)
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
@@ -929,14 +930,10 @@ describe('Edge cases', () => {
 
   it('All pieces attack the target at same time --- dense scenario', () => {
     const pos = emptyPos();
-    // Place multiple white pieces that can all attack (5,4)
-    putPiece(pos, 5, 5, 'P', 'white'); // B to (5,6)... no wait
-    // P at (5,5): F=(5,4), B=(5,6)
-    putPiece(pos, 5, 5, 'M', 'white'); // step all 8 dirs
-    putPiece(pos, 4, 4, 'P', 'white'); // step to (5,4)?
-
-    // White M at (5,5): F = (5,4), so yes
-    // White P at (4,4): L = (5,4) for white? L = col+1 = (5,4), yes
+    // White M at (5,5): F = (5,4)
+    putPiece(pos, 5, 5, 'M', 'white');
+    // White P at (4,4): L = col+1 = (5,4)
+    putPiece(pos, 4, 4, 'P', 'white');
     putPiece(pos, 5, 4, 'P', 'black');
 
     expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
@@ -1103,15 +1100,16 @@ describe('Exact attack-set enumeration', () => {
 /* ------------------------------------------------------------------ */
 
 describe('Cross-check with getLegalDestinations', () => {
-  it('isSquareUnderAttack matches getLegalDestinations for single piece', () => {
+  it('isSquareUnderAttack matches hand-computed reachability for single piece', () => {
     const pos = emptyPos();
     putPiece(pos, 5, 5, 'M', 'white');
     putPiece(pos, 5, 4, 'P', 'black');
 
-    const moves = getLegalDestinations(pos, { col: 5, row: 5 }, 'white');
-    const canReach = moves.some((m) => m.dest.col === 5 && m.dest.row === 4);
-
-    expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(canReach);
+    // Hand-computed: a white Marshal at (5,5) steps forward to (5,4), so
+    // the square is attacked.  (Deliberately NOT mirrored through
+    // getLegalDestinations --- that is the very helper isSquareUnderAttack
+    // wraps, so a mirror could never fail for movement bugs.)
+    expect(isSquareUnderAttack(pos, { col: 5, row: 4 }, 'white')).toBe(true);
   });
 
   it('isSquareUnderAttack returns false for square not in legal destinations', () => {

@@ -60,12 +60,6 @@ export function onlyPlacementsStrategy(actions: Action[], _state: GameState, rng
   return filtered[Math.floor(rng() * filtered.length)];
 }
 
-export function cycleThroughStrategy(actions: Action[], _state: GameState, rng: () => number): Action | null {
-  if (actions.length === 0) return null;
-  const index = Math.floor(rng() * actions.length) % actions.length;
-  return actions[index];
-}
-
 export function customStrategy(config: StrategyConfig): StrategyFn {
   return (actions: Action[], _state: GameState, rng: () => number): Action | null => {
     if (actions.length === 0) return null;
@@ -135,8 +129,6 @@ export function getStrategy(name: string, config?: StrategyConfig): StrategyFn {
       return onlyMovesStrategy;
     case 'only-placements':
       return onlyPlacementsStrategy;
-    case 'cycle-through':
-      return cycleThroughStrategy;
     case 'custom':
       if (!config) throw new Error('Custom strategy requires a StrategyConfig');
       return customStrategy(config);

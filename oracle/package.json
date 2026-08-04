@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "board-to-test": "node prototype/board-to-test.mjs",
     "check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"*.{js,json,ts}\"",
     "dev-client": "cd .. && tsx client/server.ts",

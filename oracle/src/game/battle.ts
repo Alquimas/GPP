@@ -7,9 +7,10 @@
  * @module
  */
 
-import type { Action, BoardCoord, GameState, Player } from '../types.js';
+import type { Action, BoardCoord, GameState, PieceType, Player } from '../types.js';
 import { GameError } from '../errors.js';
-import { getStack, squareFromIndex, topPiece, stackSize } from '../board/board.js';
+import { ALL_PIECE_TYPES } from '../constants.js';
+import { getStack, squareFromIndex, topPiece, stackSize, trySquare } from '../board/board.js';
 import { getLegalDestinations } from '../board/movement.js';
 import { isInCheck } from '../board/attack.js';
 import { applyMove, applyArata } from './apply.js';
@@ -149,13 +150,19 @@ function getArataZone(
  *   3. BR-MOVE-003: Destination is reachable (calls movement.ts)
  *   4. Outcome validation (BR-STACK-002/003/004, BR-CAPTURE-001/002/003)
  *   5. BR-STACK-006: Turncoat validation (Captain check, levels, hand)
- *   6. BR-STACK-004: No stacking on Marshal
+ *   6. BR-STACK-004: No stacking on Marshal --- defense-in-depth; the
+ *      movement engine already excludes Marshal-topped targets from
+ *      getLegalDestinations, so unreachable moves die at check 3 (BR-MOVE-003)
  *   7. BR-ACTION-002: Self Check --- own Marshal not under attack after move
  *
  * Rules enforced upstream (not checked here):
  *   - BR-MOVE-001 (piece is top of its stack): enforced by
  *     `getLegalDestinations` in `board/movement.ts`. If the piece is not
  *     the top of its stack, no legal destination is returned.
+ *   - BR-STACK-003 (no landing on friendly size-3 stacks) and BR-STACK-004
+ *     (no landing on Marshal-topped stacks): enforced by the movement engine
+ *     (`getLegalDestinations`); this validator keeps only a defense-in-depth
+ *     copy of the BR-STACK-004 check (see check 6).
  *
  * @param state - Current GameState.
  * @param action - The Move action to validate.
@@ -180,8 +187,20 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
   const { origin, dest, outcome } = action;
   const player = state.turn.activePlayer;
 
-  // 1. BR-MOVE-002: Origin must contain player's own piece
-  const originStack = getStack(state.position, origin);
+  // 1. BR-MOVE-002: Origin must contain player's own piece.
+  //    Origin comes from the untrusted Action --- fail closed on an
+  //    out-of-bounds square instead of letting getStack throw (BR-PLAY-001).
+  const originSquare = trySquare(origin.col, origin.row);
+  if (!originSquare) {
+    return {
+      ok: false,
+      error: new GameError(
+        `Origin (${origin.col}-${origin.row}) is out of bounds`,
+        'BR-MOVE-002',
+      ),
+    };
+  }
+  const originStack = getStack(state.position, originSquare);
   if (!originStack) {
     return {
       ok: false,
@@ -199,8 +218,21 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     };
   }
 
-  // 2. BR-MOVE-005: Stack size landing restriction (source >= target)
-  const targetStack = getStack(state.position, dest);
+  // 2. BR-MOVE-005: Stack size landing restriction (source >= target).
+  //    Dest comes from the untrusted Action --- fail closed on an
+  //    out-of-bounds square (BR-PLAY-001) instead of letting getStack throw;
+  //    an off-board destination is by definition unreachable (BR-MOVE-003).
+  const destSquare = trySquare(dest.col, dest.row);
+  if (!destSquare) {
+    return {
+      ok: false,
+      error: new GameError(
+        `Destination (${dest.col}-${dest.row}) is out of bounds`,
+        'BR-MOVE-003',
+      ),
+    };
+  }
+  const targetStack = getStack(state.position, destSquare);
   if (targetStack !== null && stackSize(targetStack) > originStack.length) {
     return {
       ok: false,
@@ -268,9 +300,21 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
         ),
       };
     }
-    // Each elected level must have an enemy piece, and hand must have match
+    // Each elected level must have an enemy piece. Hand availability is
+    // checked cumulatively AFTER the loop: two elected levels of the same
+    // piece type require two copies (GAN.md: "the Hand must hold two
+    // copies"), so per-level checks against the pre-action hand would let
+    // the apply layer overdraw it into a negative count.
     const postMoveStack = targetStack === null ? [originTop] : [...targetStack, originTop];
+    const requiredHand: Record<PieceType, number> = {} as Record<PieceType, number>;
+    const seenLevels = new Set<number>();
     for (const level of action.turncoat) {
+      if (!Number.isInteger(level) || level < 1) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} is invalid`, 'BR-STACK-006'),
+        };
+      }
       const idx = level - 1;
       if (idx >= postMoveStack.length) {
         return {
@@ -281,6 +325,13 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
           ),
         };
       }
+      if (seenLevels.has(level)) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} was already elected`, 'BR-STACK-006'),
+        };
+      }
+      seenLevels.add(level);
       const targetPiece = postMoveStack[idx];
       if (targetPiece.owner === player) {
         return {
@@ -291,11 +342,15 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
           ),
         };
       }
-      if (state.hands[player][targetPiece.type] < 1) {
+      requiredHand[targetPiece.type] = (requiredHand[targetPiece.type] ?? 0) + 1;
+    }
+    // Cumulative hand-availability check (BR-STACK-006).
+    for (const [type, need] of Object.entries(requiredHand) as [PieceType, number][]) {
+      if ((state.hands[player][type] ?? 0) < need) {
         return {
           ok: false,
           error: new GameError(
-            `No ${targetPiece.type} in hand for Turncoat swap at level ${level}`,
+            `Not enough ${type} in hand for Turncoat swaps (need ${need}, have ${state.hands[player][type]})`,
             'BR-STACK-006',
           ),
         };
@@ -303,7 +358,13 @@ export function validateMove(state: GameState, action: Action): PlayValidation {
     }
   }
 
-  // 6. BR-STACK-004: No stacking on Marshal (friendly or enemy)
+  // 6. BR-STACK-004: No stacking on Marshal (friendly or enemy).
+  //    Defense-in-depth ONLY: the movement engine already excludes
+  //    Marshal-topped targets (friendly or enemy) from getLegalDestinations
+  //    (BR-STACK-004 lives in movement.ts), so for movement-based actions
+  //    this branch is unreachable --- such moves are rejected earlier as
+  //    BR-MOVE-003 (destination unreachable). Kept as a belt-and-braces guard
+  //    in case a future caller bypasses the movement engine; do not remove.
   if (targetStack !== null && targetStack.length > 0) {
     const targetTop = topPiece(targetStack);
     if (targetTop.type === 'M') {
@@ -365,8 +426,11 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
   const { piece, dest } = action;
   const player = state.turn.activePlayer;
 
-  // 1. BR-ARATA-002: Piece must be in hand
-  if (state.hands[player][piece] < 1) {
+  // 1. BR-ARATA-002: Piece must be in hand.
+  //    Fail closed on unknown piece letters (untrusted Action input): an
+  //    out-of-ALL_PIECE_TYPES letter would otherwise pass `hand[piece] < 1`
+  //    (undefined < 1 === false) and later write NaN into the hand.
+  if (!ALL_PIECE_TYPES.includes(piece) || state.hands[player][piece] < 1) {
     return {
       ok: false,
       error: new GameError(`Piece ${piece} is not in ${player}'s hand`, 'BR-ARATA-002'),
@@ -389,8 +453,22 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
     };
   }
 
-  // 3+4+5. Check destination square
-  const targetStack = getStack(state.position, dest);
+  // 3+4+5. Check destination square.
+  //    Dest comes from the untrusted Action --- fail closed on an
+  //    out-of-bounds square (BR-PLAY-001) instead of letting getStack throw.
+  //    Out-of-range rows are already rejected by the zone check above; this
+  //    guard additionally covers out-of-range columns (BR-ARATA-003).
+  const destSquare = trySquare(dest.col, dest.row);
+  if (!destSquare) {
+    return {
+      ok: false,
+      error: new GameError(
+        `Destination (${dest.col}-${dest.row}) is out of bounds`,
+        'BR-ARATA-003',
+      ),
+    };
+  }
+  const targetStack = getStack(state.position, destSquare);
 
   if (targetStack !== null) {
     const targetTop = topPiece(targetStack);
@@ -429,11 +507,22 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
         error: new GameError('Only the Captain can perform Turncoat swaps', 'BR-STACK-006'),
       };
     }
-    // Each elected level must have an enemy piece, and hand must have match
+    // Each elected level must have an enemy piece. Hand availability is
+    // checked cumulatively AFTER the loop: the arata piece itself is
+    // consumed from the hand, and each swap draws an additional copy
+    // (GAN.md: "the Hand must hold two copies" for same-type double swaps).
     // After arata, the stack will be [...targetStack, captain]
     const captainPiece = { type: 'T' as const, owner: player };
     const postArataStack = targetStack === null ? [captainPiece] : [...targetStack, captainPiece];
+    const requiredHand: Record<PieceType, number> = { T: 1 } as Record<PieceType, number>; // the arata piece itself
+    const seenLevels = new Set<number>();
     for (const level of action.turncoat) {
+      if (!Number.isInteger(level) || level < 1) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} is invalid`, 'BR-STACK-006'),
+        };
+      }
       const idx = level - 1;
       if (idx >= postArataStack.length) {
         return {
@@ -444,6 +533,13 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
           ),
         };
       }
+      if (seenLevels.has(level)) {
+        return {
+          ok: false,
+          error: new GameError(`Turncoat level ${level} was already elected`, 'BR-STACK-006'),
+        };
+      }
+      seenLevels.add(level);
       const targetPiece = postArataStack[idx];
       if (targetPiece.owner === player) {
         return {
@@ -454,13 +550,15 @@ export function validateArata(state: GameState, action: Action): PlayValidation 
           ),
         };
       }
-      // Hand must have the piece for the swap (the arata piece T is consumed separately,
-      // and each swap uses an additional copy)
-      if (state.hands[player][targetPiece.type] < 1) {
+      requiredHand[targetPiece.type] = (requiredHand[targetPiece.type] ?? 0) + 1;
+    }
+    // Cumulative hand-availability check (BR-STACK-006).
+    for (const [type, need] of Object.entries(requiredHand) as [PieceType, number][]) {
+      if ((state.hands[player][type] ?? 0) < need) {
         return {
           ok: false,
           error: new GameError(
-            `No ${targetPiece.type} in hand for Turncoat swap at level ${level}`,
+            `Not enough ${type} in hand for Arata + Turncoat (need ${need}, have ${state.hands[player][type]})`,
             'BR-STACK-006',
           ),
         };

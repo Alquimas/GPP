@@ -256,6 +256,30 @@ describe('parseGAN --- invalid strings from GAN.md', () => {
     const result = parseGAN('!!');
     assertError(result, 'BR-GAN-GRAMMAR-007');
   });
+
+  // 5-6>5-5! --- '!' is a standalone Done token, never a Move suffix (GAN.md:459, BR-GAN-GRAMMAR-011)
+  it('rejects 5-6>5-5! (Move cannot carry Done)', () => {
+    const result = parseGAN('5-6>5-5!');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // 5-6>5-5!= --- '!' anywhere in a Move is illegal (BR-GAN-GRAMMAR-011)
+  it('rejects 5-6>5-5!= (interior ! in Move)', () => {
+    const result = parseGAN('5-6>5-5!=');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // T*5-6! --- '!' is a standalone Done token, never an Arata suffix (BR-GAN-GRAMMAR-011)
+  it('rejects T*5-6! (Arata cannot carry Done)', () => {
+    const result = parseGAN('T*5-6!');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
+
+  // T!*5-6 --- '!' anywhere in an Arata is illegal (BR-GAN-GRAMMAR-011)
+  it('rejects T!*5-6 (interior ! in Arata)', () => {
+    const result = parseGAN('T!*5-6');
+    assertError(result, 'BR-GAN-GRAMMAR-011');
+  });
 });
 
 // ---------------------------------------------------------------------------

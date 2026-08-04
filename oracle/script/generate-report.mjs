@@ -1,6 +1,8 @@
 /**
  * Generate fixtures/report.html from all .gsfen fixture files.
- * Reads from `fixtures/valid/` and `fixtures/invalid/` subdirectories.
+ * Reads from `fixtures/valid/` and `fixtures/invalid/` (recursively).
+ * Exits non-zero when a fixture behaves contrary to its directory:
+ * a valid/ fixture that fails validation, or an invalid/ fixture that passes.
  */
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
@@ -12,8 +14,26 @@ import { validateState } from '../src/gsfen/validate.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = resolve(__dirname, '../fixtures');
 
-function readFixture(subdir, name) {
-  return readFileSync(resolve(FIXTURE_DIR, subdir, `${name}.gsfen`), 'utf-8').trim();
+/** Recursively collect .gsfen files under `dir`, returned as paths relative to FIXTURE_DIR. */
+function collectGsfenFiles(dir) {
+  const full = resolve(FIXTURE_DIR, dir);
+  if (!existsSync(full)) return [];
+  const files = [];
+  for (const entry of readdirSync(full, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  )) {
+    const rel = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      files.push(...collectGsfenFiles(rel));
+    } else if (entry.name.endsWith('.gsfen')) {
+      files.push(rel);
+    }
+  }
+  return files;
+}
+
+function readFixture(relPath) {
+  return readFileSync(resolve(FIXTURE_DIR, relPath), 'utf-8').trim();
 }
 
 function renderBoardAscii(position) {
@@ -94,7 +114,9 @@ function fixtureHTML(name, raw) {
     handsTurnHtml = '(parse failed)';
   }
 
-  return `
+  return {
+    valid: !errMsg,
+    html: `
   <div class="fixture">
     <div class="fixture-header" onclick="toggle(this)">
       <span class="fixture-name">${name}</span>
@@ -109,47 +131,61 @@ function fixtureHTML(name, raw) {
       <div class="hands-turn">${handsTurnHtml}</div>
       ${errMsg ? `<h3>Validation Error</h3><div class="error-box">${errMsg}</div>` : ''}
     </div>
-  </div>`;
+  </div>`,
+  };
 }
 
-// Scan subdirectories
-const validNames = [];
-const invalidNames = [];
+// Scan directories (recursively) for .gsfen files.
+const validFiles = collectGsfenFiles('valid');
+const invalidFiles = collectGsfenFiles('invalid');
 
-if (existsSync(resolve(FIXTURE_DIR, 'valid'))) {
-  for (const f of readdirSync(resolve(FIXTURE_DIR, 'valid')).sort()) {
-    if (f.endsWith('.gsfen')) validNames.push(f.replace(/\.gsfen$/, ''));
-  }
-}
-if (existsSync(resolve(FIXTURE_DIR, 'invalid'))) {
-  for (const f of readdirSync(resolve(FIXTURE_DIR, 'invalid')).sort()) {
-    if (f.endsWith('.gsfen')) invalidNames.push(f.replace(/\.gsfen$/, ''));
-  }
-}
+const validResults = validFiles.map((rel) => ({
+  name: rel.replace(/\.gsfen$/, ''),
+  rel,
+  ...fixtureHTML(rel.replace(/\.gsfen$/, ''), readFixture(rel)),
+}));
+const invalidResults = invalidFiles.map((rel) => ({
+  name: rel.replace(/\.gsfen$/, ''),
+  rel,
+  ...fixtureHTML(rel.replace(/\.gsfen$/, ''), readFixture(rel)),
+}));
+
+const validCount = validResults.length;
+const validPass = validResults.filter((r) => r.valid).length;
+const validFail = validCount - validPass;
+
+const invalidCount = invalidResults.length;
+const invalidFail = invalidResults.filter((r) => !r.valid).length;
+const invalidPass = invalidCount - invalidFail;
 
 let validHTML = '';
-let validCount = 0;
-let validPass = 0;
-for (const name of validNames) {
-  const raw = readFixture('valid', name);
-  const html = fixtureHTML(name, raw);
-  validHTML += html;
-  validCount++;
-  if (html.includes('fixture-status valid')) validPass++;
-}
+for (const r of validResults) validHTML += r.html;
 
 let invalidHTML = '';
-let invalidCount = 0;
-let invalidPass = 0;
-for (const name of invalidNames) {
-  const raw = readFixture('invalid', name);
-  const html = fixtureHTML(name, raw);
-  invalidHTML += html;
-  invalidCount++;
-  if (html.includes('fixture-status valid')) invalidPass++;
+for (const r of invalidResults) invalidHTML += r.html;
+
+// Honest exit code: a fixture that contradicts its directory is a regression
+// (broken fixture or broken validation) and must fail the report run.
+if (validFail > 0) {
+  process.stderr.write(
+    `ERROR: ${validFail}/${validCount} fixture(s) in valid/ failed validation: ` +
+      validResults.filter((r) => !r.valid).map((r) => r.name).join(', ') + '\n',
+  );
+}
+if (invalidPass > 0) {
+  process.stderr.write(
+    `ERROR: ${invalidPass}/${invalidCount} fixture(s) in invalid/ passed validation: ` +
+      invalidResults.filter((r) => r.valid).map((r) => r.name).join(', ') + '\n',
+  );
+}
+if (validFail > 0 || invalidPass > 0) {
+  process.exitCode = 1;
 }
 
 const totalCount = validCount + invalidCount;
+// Pass/Fail cards count validation results across ALL fixtures, so the
+// numbers sum to the total. Directory-contradicting fixtures are still
+// reported on stderr and fail the run via process.exitCode above.
 const totalValid = validPass + invalidPass;
 const totalInvalid = totalCount - totalValid;
 

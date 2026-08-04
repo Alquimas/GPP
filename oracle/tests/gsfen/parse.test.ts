@@ -444,3 +444,71 @@ describe('parseGSFEN --- coordinate mapping', () => {
     expect(state.position[0][0]).toBeNull(); // Col 1
   });
 });
+
+describe('parseGSFEN --- hand count format (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)', () => {
+  it('rejects adjacent count digits "23P" (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)', () => {
+    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw 23P 1');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-HANDS-COUNT-FORMAT');
+  });
+
+  it('rejects adjacent count digits "44P" (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)', () => {
+    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw 44P 1');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-HANDS-COUNT-FORMAT');
+  });
+
+  it('rejects a trailing count digit with no following piece letter (BR-GSFEN-CANON-HANDS-COUNT-FORMAT)', () => {
+    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw P2 1');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-HANDS-COUNT-FORMAT');
+  });
+
+  it('still accepts a single count digit per letter (canonical "2P")', () => {
+    const state = assertOk(parseGSFEN('9/9/9/9/9/9/9/9/9 dw 2P 1'));
+    expect(state.hands.white.P).toBe(2);
+  });
+});
+
+describe('parseGSFEN --- counter length (BR-GSFEN-CANON-COUNTER-LENGTH)', () => {
+  it('rejects a 20-digit counter (BR-GSFEN-CANON-COUNTER-LENGTH)', () => {
+    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw - 12345678901234567890');
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-COUNTER-LENGTH');
+  });
+
+  it('accepts a 7-digit counter (exact boundary)', () => {
+    const state = assertOk(parseGSFEN('9/9/9/9/9/9/9/9/9 dw - 9999999'));
+    expect(state.turn.counter).toBe(9999999);
+  });
+
+  it('accepts a 6-digit counter (within bound)', () => {
+    const state = assertOk(parseGSFEN('9/9/9/9/9/9/9/9/9 dw - 999999'));
+    expect(state.turn.counter).toBe(999999);
+  });
+});
+
+describe('parseGSFEN --- "-" hands are fresh clones (no EMPTY_HAND aliasing)', () => {
+  it('does not return the frozen EMPTY_HAND singleton', () => {
+    const result = parseGSFEN('9/9/9/9/9/9/9/9/9 dw - 1');
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.hands.white).toEqual(EMPTY_HAND);
+    expect(result.state.hands.white).not.toBe(EMPTY_HAND);
+    expect(result.state.hands.black).not.toBe(EMPTY_HAND);
+  });
+
+  it('returns distinct hand objects across parses', () => {
+    const a = assertOk(parseGSFEN('9/9/9/9/9/9/9/9/9 dw - 1'));
+    const b = assertOk(parseGSFEN('9/9/9/9/9/9/9/9/9 dw - 1'));
+    expect(a.hands.white).not.toBe(b.hands.white);
+    expect(a.hands.black).not.toBe(b.hands.black);
+    // Mutating one parse's hand must not leak into another parse.
+    a.hands.white.P = 1;
+    expect(b.hands.white.P).toBe(0);
+  });
+});

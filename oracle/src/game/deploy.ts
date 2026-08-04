@@ -9,7 +9,8 @@
 
 import type { Action, GameState, Player } from '../types.js';
 import { GameError } from '../errors.js';
-import { getStack, topPiece, stackSize, hasPlacedMarshal } from '../board/board.js';
+import { ALL_PIECE_TYPES } from '../constants.js';
+import { getStack, topPiece, stackSize, hasPlacedMarshal, trySquare } from '../board/board.js';
 import type { ValidationResult } from './validation.js';
 
 // Re-export ValidationResult so consumers can import from deploy.ts
@@ -72,28 +73,26 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
     };
   }
 
-  // 2. Piece must be in hand
-  if (hand[piece] < 1) {
+  // 2. Piece must be in hand.
+  //    Fail closed on unknown piece letters (untrusted Action input): an
+  //    out-of-ALL_PIECE_TYPES letter would otherwise pass `hand[piece] < 1`
+  //    (undefined < 1 === false) and later write NaN into the hand.
+  if (!ALL_PIECE_TYPES.includes(piece) || hand[piece] < 1) {
     return {
       ok: false,
       error: new GameError(`Piece ${piece} is not in ${player}'s hand`, 'BR-DEPLOY-002'),
     };
   }
 
-  // 3. BR-DEPLOY-003: Marshal must be first placement
-  if (piece === 'M') {
-    // Marshal placement is valid --- but only if Marshal is still in hand
-    // (which we already checked above). The "first placement" condition
-    // is enforced below: if ANY of the player's non-Marshal pieces have
-    // been placed (count on board > 0), then Marshal should already be placed.
-  } else {
-    // Non-Marshal piece: Marshal must already be placed on the board
-    if (!hasPlacedMarshal(state.position, player)) {
-      return {
-        ok: false,
-        error: new GameError(`Must place Marshal before placing other pieces`, 'BR-DEPLOY-003'),
-      };
-    }
+  // 3. BR-DEPLOY-003: Marshal must be first placement.
+  //    Marshal placement needs no extra check (hand availability already
+  //    verified above); every non-Marshal piece requires the Marshal to
+  //    already be on the board.
+  if (piece !== 'M' && !hasPlacedMarshal(state.position, player)) {
+    return {
+      ok: false,
+      error: new GameError(`Must place Marshal before placing other pieces`, 'BR-DEPLOY-003'),
+    };
   }
 
   // 4. BR-DEPLOY-004: Deploy zone
@@ -107,8 +106,22 @@ export function validatePlacement(state: GameState, action: Action): ValidationR
     };
   }
 
-  // 5+6. Check destination square (BR-DEPLOY-005/006)
-  const targetStack = getStack(state.position, dest);
+  // 5+6. Check destination square (BR-DEPLOY-005/006).
+  //    Dest comes from the untrusted Action --- fail closed on an
+  //    out-of-bounds square (BR-PLAY-001) instead of letting getStack throw.
+  //    Out-of-range rows are already rejected by the zone check above; this
+  //    guard additionally covers out-of-range columns (BR-DEPLOY-004).
+  const destSquare = trySquare(dest.col, dest.row);
+  if (!destSquare) {
+    return {
+      ok: false,
+      error: new GameError(
+        `Destination (${dest.col}-${dest.row}) is out of bounds`,
+        'BR-DEPLOY-004',
+      ),
+    };
+  }
+  const targetStack = getStack(state.position, destSquare);
 
   if (targetStack !== null) {
     const targetTop = topPiece(targetStack);

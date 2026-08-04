@@ -82,8 +82,8 @@ async function doSendAction(action) {
     serverState = res;
     currentViewIndex = serverState.currentIndex;
     return true;
-  } catch {
-    setStatus('Failed to send action', true);
+  } catch (e) {
+    setStatus('Failed to send action' + (e?.message ? ': ' + e.message : ''), true);
     return false;
   }
 }
@@ -95,8 +95,8 @@ async function doUndo() {
     serverState = res;
     currentViewIndex = serverState.currentIndex;
     return true;
-  } catch {
-    setStatus('Failed to undo', true);
+  } catch (e) {
+    setStatus('Failed to undo' + (e?.message ? ': ' + e.message : ''), true);
     return false;
   }
 }
@@ -109,8 +109,8 @@ async function doGotoHistory(index) {
     currentViewIndex = index;
     renderAll();
     return true;
-  } catch {
-    setStatus('Failed to navigate history', true);
+  } catch (e) {
+    setStatus('Failed to navigate history' + (e?.message ? ': ' + e.message : ''), true);
     return false;
   }
 }
@@ -126,8 +126,8 @@ async function doReset(gsfen) {
     pendingAction = null;
     renderAll();
     return true;
-  } catch {
-    setStatus('Failed to reset game', true);
+  } catch (e) {
+    setStatus('Failed to reset game' + (e?.message ? ': ' + e.message : ''), true);
     return false;
   }
 }
@@ -692,13 +692,28 @@ async function executeBattleAction(action) {
 async function onConfirm() {
   if (!pendingAction) return;
   const action = pendingAction;
-  pendingAction = null;
-  const result = await sendAction(action);
-  if (result.error) {
-    setStatus('Error: ' + result.error);
+
+  let result;
+  try {
+    result = await sendAction(action);
+  } catch (e) {
+    // Network/parse failure (or a server-side rejection thrown by api()):
+    // keep the action pending so the player can retry or cancel.
+    setStatus('Failed to send action' + (e?.message ? ': ' + e.message : ''), true);
     renderAll();
     return;
   }
+
+  if (result.error) {
+    // Defensive: the server normally rejects with a non-2xx status instead.
+    pendingAction = null;
+    setStatus('Error: ' + result.error, true);
+    renderAll();
+    return;
+  }
+
+  // Only clear the pending action once the server accepted it.
+  pendingAction = null;
   serverState = result;
   currentViewIndex = serverState.currentIndex;
   selectedCell = null;
@@ -733,38 +748,51 @@ async function startPresentation() {
   setStatus(`Presenting ${gans.length} actions…`);
 
   let aborted = false;
+  let failed = false;
   presentAbort = () => { aborted = true; };
 
-  for (let i = 0; i < gans.length; i++) {
-    if (aborted || serverState?.isTerminal) break;
+  try {
+    for (let i = 0; i < gans.length; i++) {
+      if (aborted || serverState?.isTerminal) break;
 
-    setStatus(`Presenting ${i + 1}/${gans.length}: ${gans[i]}`);
+      setStatus(`Presenting ${i + 1}/${gans.length}: ${gans[i]}`);
 
-    const result = await applyGAN(gans[i]);
-    if (result.error) {
-      setStatus(`Presentation stopped at action ${i + 1}: ${result.error}`, true);
-      break;
+      const result = await applyGAN(gans[i]);
+      // Stop may have been pressed while the request was in flight: never
+      // commit (or render) an action the user tried to abort.
+      if (aborted) break;
+
+      if (result.error) {
+        setStatus(`Presentation stopped at action ${i + 1}: ${result.error}`, true);
+        break;
+      }
+
+      serverState = result;
+      currentViewIndex = serverState.currentIndex;
+      renderAll();
+
+      if (serverState.isTerminal) {
+        setStatus('Game ended --- presentation complete');
+        break;
+      }
+
+      // Wait 1 second between actions (skip wait after last)
+      if (i < gans.length - 1 && !aborted) {
+        await new Promise(r => { const t = setTimeout(r, 1000); presentAbort = () => { clearTimeout(t); aborted = true; r(); }; });
+        if (aborted) break;
+      }
     }
-
-    serverState = result;
-    currentViewIndex = serverState.currentIndex;
+  } catch (e) {
+    // Network failure etc.: surface the error instead of leaving the UI stuck
+    // in "presenting" mode (the finally below always resets the state).
+    failed = true;
+    setStatus('Presentation failed' + (e?.message ? ': ' + e.message : ''), true);
+  } finally {
+    presenting = false;
+    presentAbort = null;
+    if (!aborted && !failed && !serverState?.isTerminal) setStatus('Presentation complete');
     renderAll();
-
-    if (serverState.isTerminal) {
-      setStatus('Game ended --- presentation complete');
-      break;
-    }
-
-    // Wait 3 seconds between actions (skip wait after last)
-    if (i < gans.length - 1 && !aborted) {
-      await new Promise(r => { const t = setTimeout(r, 1000); presentAbort = () => { clearTimeout(t); aborted = true; r(); }; });
-    }
   }
-
-  presenting = false;
-  presentAbort = null;
-  if (!aborted && !serverState?.isTerminal) setStatus('Presentation complete');
-  renderAll();
 }
 
 function stopPresentation() {
@@ -808,9 +836,10 @@ function renderMoveList() {
   if (history.length <= 1) {
     html += '<div style="color:#666;font-style:italic;padding:12px;text-align:center;font-size:12px;">Game started</div>';
   } else {
-    // Track player turns for deploy phase (battle strictly alternates).
-    // Deploy: players alternate, but if a player has declared done,
-    // their turn is skipped and the other player goes again.
+    // Turn attribution. The server reports the acting player on every history
+    // entry (entry.player), so use it directly. The simulated tracker below
+    // is only a fallback for entries that predate that field: battle strictly
+    // alternates, and in deploy a player who declared done ('!') is skipped.
     let whiteDone = false;
     let blackDone = false;
     let isWhiteTurn = true;       // first action is always White
@@ -832,44 +861,37 @@ function renderMoveList() {
       }
 
       const isCurrent = i === currentIdx;
-      const isDeploy = !isBattleAction;
       const displayLabel = actionGAN || '---';
       const isDone = actionGAN === '!';
 
-      if (inBattle) {
-        // Battle: strictly alternate every action.
-        if (isWhiteTurn) {
-          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
-            <span class="ml-tnum">${i}</span>
-            <span class="ml-move${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
-            <span class="ml-move"></span>
-          </div>`;
-        } else {
-          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
-            <span class="ml-tnum">${i}</span>
-            <span class="ml-move"></span>
-            <span class="ml-move${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
-          </div>`;
-        }
-        isWhiteTurn = !isWhiteTurn; // strict alternation in battle
+      // Attribution: trust the server-provided acting player when present;
+      // otherwise fall back to the simulated turn tracker.
+      const hasPlayer = entry.player === 'white' || entry.player === 'black';
+      const whiteTurn = hasPlayer ? entry.player === 'white' : isWhiteTurn;
+
+      if (whiteTurn) {
+        html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
+          <span class="ml-tnum">${i}</span>
+          <span class="ml-move${inBattle ? '' : ' ml-deploy'}${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
+          <span class="ml-move"></span>
+        </div>`;
       } else {
-        // Deploy: skip done players
-        if (isWhiteTurn) {
-          if (isDone) whiteDone = true;
-          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
-            <span class="ml-tnum">${i}</span>
-            <span class="ml-move ml-deploy${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
-            <span class="ml-move"></span>
-          </div>`;
-          isWhiteTurn = blackDone; // next is Black unless Black is done
+        html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
+          <span class="ml-tnum">${i}</span>
+          <span class="ml-move"></span>
+          <span class="ml-move${inBattle ? '' : ' ml-deploy'}${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
+        </div>`;
+      }
+
+      // Advance the fallback tracker only when the server gave no player.
+      if (!hasPlayer) {
+        if (inBattle) {
+          isWhiteTurn = !whiteTurn; // strict alternation in battle
         } else {
-          if (isDone) blackDone = true;
-          html += `<div class="ml-turn${isCurrent ? ' current' : ''}">
-            <span class="ml-tnum">${i}</span>
-            <span class="ml-move"></span>
-            <span class="ml-move ml-deploy${isCurrent ? ' ml-cur' : ''}" data-hi="${i}">${escapeHtml(displayLabel)}</span>
-          </div>`;
-          isWhiteTurn = !whiteDone; // next is White unless White is done
+          if (isDone) {
+            if (whiteTurn) whiteDone = true; else blackDone = true;
+          }
+          isWhiteTurn = whiteTurn ? blackDone : !whiteDone; // skip done players
         }
       }
     }

@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 // ── Oracle imports ──────────────────────────────────────────────────
 import { Game } from "../oracle/src/game/game.js";
 import type { Action } from "../oracle/src/types.js";
-import { PIECE_NAMES } from "../oracle/src/constants.js";
+import { PIECE_NAMES, ALL_PIECE_TYPES } from "../oracle/src/constants.js";
 import { serializeGAN } from "../oracle/src/gan/serialize.js";
 
 // ── Paths ───────────────────────────────────────────────────────────
@@ -23,6 +23,7 @@ const ROOT = path.resolve(__dirname, "..");
 const ASSETS_DIR = path.join(ROOT, "assets");
 const INDEX_HTML = path.join(__dirname, "index.html");
 const PORT = parseInt(process.env.PORT ?? "") || 3030;
+const MAX_BODY_BYTES = 1024 * 1024; // 1 MB cap on request bodies
 
 // ── MIME types ──────────────────────────────────────────────────────
 const MIME: Record<string, string> = {
@@ -45,6 +46,8 @@ interface HistoryEntry {
   gsfen: string;
   actionGAN: string | null;
   actionLabel: string | null;
+  /** Acting player for this entry's action (player to move for the initial entry). */
+  player: "white" | "black";
 }
 
 let game: Game;
@@ -58,7 +61,15 @@ let _parseGAN: ((s: string) => any) | null = null;
 
 function startNewGame(gsfen?: string): void {
   game = new Game(gsfen);
-  fullHistory = [{ gsfen: game.toGsfen(), actionGAN: null, actionLabel: null }];
+  fullHistory = [
+    {
+      gsfen: game.toGsfen(),
+      actionGAN: null,
+      actionLabel: null,
+      // Initial entry has no action, so record the player to move there.
+      player: game.state.turn.activePlayer,
+    },
+  ];
   currentGameIndex = 0;
 }
 
@@ -66,6 +77,22 @@ startNewGame();
 
 /** Apply an action. Returns the new result on success. */
 function doAction(action: Action): { ok: true } | { ok: false; error: string } {
+  // Read the acting player BEFORE applying (the state getter returns a clone).
+  const actingPlayer = game.state.turn.activePlayer;
+
+  // Serialize and label BEFORE mutating state: if serialization throws
+  // (e.g. malformed turncoat), nothing has been applied, so history can
+  // never diverge from the board.
+  let ganStr: string;
+  let pn: string;
+  try {
+    ganStr = serializeGAN(action);
+    pn = actionLabel(action);
+  } catch (e: any) {
+    console.error("ORACLE THREW:", e.message ?? e);
+    return { ok: false, error: "ORACLE ERROR: " + (e.message ?? String(e)) };
+  }
+
   let applyResult;
   try {
     applyResult = game.applyAction(action);
@@ -83,10 +110,13 @@ function doAction(action: Action): { ok: true } | { ok: false; error: string } {
 
   // Action succeeded
   const afterGsfen = game.toGsfen();
-  const ganStr = serializeGAN(action);
-  const pn = actionLabel(action);
   fullHistory = fullHistory.slice(0, currentGameIndex + 1);
-  fullHistory.push({ gsfen: afterGsfen, actionGAN: ganStr, actionLabel: pn });
+  fullHistory.push({
+    gsfen: afterGsfen,
+    actionGAN: ganStr,
+    actionLabel: pn,
+    player: actingPlayer,
+  });
   currentGameIndex = fullHistory.length - 1;
 
   return { ok: true };
@@ -228,6 +258,7 @@ function buildStateResponse(): object {
     gsfen: entry.gsfen,
     action: entry.actionLabel,
     actionGAN: entry.actionGAN,
+    player: entry.player,
     isCurrent: i === currentGameIndex,
   }));
 
@@ -280,14 +311,46 @@ function resultLabel(result: { kind: string; loser?: string }): string {
 function parseBody(req: http.IncomingMessage): Promise<any> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
-    req.on("data", (c: Buffer) => chunks.push(c));
+    let total = 0;
+    let settled = false;
+    const settle = (value: any): void => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    // Defensive: bail out immediately if the declared length is over the cap.
+    const declaredLength = parseInt(
+      String(req.headers["content-length"] ?? ""),
+      10,
+    );
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+      settle(null);
+      return;
+    }
+
+    req.on("data", (c: Buffer) => {
+      if (settled) return; // already rejected (oversize / abort)
+      total += c.length;
+      if (total > MAX_BODY_BYTES) {
+        // Stop accumulating past the cap; the route sees null.
+        settle(null);
+        return;
+      }
+      chunks.push(c);
+    });
     req.on("end", () => {
+      if (settled) return;
       try {
-        resolve(JSON.parse(Buffer.concat(chunks).toString()));
+        settle(JSON.parse(Buffer.concat(chunks).toString()));
       } catch {
-        resolve(null);
+        settle(null);
       }
     });
+    // Client abort or connection error mid-body: settle instead of leaving
+    // the promise pending and crashing the process on an unhandled event.
+    req.on("error", () => settle(null));
+    req.on("aborted", () => settle(null));
   });
 }
 
@@ -317,13 +380,41 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
   const method = req.method ?? "GET";
 
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  // Content-Security-Policy: index.html uses inline style="" attributes
+  // (hence 'unsafe-inline' for styles) but has NO inline <script> blocks,
+  // so script-src 'self' is sufficient. All resources are same-origin.
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'",
+  );
+
+  // CORS: reflect the origin ONLY for the local dev origins (the server
+  // binds loopback). Any other origin gets no Access-Control-Allow-Origin.
+  const origin = req.headers.origin;
+  if (
+    origin === `http://localhost:${PORT}` ||
+    origin === `http://127.0.0.1:${PORT}`
+  ) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (method === "OPTIONS") {
     res.writeHead(204);
     res.end();
+    return;
+  }
+
+  // Reject oversized request bodies up front when Content-Length is known.
+  const declaredLength = parseInt(
+    String(req.headers["content-length"] ?? ""),
+    10,
+  );
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+    req.resume(); // drain the socket so it can be reused
+    json(res, 413, { error: "Request body too large (max 1 MB)" });
     return;
   }
 
@@ -406,7 +497,11 @@ const server = http.createServer(async (req, res) => {
 
     if (url.pathname === "/api/goto" && method === "POST") {
       const body = await parseBody(req);
-      if (typeof body?.index !== "number" || !doGoto(body.index)) {
+      if (
+        typeof body?.index !== "number" ||
+        !Number.isInteger(body.index) ||
+        !doGoto(body.index)
+      ) {
         json(res, 400, { error: "Invalid index" });
         return;
       }
@@ -429,12 +524,16 @@ const server = http.createServer(async (req, res) => {
     // ── Serve assets ─────────────────────────────────────────────
     if (url.pathname.startsWith("/assets/")) {
       const filename = url.pathname.slice("/assets/".length);
-      // Prevent path traversal
-      if (filename.includes("..") || filename.includes("~")) {
+      // Prevent path traversal / escape from ASSETS_DIR.
+      const filePath = path.resolve(ASSETS_DIR, filename);
+      if (
+        filename.includes("..") ||
+        filename.includes("~") ||
+        !filePath.startsWith(ASSETS_DIR + path.sep)
+      ) {
         text(res, 403, "Forbidden");
         return;
       }
-      const filePath = path.join(ASSETS_DIR, filename);
       try {
         const content = await fs.readFile(filePath);
         binary(res, 200, mimeType(filePath), content);
@@ -480,8 +579,13 @@ const server = http.createServer(async (req, res) => {
     // ── Serve static files (JS, CSS, etc.) ────────────────────────
     const ext = path.extname(url.pathname).toLowerCase();
     if (ext === ".js" || ext === ".css") {
-      // Resolve relative to client/ directory
-      const filePath = path.join(__dirname, url.pathname.replace(/^\//, ""));
+      // Resolve relative to client/ directory, enforcing containment:
+      // the resolved path must stay inside __dirname.
+      const filePath = path.resolve(__dirname, url.pathname.replace(/^\//, ""));
+      if (!filePath.startsWith(__dirname + path.sep)) {
+        text(res, 403, "Forbidden");
+        return;
+      }
       try {
         const content = await fs.readFile(filePath, "utf-8");
         res.writeHead(200, { "Content-Type": mimeType(filePath) });
@@ -534,10 +638,46 @@ function missingPieceSVG(filePath: string): string | null {
 
 // ── Build Action from DTO ───────────────────────────────────────────
 
+const PIECE_TYPE_SET: ReadonlySet<string> = new Set(ALL_PIECE_TYPES);
+
+/** True if v is an object with integer col/row in 1..9. */
+function isValidSquare(v: any): boolean {
+  return (
+    v !== null &&
+    typeof v === "object" &&
+    Number.isInteger(v.col) &&
+    Number.isInteger(v.row) &&
+    v.col >= 1 &&
+    v.col <= 9 &&
+    v.row >= 1 &&
+    v.row <= 9
+  );
+}
+
+/** True if v is an array whose elements are all 1 or 2 (TurncoatLevels). */
+function isValidTurncoat(v: any): boolean {
+  // Strictly ascending: serializeTurncoat joins levels into "+12"; the GAN
+  // parser accepts only "1", "2", "12", so [2,1] would create a history
+  // entry that cannot be replayed after undo/goto.
+  return (
+    Array.isArray(v) &&
+    v.every((n) => n === 1 || n === 2) &&
+    v.every((n, i) => i === 0 || v[i - 1] < n)
+  );
+}
+
+/**
+ * Validate the raw wire DTO BEFORE constructing the Action so the engine
+ * never sees unvalidated input (the engine fails open on unknown piece
+ * letters and crashes on bad coordinates).
+ */
 function buildActionFromDTO(dto: any): Action | null {
   try {
     switch (dto.kind) {
       case "placement":
+        if (!PIECE_TYPE_SET.has(dto.piece) || !isValidSquare(dto.dest)) {
+          return null;
+        }
         return {
           kind: "placement",
           piece: dto.piece,
@@ -545,21 +685,37 @@ function buildActionFromDTO(dto: any): Action | null {
         };
       case "done":
         return { kind: "done" };
-      case "move":
+      case "move": {
+        if (!isValidSquare(dto.origin) || !isValidSquare(dto.dest)) {
+          return null;
+        }
+        const outcome = dto.outcome ?? null;
+        if (outcome !== null && outcome !== "stack" && outcome !== "capture") {
+          return null;
+        }
+        const turncoat = dto.turncoat ?? [];
+        if (!isValidTurncoat(turncoat)) return null;
         return {
           kind: "move",
           origin: dto.origin,
           dest: dto.dest,
-          outcome: dto.outcome ?? null,
-          turncoat: dto.turncoat ?? [],
+          outcome,
+          turncoat,
         };
-      case "arata":
+      }
+      case "arata": {
+        if (!PIECE_TYPE_SET.has(dto.piece) || !isValidSquare(dto.dest)) {
+          return null;
+        }
+        const turncoat = dto.turncoat ?? [];
+        if (!isValidTurncoat(turncoat)) return null;
         return {
           kind: "arata",
           piece: dto.piece,
           dest: dto.dest,
-          turncoat: dto.turncoat ?? [],
+          turncoat,
         };
+      }
       default:
         return null;
     }
@@ -579,9 +735,9 @@ async function main() {
     console.warn("GAN parser not available:", err);
   }
 
-  server.listen(PORT, () => {
+  server.listen(PORT, "127.0.0.1", () => {
     console.log(`\n  🏯 Gungi Developer Client\n`);
-    console.log(`  -> http://localhost:${PORT}\n`);
+    console.log(`  -> http://127.0.0.1:${PORT} (loopback only)\n`);
     console.log(`  Keys:  g=GSFEN  a=Actions  h=History  t=Turn info`);
     console.log(`         u=Undo  ←->=Navigate  r=Reset  ?=Help\n`);
   });

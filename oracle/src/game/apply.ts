@@ -17,7 +17,7 @@ import type {
   Stack,
   TurncoatLevels,
 } from '../types.js';
-import { createStack, getStack, setStack, topPiece } from '../board/board.js';
+import { createStack, getStack, setStack, stackSize, topPiece } from '../board/board.js';
 import { ALL_PIECE_TYPES } from '../constants.js';
 
 /** Placement transition plus a signal that both players are Done. */
@@ -142,8 +142,11 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
 
   // 5. Turn management
   if (playerDone) {
-    // Current player is done --- check if opponent is already done
-    if (newState.turn.done !== null) {
+    // Current player is done --- check if opponent is already done. "Done"
+    // is derived from an empty hand (GSFEN canonical form omits the flag),
+    // so a reloaded state without the flag still behaves identically.
+    const opponentDone = newState.turn.done !== null || isHandEmpty(newState.hands[opponent(player)]);
+    if (opponentDone) {
       // Opponent already done -> both done. The engine evaluates Exposure
       // before deciding whether the Battle Phase starts.
       return { state: newState, deployEnded: true };
@@ -154,7 +157,8 @@ export function applyPlacement(state: GameState, action: PlacementAction): Place
     newState.turn.activePlayer = opponent(player);
   } else {
     // Player is NOT done
-    if (newState.turn.done !== null) {
+    const opponentDone = newState.turn.done !== null || isHandEmpty(newState.hands[opponent(player)]);
+    if (opponentDone) {
       // Opponent already done -> non-done player keeps the turn
       // (activePlayer already is this player, so no change needed)
     } else {
@@ -187,7 +191,7 @@ export function applyDone(state: GameState): PlacementResult {
   // Set the GSFEN Done flag; no position/hands/counter changes.
   newState.turn.done = player;
 
-  if (state.turn.done !== null) {
+  if (state.turn.done !== null || isHandEmpty(state.hands[opponent(player)])) {
     // Opponent already done -> both done -> Deploy Phase boundary.
     return { state: newState, deployEnded: true };
   }
@@ -242,6 +246,14 @@ function applyTurncoatSwaps(
     // Validated before: enemyPiece exists and belongs to opponent
     newStack[idx] = { type: enemyPiece.type, owner: player };
     newHand[enemyPiece.type]--;
+    // Defensive: validation accounts for all elected levels cumulatively;
+    // never allow the hand ledger to go negative (would corrupt material).
+    const remaining = newHand[enemyPiece.type];
+    if (!Number.isInteger(remaining) || remaining < 0) {
+      throw new Error(
+        `Turncoat swap would overdraw ${player}'s hand (${enemyPiece.type} = ${remaining}) --- validation bug`,
+      );
+    }
   }
 
   return { stack: createStack(newStack), hand: newHand };
@@ -289,10 +301,32 @@ export function applyMove(state: GameState, action: MoveAction): GameState {
   if (targetStack === null) {
     // Empty square --- place piece alone
     destStack = createStack([movingPiece]);
-  } else if (
-    outcome === 'capture' ||
-    (outcome === null && topPiece(targetStack).owner !== movingPiece.owner)
-  ) {
+  } else if (outcome === 'capture') {
+    // Capture with an explicit outcome token (validated: a choice existed).
+    // Remove enemy pieces, keep friendly, then add moving piece on top.
+    const remaining = removeEnemyPieces(targetStack, movingPiece.owner);
+    if (remaining === null) {
+      destStack = createStack([movingPiece]);
+    } else {
+      const pieces = [...remaining, movingPiece];
+      destStack = createStack(pieces);
+    }
+  } else if (outcome === null && topPiece(targetStack).owner !== movingPiece.owner) {
+    // Canonical forced capture (GAN.md: the outcome token is OMITTED for
+    // forced outcomes; candidates.ts normalizes forced captures to null).
+    // This mirrors validateOutcome's forced-capture classification: a null
+    // outcome on an enemy top can only reach applyMove through a validated
+    // action when the capture is forced --- enemy target at max size (3) or
+    // source stack size < target stack size.
+    const targetSize = stackSize(targetStack);
+    if (targetSize < 3 && targetSize <= originStack.length) {
+      // Neither forced-capture condition holds --- this is a capture the
+      // validator would have required an explicit outcome token for. Never
+      // silently capture; fail loudly (matches this module's throw style).
+      throw new Error(
+        `applyMove requires a validated action: null outcome on an enemy top must be a forced capture (target size 3 or source < target); got target size ${targetSize}, source size ${originStack.length}`,
+      );
+    }
     // Capture: remove enemy pieces, keep friendly, then add moving piece on top
     const remaining = removeEnemyPieces(targetStack, movingPiece.owner);
     if (remaining === null) {

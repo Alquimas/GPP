@@ -9,7 +9,6 @@ export type StrategyName =
   | 'favor-arata'
   | 'only-moves'
   | 'only-placements'
-  | 'cycle-through'
   | 'custom';
 
 export type StrategyFn = (

@@ -70,7 +70,6 @@ The oracle exposes a deterministic game engine with the following core modules:
 | `src/game/engine.ts` | Pure function game loop (apply action, check terminal) |
 | `src/gan/parse.ts` | GAN string parser |
 | `src/gan/serialize.ts` | GAN string serializer |
-| `src/gan/validate.ts` | GAN semantic validation against game state |
 | `src/gsfen/parse.ts` | GSFEN string parser |
 | `src/gsfen/serialize.ts` | GSFEN string serializer |
 | `src/gsfen/validate.ts` | GSFEN state validation |

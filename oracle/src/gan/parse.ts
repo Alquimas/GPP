@@ -199,6 +199,7 @@ export function parsePlacement(gan: string): Action {
  *
  * @param gan - The full GAN string.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-009' if whitespace present.
+ * @throws {GameError} with rule 'BR-GAN-GRAMMAR-011' if the string contains '!'.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-008' on invalid characters.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-005' on missing '>' separator.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-006' on multiple '>' separators.
@@ -210,6 +211,16 @@ export function parseMove(gan: string): Action {
     throw new GameError(
       `Move "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`,
       'BR-GAN-GRAMMAR-009',
+    );
+  }
+
+  // BR-GAN-GRAMMAR-011: '!' is a standalone Done Action token, never a Move
+  // suffix (GAN.md documents `5-6>5-5!` as BR-GAN-GRAMMAR-011). Checked
+  // before the charset rule so the reported rule is GRAMMAR-011, not 008.
+  if (gan.includes('!')) {
+    throw new GameError(
+      `Move "${gan}" contains "!" --- Done is a standalone Action token (BR-GAN-GRAMMAR-011)`,
+      'BR-GAN-GRAMMAR-011',
     );
   }
 
@@ -306,6 +317,7 @@ export function parseMove(gan: string): Action {
  * @param gan - The full GAN string.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-007' if too short.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-009' if whitespace present.
+ * @throws {GameError} with rule 'BR-GAN-GRAMMAR-011' if the string contains '!'.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-003' on invalid piece letter.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-005' on missing '*' separator.
  * @throws {GameError} with rule 'BR-GAN-GRAMMAR-006' on multiple '*' separators.
@@ -321,6 +333,16 @@ export function parseArata(gan: string): Action {
     throw new GameError(
       `Arata "${gan}" contains whitespace (BR-GAN-GRAMMAR-009)`,
       'BR-GAN-GRAMMAR-009',
+    );
+  }
+
+  // BR-GAN-GRAMMAR-011: '!' is a standalone Done Action token, never an
+  // Arata suffix. Checked before the trailing-characters rule so the
+  // reported rule is GRAMMAR-011, not 008.
+  if (gan.includes('!')) {
+    throw new GameError(
+      `Arata "${gan}" contains "!" --- Done is a standalone Action token (BR-GAN-GRAMMAR-011)`,
+      'BR-GAN-GRAMMAR-011',
     );
   }
 
@@ -458,10 +480,8 @@ export function parseGAN(gan: string): ParseResult {
     if (e instanceof GameError) {
       return { ok: false, error: e };
     }
-    // BR-GAN-GRAMMAR-008: Defensive catch-all for unexpected parse errors
-    return {
-      ok: false,
-      error: new GameError(`Unexpected parse error: ${(e as Error).message}`, 'BR-GAN-GRAMMAR-008'),
-    };
+    // Any non-GameError exception here is a genuine parser bug --- propagate
+    // it instead of masking it as a grammar violation (BR-GAN-GRAMMAR-008).
+    throw e;
   }
 }

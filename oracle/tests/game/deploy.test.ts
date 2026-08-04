@@ -11,11 +11,13 @@
 import { describe, it, expect } from 'vitest';
 import type { Action, GameState, PieceType, Square } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
+import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { validatePlacement, validateDone } from '../../src/game/deploy.js';
 import { applyPlacement, applyDone } from '../../src/game/apply.js';
 import { step } from '../../src/game/engine.js';
-import { getStack, topPiece } from '../../src/board/board.js';
+import { createStack, getStack, setStack, topPiece } from '../../src/board/board.js';
+import { EMPTY_HAND } from '../../src/constants.js';
 import {
   BOTH_MARSHALS_BATTLE_NOHANDS,
   DEPLOY_AUTO_DONE,
@@ -99,8 +101,10 @@ describe('validatePlacement', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-003');
   });
 
-  it('accepts Marshal as first placement (BR-DEPLOY-003)', () => {
-    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 9));
+  it('accepts non-Marshal placement on an empty zone square once the Marshal is deployed (BR-DEPLOY-006)', () => {
+    // DEPLOY_PHASE_CTR3: White Marshal already at (5,9), White to place.
+    // (5,8) is empty and inside the deploy zone (rows 7-9) --- BR-DEPLOY-006.
+    const r = validatePlacement(gsfenState(DEPLOY_PHASE_CTR3), placement('P', 5, 8));
     expect(r.ok).toBe(true);
   });
 
@@ -110,8 +114,9 @@ describe('validatePlacement', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-004');
   });
 
-  it('accepts placement on empty square in deploy zone', () => {
-    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 9));
+  it('accepts placement on a boundary row of the deploy zone (row 7)', () => {
+    // Row 7 is the outermost row of White's zone (7-9) --- still legal.
+    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 7));
     expect(r.ok).toBe(true);
   });
 
@@ -138,14 +143,26 @@ describe('validatePlacement', () => {
     if (!r.ok) expect(r.error.rule).toBe('BR-STACK-004');
   });
 
-  it('accepts placement on a valid square', () => {
-    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 9));
-    expect(r.ok).toBe(true);
+  it('rejects placement on an enemy-topped square (BR-DEPLOY-005)', () => {
+    // White Marshal at (5,9), Black Pawn on (5,8) inside White's zone.
+    const base = gsfenState(DEPLOY_PHASE_CTR3);
+    const state: GameState = {
+      ...base,
+      position: setStack(
+        base.position,
+        { col: 5, row: 8 },
+        createStack([{ type: 'P', owner: 'black' }]),
+      ),
+    };
+    const r = validatePlacement(state, placement('P', 5, 8));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-005');
   });
 
-  it('rejects placement outside deploy zone (BR-DEPLOY-004)', () => {
-    // Placing outside the deploy zone must still be rejected.
-    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 5, 5));
+  it('rejects placement with an out-of-bounds destination (BR-DEPLOY-004)', () => {
+    // Dest comes from the untrusted Action; getStack would throw a bare
+    // Error on an out-of-bounds square. validatePlacement must fail closed.
+    const r = validatePlacement(gsfenState(STARTPOS), placement('M', 0, 9));
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error.rule).toBe('BR-DEPLOY-004');
   });
@@ -245,7 +262,7 @@ describe('applyPlacement', () => {
   });
 
   it('sets done flag and gives opponent the turn when declaring Done', () => {
-    let state = gsfenState(STARTPOS);
+    const state = gsfenState(STARTPOS);
 
     // White places Marshal, Black places Marshal (both on their own turns),
     // then White declares Done as a standalone action.
@@ -488,6 +505,38 @@ describe('applyPlacement', () => {
     if (r.result.kind === 'exposure') {
       expect(r.result.loser).toBe('black');
     }
+  });
+
+  it('auto-Done survives a GSFEN round-trip without an explicit Done (derivable flag)', () => {
+    // Only the Marshals remain in hand, so each player auto-dones on their
+    // last placement. After White's placement the canonical serializer omits
+    // the done flag (empty hand is derivable); reloading that GSFEN must
+    // still end the Deploy Phase when Black places its last piece, without
+    // any explicit Done action.
+    const state = gsfenState(STARTPOS_EXPANDED);
+    state.hands.white = { ...EMPTY_HAND, M: 1 };
+    state.hands.black = { ...EMPTY_HAND, M: 1 };
+
+    const w = applyPlacement(state, placement('M', 5, 9));
+    expect(w.deployEnded).toBe(false);
+    expect(w.state.turn.done).toBe('white');
+    expect(w.state.turn.activePlayer).toBe('black');
+
+    // Canonical serialization omits the derivable flag: token is 'db'
+    // (Black places next), never the legacy 'dbW'.
+    const gsfen = serializeGSFEN(w.state);
+    expect(gsfen).toMatch(/\sdb\s/);
+    expect(gsfen).not.toMatch(/\sdbW\s/);
+
+    const reloaded = parseGSFEN(gsfen);
+    expect(reloaded.ok).toBe(true);
+    if (!reloaded.ok) return;
+    expect(reloaded.state.turn.done).toBeNull();
+
+    // Black places its last piece -> both hands empty -> Deploy Phase ends,
+    // even though no done flag survived the round-trip.
+    const b = applyPlacement(reloaded.state, placement('M', 5, 1));
+    expect(b.deployEnded).toBe(true);
   });
 });
 

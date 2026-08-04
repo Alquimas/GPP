@@ -56,8 +56,16 @@ export function trySquare(col: number, row: number): Square | null {
  *
  * The cast is provably safe here: c ∈ [0,8] ⇒ c+1 ∈ [1,9].  Isolating
  * the cast in one helper keeps the invariant auditable.
+ *
+ * @throws if either index is not an integer in 0..8 --- same loud style as
+ *   `getStack`/`setStack` so a buggy caller fails loudly instead of silently
+ *   fabricating an out-of-bounds Square (e.g. squareFromIndex(9, 0) used to
+ *   return { col: 1, row: 10 }).
  */
 export function squareFromIndex(r: number, c: number): Square {
+  if (!Number.isInteger(r) || r < 0 || r > 8 || !Number.isInteger(c) || c < 0 || c > 8) {
+    throw new Error(`squareFromIndex index (${r}, ${c}) is out of bounds (expected r, c in 0..8)`);
+  }
   return { col: (c + 1) as BoardCoord, row: (r + 1) as BoardCoord };
 }
 

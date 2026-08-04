@@ -1,6 +1,18 @@
 /**
  * Movement rules engine --- computes all legal destinations for any piece at
- * any stack size, applying the BR-MOVEMENT / BR-PATH / BR-MOVE-005 rules.
+ * any stack size, applying the BR-MOVEMENT / BR-PATH / BR-MOVE-005 /
+ * BR-STACK-003 / BR-STACK-004 rules.
+ *
+ * Landing prohibitions are enforced here, in the movement engine itself:
+ * - BR-STACK-003: a destination on a friendly stack of size 3 is excluded
+ *   (the stack size limit of 3 cannot be exceeded).
+ * - BR-STACK-004: a destination whose target stack is topped by a Marshal
+ *   (friendly or enemy) is excluded (no piece may be placed on top of a
+ *   Marshal; the Marshal is never actually captured).
+ *
+ * Excluded squares are still obstructions (BR-PATH-001): traces stop at the
+ * first occupied square regardless of whether a landing is permitted ---
+ * excluded squares are never pass-through.
  *
  * Pure domain logic with no I/O.  Every function treats Position as immutable.
  *
@@ -39,6 +51,21 @@ export type LegalMove = {
   outcome: MoveOutcome | null;
 };
 
+/**
+ * Options for `getLegalDestinations`.
+ *
+ * - `skipStackingProhibitions`: when set, the BR-STACK-003 (friendly size-3)
+ *   and BR-STACK-004 (Marshal-topped target) landing exclusions are NOT
+ *   applied.  Used exclusively by threat/attack evaluation
+ *   (`isSquareUnderAttack`), where reachability disregards landing
+ *   restrictions per the BR-Attack definition.  All game-rule callers
+ *   (validateMove, getLegalMoves, candidates) use the default (exclusions
+ *   applied).
+ */
+export type GetLegalDestinationsOptions = {
+  skipStackingProhibitions?: boolean;
+};
+
 /* ------------------------------------------------------------------ */
 /*  Private helpers                                                    */
 /* ------------------------------------------------------------------ */
@@ -56,14 +83,13 @@ function canLandOnStack(sourceSize: number, targetStack: Stack | null): boolean 
  * - 'capture' -> enemy, size = 3 OR top is Marshal (forced)
  *
  * ## BR-STACK-004 separation
- * This function does NOT enforce "no piece may be placed or moved on top
- * of a Marshal."  The movement engine computes every geometrically
- * reachable square; the semantic prohibition on stacking onto a Marshal
- * is enforced by the validator (Step 8 --- `validateMove` / `validateArata`)
- * which rejects moves whose target top is a friendly Marshal.  Callers
- * that need only the rule-legal move set must therefore run the result
- * through the validator --- `getLegalDestinations` alone is necessary but
- * not sufficient for legality.
+ * This function does NOT itself enforce "no piece may be placed or moved on
+ * top of a Marshal" --- that exclusion lives in `isLandingProhibited`, which
+ * the movement handlers consult before a destination is emitted.  A
+ * Marshal-topped target therefore never reaches this function on the default
+ * (rule-legal) path; it can only be produced with
+ * `skipStackingProhibitions` (attack/threat evaluation), where the
+ * 'capture' outcome expresses "this square is reachable for capture".
  */
 function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcome | null {
   if (targetStack === null) return null;
@@ -72,6 +98,34 @@ function determineOutcome(targetStack: Stack | null, player: Player): MoveOutcom
   const tSize = getStackSize(targetStack);
   if (tSize === 3 || top.type === 'M') return 'capture';
   return 'stack';
+}
+
+/**
+ * BR-STACK-003 / BR-STACK-004 landing prohibitions.
+ *
+ * Returns `true` when landing on `targetStack` is prohibited by the stacking
+ * rules (independent of the BR-MOVE-005 size comparison, which is checked by
+ * `canLandOnStack`):
+ * - BR-STACK-004: the target's top piece is a Marshal (friendly or enemy) ---
+ *   no piece may ever be placed or moved on top of a Marshal, and the
+ *   Marshal is never actually captured.
+ * - BR-STACK-003: the target is a friendly stack of size 3 --- the stack
+ *   size limit of 3 cannot be exceeded.
+ *
+ * With `opts.skipStackingProhibitions` (attack evaluation only) both
+ * exclusions are skipped: reachability disregards landing restrictions.
+ */
+function isLandingProhibited(
+  targetStack: Stack | null,
+  player: Player,
+  opts?: GetLegalDestinationsOptions,
+): boolean {
+  if (targetStack === null) return false;
+  if (opts?.skipStackingProhibitions) return false;
+  const top = topPiece(targetStack);
+  if (top.type === 'M') return true; // BR-STACK-004
+  if (top.owner === player && getStackSize(targetStack) === 3) return true; // BR-STACK-003
+  return false;
 }
 
 /**
@@ -99,6 +153,7 @@ function computeStepMovement(
   square: Square,
   player: Player,
   directions: Direction[],
+  opts?: GetLegalDestinationsOptions,
 ): LegalMove[] {
   const results: LegalMove[] = [];
   const sourceStack = getStack(position, square);
@@ -111,6 +166,7 @@ function computeStepMovement(
 
     const targetStack = getStack(position, dest);
     if (!canLandOnStack(sourceSize, targetStack)) continue;
+    if (isLandingProhibited(targetStack, player, opts)) continue;
     results.push({
       dest,
       moveClass: 'step',
@@ -128,8 +184,9 @@ function computeStepMovement(
 /**
  * Trace a single direction up to `maxRange` steps, adding every valid
  * square along the way.  Stops at the **first obstruction**
- * (BR-PATH-001): the obstruction square itself is a valid destination,
- * but the path cannot extend beyond it.
+ * (BR-PATH-001): the obstruction square itself may be a destination
+ * (subject to BR-MOVE-005 and the BR-STACK-003/004 landing
+ * prohibitions), but the path can never extend beyond it.
  *
  * Reused for:
  * - step directions at sizes 2-3 (step becomes limited-range)
@@ -143,6 +200,7 @@ function computeTraceMovement(
   directions: Direction[],
   maxRange: number,
   moveClass: MoveClass,
+  opts?: GetLegalDestinationsOptions,
 ): LegalMove[] {
   const results: LegalMove[] = [];
   const sourceStack = getStack(position, square);
@@ -160,8 +218,14 @@ function computeTraceMovement(
       const targetStack = getStack(position, next);
 
       if (targetStack !== null) {
-        // BR-PATH-001: obstruction --- may land on it, but cannot go beyond
-        if (canLandOnStack(sourceSize, targetStack)) {
+        // BR-PATH-001: obstruction --- may land on it, but cannot go beyond.
+        // Landing is allowed only if BR-MOVE-005 AND the BR-STACK-003/004
+        // prohibitions both pass; the trace breaks regardless of landability
+        // (excluded squares are never pass-through).
+        if (
+          canLandOnStack(sourceSize, targetStack) &&
+          !isLandingProhibited(targetStack, player, opts)
+        ) {
           results.push({
             dest: next,
             moveClass,
@@ -270,6 +334,7 @@ function computeJumpMovement(
   player: Player,
   baseJumps: JumpPattern[],
   sourceSize: number,
+  opts?: GetLegalDestinationsOptions,
 ): LegalMove[] {
   const results: LegalMove[] = [];
 
@@ -301,6 +366,7 @@ function computeJumpMovement(
       // BR-MOVE-005: source size >= target size
       const targetStack = getStack(position, destSquare);
       if (!canLandOnStack(sourceSize, targetStack)) continue;
+      if (isLandingProhibited(targetStack, player, opts)) continue;
 
       results.push({
         dest: destSquare,
@@ -324,11 +390,24 @@ function computeJumpMovement(
  * Dispatches to the four movement class handlers and pools the results.
  * Returns an empty array if the square is empty or the top piece does not
  * belong to `player`.
+ *
+ * The destination set applies the BR-STACK-003 (no landing on friendly
+ * size-3 stacks) and BR-STACK-004 (no landing on Marshal-topped stacks)
+ * exclusions by default.  Pass `opts.skipStackingProhibitions` to compute
+ * plain reachability instead (attack/threat evaluation only) --- the
+ * landing exclusions are then skipped, while path tracing, obstruction
+ * semantics (BR-PATH-001/002) and the BR-MOVE-005 size comparison remain
+ * unchanged.
+ *
+ * Destinations are deduplicated per square: the first LegalMove produced
+ * for a given (col, row) wins (e.g. a size-3 Cannon's extended step trace
+ * and its jump can overlap on the same square).
  */
 export function getLegalDestinations(
   position: Position,
   square: Square,
   player: Player,
+  opts?: GetLegalDestinationsOptions,
 ): LegalMove[] {
   const stack = getStack(position, square);
   if (!stack) return [];
@@ -342,10 +421,10 @@ export function getLegalDestinations(
   // 1. Step movement (BR-MOVEMENT-001)
   if (sSize === 1) {
     // Size 1: exact 1-square step
-    results.push(...computeStepMovement(position, square, player, def.step));
+    results.push(...computeStepMovement(position, square, player, def.step, opts));
   } else {
     // Sizes 2-3: step becomes limited-range per BR-MOVEMENT-005
-    results.push(...computeTraceMovement(position, square, player, def.step, sSize, 'step'));
+    results.push(...computeTraceMovement(position, square, player, def.step, sSize, 'step', opts));
   }
 
   // 2. Limited range movement (BR-MOVEMENT-002)
@@ -360,21 +439,35 @@ export function getLegalDestinations(
         def.limitedRange,
         maxRange,
         'limited-range',
+        opts,
       ),
     );
   }
 
   // 3. Range movement (BR-MOVEMENT-003) --- unaffected by stack size
   if (def.range.length > 0) {
-    results.push(...computeTraceMovement(position, square, player, def.range, 9, 'range'));
+    results.push(...computeTraceMovement(position, square, player, def.range, 9, 'range', opts));
   }
 
   // 4. Jump movement (BR-MOVEMENT-004)
   if (def.jumps.length > 0) {
-    results.push(...computeJumpMovement(position, square, player, def.jumps, sSize));
+    results.push(...computeJumpMovement(position, square, player, def.jumps, sSize, opts));
   }
 
-  return results;
+  // Deduplicate destinations: keep the first LegalMove per (col, row).
+  // At size 3 a Cannon's extended step trace and its jump can land on the
+  // same square, which would otherwise emit duplicate entries that
+  // propagate into engine.legalActions.
+  const seen = new Set<string>();
+  const deduped: LegalMove[] = [];
+  for (const move of results) {
+    const key = `${move.dest.col},${move.dest.row}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(move);
+  }
+
+  return deduped;
 }
 
 /**

@@ -16,9 +16,28 @@ const VALID_STRATEGIES: StrategyName[] = [
   'favor-arata',
   'only-moves',
   'only-placements',
-  'cycle-through',
   'custom',
 ];
+
+function printUsage(): void {
+  process.stdout.write(
+    'Usage: fuzzer [flags]\n\n' +
+      'Flags:\n' +
+      '  --gsfen <string>     Starting position (GSFEN). Default: startpos\n' +
+      '  --gsfen-file <path>  Read the starting GSFEN from a file\n' +
+      '  --seed <n>           RNG seed (default: random)\n' +
+      '  --games <n>          Number of games to run. 0 = run forever until an error or\n' +
+      '                       crash occurs (the process then exits non-zero)\n' +
+      '  --log-dir <path>     Directory for per-game logs (default: ./fuzzing-logs/)\n' +
+      `  --strategy <name>     Strategy: ${VALID_STRATEGIES.join(', ')} (default: uniform)\n` +
+      '  --move-timeout <ms>  Per-move deadline (default: 30000)\n' +
+      '  --game-timeout <ms>  Per-game deadline (default: 500000)\n' +
+      '  --no-capture         Exclude capture-outcome moves from the strategy action list\n' +
+      '  --stop-on-error      Stop after the first game with an error or crash\n' +
+      '  --verbose            Print each move to stdout\n' +
+      '  --help               Show this help and exit\n',
+  );
+}
 
 function parseArgs(): Partial<FuzzerConfig> & { strategyConfig: FuzzerConfig['strategyConfig'] } {
   const args = process.argv.slice(2);
@@ -121,6 +140,11 @@ function timestamp(): string {
 }
 
 function main(): void {
+  if (process.argv.includes('--help') || process.argv.includes('-h')) {
+    printUsage();
+    return;
+  }
+
   const partial = parseArgs();
   const gsfenInput = getGsfen(partial);
 
@@ -138,12 +162,6 @@ function main(): void {
     strategyConfig: partial.strategyConfig,
   };
 
-  if (config.games !== 0) {
-    if (partial.gsfenFile) {
-      config.gsfen = gsfenInput;
-    }
-  }
-
   const logDir = resolve(config.logDir);
   if (!existsSync(logDir)) {
     mkdirSync(logDir, { recursive: true });
@@ -151,9 +169,7 @@ function main(): void {
 
   let totalErrors = 0;
   let totalCrashes = 0;
-
-  const rng = mulberry32(config.seed);
-  const baseRng = rng;
+  let stoppedOnError = false;
 
   const gameCount = config.games === 0 ? Infinity : config.games;
 
@@ -176,12 +192,19 @@ function main(): void {
 
     if (config.stopOnError && (result.errors > 0 || result.crashes > 0)) {
       process.stderr.write(`Stopping on error after game ${i}\n`);
+      stoppedOnError = true;
       break;
     }
   }
 
   if (totalErrors > 0 || totalCrashes > 0) {
     process.stderr.write(`Fuzzer complete: ${totalErrors} errors, ${totalCrashes} crashes across all games\n`);
+  }
+
+  // Exit non-zero so CI can detect engine errors/crashes (including a
+  // stop-on-error break, which always implies errors or crashes > 0).
+  if (totalErrors > 0 || totalCrashes > 0 || stoppedOnError) {
+    process.exitCode = 1;
   }
 }
 

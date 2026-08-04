@@ -4,8 +4,8 @@
  * moves --- Enumerate all legal actions from a GSFEN position.
  *
  * Usage:
- *   npm run gsfen -- moves "<gsfen string>"
- *   npm run gsfen -- moves --file <path>
+ *   npm run moves -- "<gsfen string>"
+ *   npm run moves -- --file <path>
  */
 
 import { parseGSFEN } from '../src/gsfen/parse.js';

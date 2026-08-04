@@ -13,7 +13,17 @@ import type { GameState } from '../../src/types.js';
 import { parseGSFEN } from '../../src/gsfen/parse.js';
 import { validateState } from '../../src/gsfen/validate.js';
 import { checkTerminal } from '../../src/game/terminal.js';
+import { setStack, createStack } from '../../src/board/board.js';
 import { MARSHAL_ALONE_BATTLE } from '../support/fixtures.js';
+
+/**
+ * History entries must be STRUCTURALLY equal to the current state, never the
+ * same object reference. `structuredClone` guarantees distinct objects whose
+ * content alone drives statesEqualForRepetition.
+ */
+function clone(state: GameState): GameState {
+  return structuredClone(state);
+}
 
 /* ------------------------------------------------------------------ */
 /*  Test helpers                                                       */
@@ -73,7 +83,8 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
     // Same state appears twice in battle-phase history + current = 3 total.
     // Add a Pawn to White's hand to avoid triggering insufficient-material.
     const state = makeState('white', { P: 1 }, null);
-    const history = [state, state]; // 2 prior matching states
+    // History entries are structural clones: distinct objects, equal content.
+    const history = [clone(state), clone(state)]; // 2 prior matching states
     // history has only 2 of the same state + current = 3 --- < 4 -> no repetition
     const r = checkTerminal(state, history);
     expect(r.kind).toBe('ongoing');
@@ -81,7 +92,7 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
 
   it('returns repetition loss when the same state appears 4 times', () => {
     const state = makeState('white', null, null);
-    const history = [state, state, state]; // 3 prior matching states
+    const history = [clone(state), clone(state), clone(state)]; // 3 prior matching states
     // 3 in history + current = 4 -> repetition: active player (White) repeats,
     // so Black wins and White loses.
     const r = checkTerminal(state, history);
@@ -96,7 +107,7 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
     // Add a Pawn to avoid triggering insufficient-material.
     const stateWhite = makeState('white', { P: 1 }, null);
     const stateBlack = makeState('black', { P: 1 }, null);
-    const history = [stateWhite, stateWhite, stateWhite];
+    const history = [clone(stateWhite), clone(stateWhite), clone(stateWhite)];
     // State is Black's turn, but history has White's turn -> not matching
     const r = checkTerminal(stateBlack, history);
     expect(r.kind).toBe('ongoing');
@@ -105,7 +116,7 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
   it('returns ongoing when hands differ even if position is same', () => {
     const state1 = makeState('white', { P: 1 }, null);
     const state2 = makeState('white', { P: 2 }, null);
-    const history = [state1, state1, state1];
+    const history = [clone(state1), clone(state1), clone(state1)];
     // State2 has different hand -> not matching
     const r = checkTerminal(state2, history);
     expect(r.kind).toBe('ongoing');
@@ -119,7 +130,7 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
       ...state,
       turn: { ...state.turn, phase: 'deploy' },
     };
-    const history = [deployState, deployState, deployState];
+    const history = [clone(deployState), clone(deployState), clone(deployState)];
     // All history states are deploy-phase -> excluded -> only current count = 1
     const r = checkTerminal(state, history);
     expect(r.kind).toBe('ongoing');
@@ -141,11 +152,76 @@ describe('checkTerminal --- Repetition (BR-REPETITION-001)', () => {
       ...state,
       turn: { ...state.turn, phase: 'deploy', activePlayer: 'white' },
     };
-    const history = [state, state, state, deployState];
+    const history = [clone(state), clone(state), clone(state), clone(deployState)];
     const r = checkTerminal(state, history);
     expect(r.kind).toBe('repetition');
     if (r.kind === 'repetition') {
       expect(r.loser).toBe('white'); // opponent of the active (repeating) player
+    }
+  });
+
+  it('returns ongoing when position differs but hands and active player are identical', () => {
+    // Same hands and same active player; only the position differs (White
+    // Marshal on a different square). A repetition implementation that
+    // ignores the board would wrongly count these as the same state.
+    const state = makeState('white', { P: 1 }, null); // White Marshal at (5,9)
+    // Move White's Marshal from (5,9) to (4,9) for the history states.
+    const movedPosition = setStack(
+      state.position,
+      { col: 4, row: 9 },
+      createStack([{ type: 'M', owner: 'white' }]),
+    );
+    const otherState: GameState = {
+      ...state,
+      position: setStack(movedPosition, { col: 5, row: 9 }, null),
+    };
+    const history = [clone(otherState), clone(otherState), clone(otherState)];
+    const r = checkTerminal(state, history);
+    expect(r.kind).toBe('ongoing');
+  });
+
+  it('returns ongoing when position differs only in a single stack', () => {
+    // Hands and active player are identical; the history states carry one
+    // extra piece (a White Pawn at (3,9)) that the current state lacks.
+    const state = makeState('white', { P: 1 }, null);
+    const otherState: GameState = {
+      ...state,
+      position: setStack(
+        state.position,
+        { col: 3, row: 9 },
+        createStack([{ type: 'P', owner: 'white' }]),
+      ),
+    };
+    const history = [clone(otherState), clone(otherState), clone(otherState)];
+    const r = checkTerminal(state, history);
+    expect(r.kind).toBe('ongoing');
+  });
+
+  it('returns repetition loss when occurrences are NOT consecutive', () => {
+    // BR-REPETITION-001: occurrences need not be consecutive. The same
+    // state occurs at history indices 0, 2 and 4; the states at indices 1
+    // and 3 differ (extra White Pawn at (3,9)) and are NOT occurrences.
+    // 3 history matches + current = 4 -> repetition.
+    const state = makeState('white', { P: 1 }, null);
+    const otherState: GameState = {
+      ...state,
+      position: setStack(
+        state.position,
+        { col: 3, row: 9 },
+        createStack([{ type: 'P', owner: 'white' }]),
+      ),
+    };
+    const history = [
+      clone(state),
+      clone(otherState),
+      clone(state),
+      clone(otherState),
+      clone(state),
+    ];
+    const r = checkTerminal(state, history);
+    expect(r.kind).toBe('repetition');
+    if (r.kind === 'repetition') {
+      expect(r.loser).toBe('black'); // opponent of the active (repeating) player
     }
   });
 });

@@ -7,7 +7,7 @@ import {
   avoidStackStrategy,
   avoidArataStrategy,
 } from '../../fuzzing/strategies.js';
-import { playGame, mulberry32 } from '../../fuzzing/runner.js';
+import { playGame, mulberry32, filterActionsForConfig } from '../../fuzzing/runner.js';
 import type { Action, BoardCoord, GameState } from '../../src/types.js';
 import type { FuzzerConfig, RunResult } from '../../fuzzing/types.js';
 
@@ -64,14 +64,16 @@ describe('Strategies', () => {
     const stackAction = makeAction({ outcome: 'stack' });
     const captureAction = makeAction({ outcome: 'capture' });
     const actions = [stackAction, captureAction];
-    const rng = mulberry32(42);
+    // rng draws index 0, so with a broken filter the test would pick the
+    // stack action that must be removed.
+    const rng = () => 0;
     const result = avoidStackStrategy(actions, nullState, rng);
-    expect(result).not.toBe(stackAction);
+    expect(result).toBe(captureAction);
   });
 
   it('avoid-stack falls back to stack when no alternatives', () => {
     const actions = [makeAction({ outcome: 'stack' })];
-    const rng = mulberry32(42);
+    const rng = () => 0;
     const result = avoidStackStrategy(actions, nullState, rng);
     expect(result).toBe(actions[0]);
   });
@@ -85,9 +87,90 @@ describe('Strategies', () => {
     };
     const moveAction = makeAction();
     const actions = [arataAction, moveAction];
-    const rng = mulberry32(42);
+    // rng draws index 0, so with a broken filter the test would pick the
+    // arata action that must be removed.
+    const rng = () => 0;
     const result = avoidArataStrategy(actions, nullState, rng);
-    expect(result).not.toBe(arataAction);
+    expect(result).toBe(moveAction);
+  });
+});
+
+describe('filterActionsForConfig', () => {
+  function makeConfig(noCapture: boolean): FuzzerConfig {
+    return {
+      gsfen: 'startpos',
+      seed: 42,
+      games: 1,
+      logDir: '/tmp',
+      strategy: 'uniform',
+      moveTimeoutMs: 30000,
+      gameTimeoutMs: 500000,
+      verbose: false,
+      noCapture,
+      stopOnError: false,
+      strategyConfig: {
+        avoidStack: false,
+        avoidArata: false,
+        captureWeight: 1,
+        arataWeight: 1,
+        moveWeight: 1,
+        placementWeight: 1,
+      },
+    };
+  }
+
+  /** Minimal state: empty board, White to move (makeAction dest is (5,4)). */
+  function filterState(): GameState {
+    const position: (null | { type: string; owner: string }[])[][] = Array.from(
+      { length: 9 },
+      () => Array(9).fill(null),
+    );
+    return { position, turn: { activePlayer: 'white' } } as unknown as GameState;
+  }
+
+  /** Like filterState, but (5,4) holds an enemy-topped stack. */
+  function filterStateWithEnemyDest(): GameState {
+    const position: (null | { type: string; owner: string }[])[][] = Array.from(
+      { length: 9 },
+      () => Array(9).fill(null),
+    );
+    position[3][4] = [{ type: 'P', owner: 'black' }];
+    return { position, turn: { activePlayer: 'white' } } as unknown as GameState;
+  }
+
+  it('removes capture-outcome moves when noCapture is set', () => {
+    const capture = makeAction({ outcome: 'capture' });
+    const stack = makeAction({ outcome: 'stack' });
+    const plain = makeAction({ outcome: null });
+    const arata: Action = {
+      kind: 'arata',
+      piece: 'P',
+      dest: { col: c(5), row: c(5) },
+      turncoat: [],
+    };
+    const filtered = filterActionsForConfig(makeConfig(true), [capture, stack, plain, arata], filterState());
+    expect(filtered).toEqual([stack, plain, arata]);
+    expect(filtered).not.toContain(capture);
+  });
+
+  it('removes canonical forced captures (outcome null on an enemy top) when noCapture is set', () => {
+    // A move with outcome null whose destination holds an enemy-topped
+    // stack is the canonical forced-capture form --- it must be filtered
+    // even though outcome is not 'capture'.
+    const forced = makeAction({ outcome: null });
+    const filtered = filterActionsForConfig(
+      makeConfig(true),
+      [forced],
+      filterStateWithEnemyDest(),
+    );
+    expect(filtered).toEqual([]);
+  });
+
+  it('keeps capture-outcome moves when noCapture is not set', () => {
+    const capture = makeAction({ outcome: 'capture' });
+    const stack = makeAction({ outcome: 'stack' });
+    const actions = [capture, stack];
+    expect(filterActionsForConfig(makeConfig(false), actions, filterState())).toEqual(actions);
   });
 });
 

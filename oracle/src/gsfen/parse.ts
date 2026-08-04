@@ -293,7 +293,9 @@ function parseTurn(turnStr: string): FieldResult<TurnState> {
  */
 function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }> {
   if (handsStr === '-') {
-    return { ok: true, value: { white: EMPTY_HAND, black: EMPTY_HAND } };
+    // Fresh clones --- never hand out the frozen shared EMPTY_HAND
+    // singleton: callers may mutate the returned hands.
+    return { ok: true, value: { white: { ...EMPTY_HAND }, black: { ...EMPTY_HAND } } };
   }
 
   if (handsStr === '') {
@@ -321,6 +323,18 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
           ok: false,
           error: new GameError(
             `Invalid hand count at position ${i}; counts must be 2-4 and precede a piece`,
+            'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
+          ),
+        };
+      }
+      // BR-GSFEN-CANON-HANDS-COUNT-FORMAT: at most one count digit per
+      // piece letter. A count digit must be followed by a piece letter, so
+      // an adjacent count digit (e.g. "23P") is non-canonical.
+      if (/^\d$/.test(handsStr[i + 1])) {
+        return {
+          ok: false,
+          error: new GameError(
+            `Adjacent hand counts at position ${i}; counts must be a single digit 2-4 immediately preceding a piece letter`,
             'BR-GSFEN-CANON-HANDS-COUNT-FORMAT',
           ),
         };
@@ -390,6 +404,7 @@ function parseHands(handsStr: string): FieldResult<{ white: Hand; black: Hand }>
  * Canonical-form rules enforced (GSFEN.md §Canonicalization -> Counter rules):
  *   - BR-GSFEN-CANON-COUNTER-LEADING-ZERO --- no leading zeros
  *   - BR-GSFEN-CANON-COUNTER-POSITIVE     --- must be ≥ 1 (parser regex guarantees this)
+ *   - BR-GSFEN-CANON-COUNTER-LENGTH       --- at most 7 digits (parseInt precision)
  */
 function parseCounter(counterStr: string): FieldResult<number> {
   // BR-GSFEN-CANON-COUNTER-LEADING-ZERO + BR-GSFEN-CANON-COUNTER-POSITIVE:
@@ -400,6 +415,18 @@ function parseCounter(counterStr: string): FieldResult<number> {
       error: new GameError(
         `Counter must be a positive integer (no leading zeros), got "${counterStr}" (BR-GSFEN-CANON-COUNTER-LEADING-ZERO / BR-GSFEN-CANON-COUNTER-POSITIVE)`,
         'BR-GSFEN-CANON-COUNTER-LEADING-ZERO',
+      ),
+    };
+  }
+
+  // BR-GSFEN-CANON-COUNTER-LENGTH: counters longer than 7 digits lose
+  // precision in a JS number (parseInt), breaking parse -> serialize round-trips.
+  if (counterStr.length > 7) {
+    return {
+      ok: false,
+      error: new GameError(
+        `Counter must be at most 7 digits, got ${counterStr.length} (BR-GSFEN-CANON-COUNTER-LENGTH)`,
+        'BR-GSFEN-CANON-COUNTER-LENGTH',
       ),
     };
   }

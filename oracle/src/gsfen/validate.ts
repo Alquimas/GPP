@@ -23,6 +23,7 @@ import {
   countPieceOnBoard,
   findPieceOnBoard,
   hasAnyBoardPieces,
+  validatePosition,
 } from '../board/board.js';
 import type { ValidationResult } from '../game/validation.js';
 
@@ -56,6 +57,22 @@ export type { ValidationResult };
  *   - 'BR-GSFEN-VALID-005'       --- Counter bounds violated (BR-DEPLOY-002)
  */
 export function validateState(state: GameState): ValidationResult {
+  // Position shape: validateState must never crash on out-of-contract
+  // input. A non-9×9 position would raise a raw TypeError below; report a
+  // GameError instead (the canonical-form rule the shape violates).
+  try {
+    validatePosition(state.position);
+  } catch (e) {
+    const msg = (e as Error).message;
+    const rule = msg.includes('9 rows')
+      ? 'BR-GSFEN-CANON-POSITION-ROW-COUNT'
+      : 'BR-GSFEN-CANON-POSITION-SQUARE-COUNT';
+    return {
+      ok: false,
+      error: new GameError(msg, rule),
+    };
+  }
+
   const isBattle = state.turn.phase === 'battle';
 
   // -----------------------------------------------------------------------

@@ -533,3 +533,24 @@ describe('validateState --- multi-rule violations (first-rule ordering)', () => 
     assertInvalid(state, 'BR-GSFEN-VALID-004');
   });
 });
+
+describe('validateState --- out-of-contract position shape', () => {
+  it('returns { ok: false } (GameError) instead of throwing for a non-9x9 position', () => {
+    const state = parseOk(START_GSFEN);
+    state.position = state.position.slice(0, 8) as Position;
+    expect(() => validateState(state)).not.toThrow();
+    const result = validateState(state);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-ROW-COUNT');
+  });
+
+  it('reports a row with the wrong length as BR-GSFEN-CANON-POSITION-SQUARE-COUNT', () => {
+    const state = parseOk(START_GSFEN);
+    state.position[0] = state.position[0].slice(0, 8) as (Stack | null)[];
+    const result = validateState(state);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.rule).toBe('BR-GSFEN-CANON-POSITION-SQUARE-COUNT');
+  });
+});

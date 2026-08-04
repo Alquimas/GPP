@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest';
 import { parseGSFEN, type ParseResult } from '../../src/gsfen/parse.js';
 import { serializeGSFEN } from '../../src/gsfen/serialize.js';
 import { EMPTY_HAND, START_GSFEN } from '../../src/constants.js';
+import { GameError } from '../../src/errors.js';
 import type { GameState, Hand, Position, Stack } from '../../src/types.js';
 import {
   BLACK_DONE_DECLARED,
@@ -280,5 +281,125 @@ describe('serializeGSFEN --- canonical output guarantees', () => {
     const state = assertOk(parseGSFEN(raw));
     const serialized = serializeGSFEN(state);
     expect(serialized).toBe(raw);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Out-of-contract states --- GameError instead of raw crashes / garbage output
+// ---------------------------------------------------------------------------
+
+describe('serializeGSFEN --- out-of-contract states throw GameError', () => {
+  /** A minimal deploy GameState that serializes fine (used as mutation base). */
+  function validBase(): GameState {
+    return assertOk(parseGSFEN(START_GSFEN));
+  }
+
+  /** Assert serializeGSFEN throws a GameError with the given rule. */
+  function assertThrowsRule(fn: () => string, rule: string): void {
+    let caught: unknown = null;
+    try {
+      fn();
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(GameError);
+    if (caught instanceof GameError) {
+      expect(caught.rule).toBe(rule);
+    }
+  }
+
+  it('rejects a position with fewer than 9 rows (GameError, not TypeError)', () => {
+    const state = validBase();
+    state.position = state.position.slice(0, 8) as Position;
+    assertThrowsRule(() => serializeGSFEN(state), 'BR-GSFEN-CANON-POSITION-ROW-COUNT');
+  });
+
+  it('rejects a position with a row shorter than 9 squares', () => {
+    const state = validBase();
+    state.position[0] = state.position[0].slice(0, 8) as (Stack | null)[];
+    assertThrowsRule(() => serializeGSFEN(state), 'BR-GSFEN-CANON-POSITION-SQUARE-COUNT');
+  });
+
+  it('rejects a hand count > 4 (BR-GSFEN-VALID-002)', () => {
+    const state = validBase();
+    state.hands.white.P = 5;
+    assertThrowsRule(() => serializeGSFEN(state), 'BR-GSFEN-VALID-002');
+  });
+
+  it('rejects a non-integer hand count (BR-GSFEN-VALID-002)', () => {
+    const state = validBase();
+    state.hands.white.P = 1.5;
+    assertThrowsRule(() => serializeGSFEN(state), 'BR-GSFEN-VALID-002');
+  });
+
+  it('rejects a counter of 0 (BR-GSFEN-CANON-COUNTER-LEADING-ZERO)', () => {
+    const state = validBase();
+    state.turn.counter = 0;
+    assertThrowsRule(() => serializeGSFEN(state), 'BR-GSFEN-CANON-COUNTER-LEADING-ZERO');
+  });
+
+  it('rejects a negative counter (BR-GSFEN-CANON-COUNTER-LEADING-ZERO)', () => {
+    const state = validBase();
+    state.turn.counter = -3;
+    assertThrowsRule(() => serializeGSFEN(state), 'BR-GSFEN-CANON-COUNTER-LEADING-ZERO');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auto-Done flag --- omitted from the token when derivable from an empty hand
+// ---------------------------------------------------------------------------
+
+describe('serializeGSFEN --- done flag vs derivable auto-Done', () => {
+  /** Build a deploy-phase state with a done flag and controlled hands. */
+  function deployStateWithDone(
+    done: 'white' | 'black',
+    activePlayer: 'white' | 'black',
+    doneHand: Hand,
+  ): GameState {
+    const state = parseGSFEN('startpos');
+    if (!state.ok) throw new Error('parse failed');
+    state.state.turn = {
+      phase: 'deploy',
+      activePlayer,
+      done,
+      counter: 20,
+    };
+    state.state.hands[done] = doneHand;
+    // Marshal on board for the done player so the state is semantically sane
+    state.state.position[done === 'white' ? 8 : 0][4] = [{ type: 'M', owner: done }] as Stack;
+    state.state.hands[done].M = 0;
+    return state.state;
+  }
+
+  it("omits the flag when the done player's hand is empty (auto-Done): dw", () => {
+    const state = deployStateWithDone('black', 'white', { ...EMPTY_HAND });
+    const parts = serializeGSFEN(state).split(' ');
+    expect(parts[1]).toBe('dw');
+  });
+
+  it("omits the flag when the done player's hand is empty (auto-Done): db", () => {
+    const state = deployStateWithDone('white', 'black', { ...EMPTY_HAND });
+    const parts = serializeGSFEN(state).split(' ');
+    expect(parts[1]).toBe('db');
+  });
+
+  it('keeps the flag for a genuine Done declaration (non-empty hand): dwB', () => {
+    const state = deployStateWithDone('black', 'white', { ...EMPTY_HAND, P: 1 });
+    const parts = serializeGSFEN(state).split(' ');
+    expect(parts[1]).toBe('dwB');
+  });
+
+  it('keeps the flag for a genuine Done declaration (non-empty hand): dbW', () => {
+    const state = deployStateWithDone('white', 'black', { ...EMPTY_HAND, P: 1 });
+    const parts = serializeGSFEN(state).split(' ');
+    expect(parts[1]).toBe('dbW');
+  });
+
+  it('emitted auto-done GSFEN re-parses and round-trips', () => {
+    const state = deployStateWithDone('black', 'white', { ...EMPTY_HAND });
+    const serialized = serializeGSFEN(state);
+    const reparsed = assertOk(parseGSFEN(serialized));
+    expect(reparsed.turn.done).toBeNull();
+    expect(serializeGSFEN(reparsed)).toBe(serialized);
   });
 });
