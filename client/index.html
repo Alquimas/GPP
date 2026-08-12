@@ -42,10 +42,13 @@
   <div id="decision-panel" class="hidden">
     <div class="dp-head">
       <span class="dp-title">AI Decision</span>
-      <span class="dp-legend">Facts · Search records · Attribution · Hypotheses (labeled) — the engine's behavior, not its intentions</span>
-      <button class="ctrl-btn" id="dp-export">Export decisions (JSONL)</button>
+      <span id="dp-head-summary" class="dp-summary"></span>
+      <button class="ctrl-btn" id="dp-attacked" style="display:none">Attacked</button>
+      <button class="ctrl-btn" id="dp-toggle">▸ Details</button>
+      <button class="ctrl-btn" id="dp-export">Export (JSONL)</button>
     </div>
-    <div id="dp-body"></div>
+    <div id="dp-legend" class="dp-legend"></div>
+    <div id="dp-body" class="hidden"></div>
   </div>
 </div>
 

@@ -33,6 +33,8 @@ let presentAbort = null;           // abort function for presentation
 let aiBusy = false;                // Track B: an AI step is in flight
 let aiAuto = true;                 // Track B: auto-step when it's the AI's turn
 let aiStepTimer = null;
+let dpOpen = false;                // Track B: decision panel expanded?
+let showAttacked = false;          // Track B: highlight the AI's attacked squares
 
 /* ── DOM refs ───────────────────────────────────────────────────────── */
 
@@ -139,6 +141,11 @@ async function doReset(gsfen, aiMode) {
 
 async function doAiStep() {
   if (aiBusy || !serverState?.aiTurn || serverState.isTerminal) return false;
+  // Never step from a past state: the server would apply the move to the
+  // viewed branch and truncate the live continuation.
+  if (currentViewIndex < (serverState.historySize || serverState.history.length) - 1) {
+    return false;
+  }
   aiBusy = true;
   try {
     const res = await apiAiStep();
@@ -155,14 +162,17 @@ async function doAiStep() {
   }
 }
 
-/** Auto-step: when it's the AI's turn (and we're at the live position),
+/** Auto-step: when it's the AI's turn (and we're at the LIVE position),
  * schedule one AI move. Human-vs-AI and watch ("both") both use this. */
 function maybeScheduleAiStep() {
   clearTimeout(aiStepTimer);
   aiStepTimer = null;
   if (!aiAuto || !serverState) return;
   if (!serverState.aiTurn || serverState.isTerminal) return;
-  if (currentViewIndex !== serverState.currentIndex) return; // viewing the past
+  // The live position is the LAST history entry; anything else is a past
+  // state the AI must never mutate.
+  const liveIndex = (serverState.historySize || serverState.history.length) - 1;
+  if (currentViewIndex !== liveIndex) return;
   if (pendingAction || presenting || aiBusy) return;
   aiStepTimer = setTimeout(() => { doAiStep().then(() => maybeScheduleAiStep()); }, 350);
 }
@@ -176,6 +186,31 @@ function renderDecisionPanel() {
   if (!serverState?.lastDecision) { panel.classList.add('hidden'); return; }
   const d = serverState.lastDecision;
   panel.classList.remove('hidden');
+
+  // Compact summary line (always visible).
+  let summary;
+  if (d.phase === 'deploy') {
+    summary = `AI placed ${escapeHtml(d.move_gan ?? '—')}`;
+  } else {
+    summary = `AI ${escapeHtml(d.move_gan ?? '—')} · score <b>${d.score ?? '—'}</b>`
+      + ` · residual <b>${d.residual ?? '—'}</b>`;
+  }
+  const legend = evBadge('ev-fact', 'fact') + ' ' + evBadge('ev-search', 'search record')
+    + ' ' + evBadge('ev-attr', 'attribution') + ' ' + evBadge('ev-hyp', 'hypothesis (labeled)');
+  $('dp-head-summary').innerHTML = summary;
+  $('dp-legend').innerHTML = legend;
+  const toggleBtn = $('dp-toggle');
+  toggleBtn.textContent = dpOpen ? '▾ Hide details' : '▸ Details';
+  $('dp-body').classList.toggle('hidden', !dpOpen);
+  const attBtn = $('dp-attacked');
+  if (attBtn) {
+    const hasCells = Array.isArray(d.attacked) && d.attacked.length > 0;
+    attBtn.style.display = hasCells ? '' : 'none';
+    attBtn.classList.toggle('active', showAttacked);
+    attBtn.textContent = `Attacked (${hasCells ? d.attacked.length : 0})`;
+  }
+  if (!dpOpen) return;
+
   let html = '';
 
   if (d.phase === 'deploy') {
@@ -221,7 +256,7 @@ function renderDecisionPanel() {
       </tr>`;
     }
     html += `</table>`;
-    html += `<div class="dp-note">${evBadge('ev-attr', 'attribution')} Δ attack = mover's newly-attacked squares (size≥1). Ties mean the ordering, not the eval, decided.</div>`;
+    html += `<div class="dp-note">${evBadge('ev-attr', 'attribution')} Δ attack = mover's newly-attacked squares (size≥1). Ties mean the ordering, not the eval, decided. The Attacked button highlights the AI's reach on the board.</div>`;
   }
   $('dp-body').innerHTML = html;
 }
@@ -326,6 +361,13 @@ function renderBoard() {
   const legalMoveDests = new Set();
   const legalArataDests = new Set();
   const legalPlacementDests = new Set();
+  // Track B: the AI's attacked squares (from the current decision record).
+  const attackedSet = new Set();
+  if (showAttacked && serverState.lastDecision && Array.isArray(serverState.lastDecision.attacked)) {
+    for (const c of serverState.lastDecision.attacked) {
+      attackedSet.add(`${(c % 9) + 1},${Math.floor(c / 9) + 1}`);
+    }
+  }
 
   if (pendingAction || presenting) {
     // Show pending/presenting state --- no highlights
@@ -394,6 +436,9 @@ function renderBoard() {
       if (legalMoveDests.has(coordKey) || legalArataDests.has(coordKey) || legalPlacementDests.has(coordKey)) {
         extraClass += ' legal-target';
       }
+
+      // Track B: AI attacked-square highlight (the Attacked toggle)
+      if (attackedSet.has(coordKey)) extraClass += ' cell-attacked';
 
       // Selected cell
       if (selectedCell && selectedCell.col === displayCol && selectedCell.row === rowNum) {
@@ -938,6 +983,14 @@ function renderMoveList() {
   const s = serverState;
   const history = s.history || [];
   const currentIdx = s.currentIndex;
+  const mlBodyEl = moveListEl.querySelector('.ml-body');
+  // Scroll pinning: if the list was pinned to the bottom, keep it pinned
+  // after the re-render; otherwise preserve the exact scroll position
+  // (never yank the user up/down on a new move).
+  const wasAtBottom = mlBodyEl
+    ? mlBodyEl.scrollHeight - mlBodyEl.scrollTop - mlBodyEl.clientHeight < 40
+    : true;
+  const prevScroll = mlBodyEl ? mlBodyEl.scrollTop : 0;
 
   let html = `<div class="ml-header">
     <span>Moves</span>
@@ -973,7 +1026,9 @@ function renderMoveList() {
       }
 
       const isCurrent = i === currentIdx;
-      const displayLabel = actionGAN || '---';
+      // Friendly notation from the server (piece name + coordinates,
+      // e.g. "Pawn 4-8 → 4-7 (capture)"); GAN is the fallback.
+      const displayLabel = entry.actionLabel || actionGAN || '---';
       const isDone = actionGAN === '!';
 
       // Attribution: trust the server-provided acting player when present;
@@ -1013,6 +1068,12 @@ function renderMoveList() {
 
   moveListEl.innerHTML = html;
 
+  // Restore the scroll position (pinned or exact).
+  const newBody = moveListEl.querySelector('.ml-body');
+  if (newBody) {
+    newBody.scrollTop = wasAtBottom ? newBody.scrollHeight : prevScroll;
+  }
+
   // Click handlers for history navigation
   moveListEl.querySelectorAll('.ml-move[data-hi]').forEach(el => {
     el.addEventListener('click', () => {
@@ -1021,10 +1082,6 @@ function renderMoveList() {
       if (!isNaN(idx) && idx !== currentIdx) navigateToHistory(idx);
     });
   });
-
-  // Scroll to current
-  const cur = moveListEl.querySelector('.ml-cur');
-  if (cur) cur.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 async function navigateToHistory(index) {
@@ -1135,8 +1192,6 @@ function renderControls() {
     aiAuto = autoChk.checked;
     maybeScheduleAiStep();
   });
-  const dpExport = document.getElementById('dp-export');
-  if (dpExport) dpExport.addEventListener('click', doExportDecisions);
   bind('btn-stop-present', stopPresentation);
 }
 
@@ -1253,6 +1308,19 @@ document.addEventListener('keydown', function (e) {
 
 $('ng-cancel').addEventListener('click', closeNewGameDialog);
 $('ng-confirm').addEventListener('click', confirmNewGame);
+
+/* ── Track B: decision panel bindings (once) ────────────────────────── */
+
+$('dp-toggle').addEventListener('click', () => {
+  dpOpen = !dpOpen;
+  renderDecisionPanel();
+});
+$('dp-attacked').addEventListener('click', () => {
+  showAttacked = !showAttacked;
+  renderBoard();
+  renderDecisionPanel();
+});
+$('dp-export').addEventListener('click', doExportDecisions);
 
 /* ── Initialization ──────────────────────────────────────────────────── */
 

@@ -149,6 +149,8 @@ startNewGame();
 function doAction(action: Action): { ok: true } | { ok: false; error: string } {
   // Read the acting player BEFORE applying (the state getter returns a clone).
   const actingPlayer = game.state.turn.activePlayer;
+  // The moved piece (top of the origin stack) — read BEFORE mutating.
+  const movedPiece = originPiece(game, action);
 
   // Serialize and label BEFORE mutating state: if serialization throws
   // (e.g. malformed turncoat), nothing has been applied, so history can
@@ -157,7 +159,7 @@ function doAction(action: Action): { ok: true } | { ok: false; error: string } {
   let pn: string;
   try {
     ganStr = serializeGAN(action);
-    pn = actionLabel(action);
+    pn = actionLabel(action, movedPiece);
   } catch (e: any) {
     console.error("ORACLE THREW:", e.message ?? e);
     return { ok: false, error: "ORACLE ERROR: " + (e.message ?? String(e)) };
@@ -191,6 +193,14 @@ function doAction(action: Action): { ok: true } | { ok: false; error: string } {
   currentGameIndex = fullHistory.length - 1;
 
   return { ok: true };
+}
+
+/** The moved piece of a "move" action (top of the origin stack), or null. */
+function originPiece(game: Game, action: Action): string | null {
+  if (action.kind !== "move") return null;
+  const stack = game.state.position[action.origin.row - 1]?.[action.origin.col - 1];
+  if (!stack || stack.length === 0) return null;
+  return PIECE_NAMES[stack[stack.length - 1].type] ?? stack[stack.length - 1].type;
 }
 
 /** Undo: rewind to previous history entry. */
@@ -230,14 +240,15 @@ function rebuildGameAtCurrentIndex(): void {
   }
 }
 
-function actionLabel(action: Action): string {
+function actionLabel(action: Action, movedPiece: string | null = null): string {
   switch (action.kind) {
     case "placement": {
       const pn = PIECE_NAMES[action.piece] ?? action.piece;
       return `Place ${pn} ${action.dest.col}-${action.dest.row}`;
     }
     case "move": {
-      let label = `Move ${action.origin.col}-${action.origin.row}->${action.dest.col}-${action.dest.row}`;
+      const pn = movedPiece ? `${movedPiece} ` : "";
+      let label = `${pn}${action.origin.col}-${action.origin.row} → ${action.dest.col}-${action.dest.row}`;
       // outcome: null = forced (auto-stack or forced-capture), 'stack' = choice, 'capture' = choice
       if (action.outcome === "stack") label += " (stack)";
       else if (action.outcome === "capture") label += " (capture)";

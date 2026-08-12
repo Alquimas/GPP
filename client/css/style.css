@@ -1072,3 +1072,127 @@ tr.dp-chosen td { color: #aef0ae; }
   font-size: 10.5px;
   color: var(--color-text-dim);
 }
+
+/* ── Track B: decision panel (compact) ───────────────────────────────── */
+
+#decision-panel {
+  margin: 10px auto 0;
+  width: min(980px, 96vw);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 8px 14px;
+}
+
+#decision-panel.hidden { display: none; }
+#dp-body.hidden { display: none; }
+
+.dp-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dp-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--color-text);
+}
+
+.dp-summary {
+  font-size: 12px;
+  color: var(--color-text);
+  flex: 1;
+  min-width: 200px;
+}
+
+.dp-legend {
+  font-size: 10px;
+  color: var(--color-text-dim);
+  margin-top: 5px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#dp-attacked.active {
+  background: var(--bg-cell-legal);
+  color: #0d1b2a;
+  font-weight: 700;
+}
+
+.dp-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--color-text);
+  padding: 3px 0;
+}
+
+.dp-row code {
+  font-family: monospace;
+  font-size: 11px;
+  background: rgba(0,0,0,0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.ev-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.ev-fact { background: #2a4a2a; color: #b8e6b8; border: 1px solid #3d6b3d; }
+.ev-search { background: #2a3a5a; color: #b8cce6; border: 1px solid #3d5580; }
+.ev-attr { background: #5a3a1a; color: #e6c9a0; border: 1px solid #7a5028; }
+.ev-hyp { background: #4a2a4a; color: #d8b8e6; border: 1px solid #6b3d6b; }
+
+table.dp-cands {
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 11px;
+  width: 100%;
+}
+
+table.dp-cands th, table.dp-cands td {
+  text-align: left;
+  padding: 3px 10px 3px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-family: monospace;
+}
+
+table.dp-cands th { color: var(--color-text-dim); font-weight: 600; }
+tr.dp-chosen td { color: #aef0ae; }
+
+.dp-note {
+  margin-top: 6px;
+  font-size: 10.5px;
+  color: var(--color-text-dim);
+}
+
+/* AI attacked-square highlight on the board */
+.cell-attacked {
+  box-shadow: inset 0 0 0 3px var(--color-accent);
+}
+
+/* New-game dialog AI select: visible on the dark panel */
+#ng-ai {
+  background: #0d1b2a;
+  color: var(--color-text);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 12px;
+  outline: none;
+}
+
+#ng-ai:focus { border-color: var(--color-accent); }
