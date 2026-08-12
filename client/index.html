@@ -37,6 +37,16 @@
       <div id="move-list"></div>
     </div>
   </div>
+
+  <!-- Track B: AI decision panel -->
+  <div id="decision-panel" class="hidden">
+    <div class="dp-head">
+      <span class="dp-title">AI Decision</span>
+      <span class="dp-legend">Facts · Search records · Attribution · Hypotheses (labeled) — the engine's behavior, not its intentions</span>
+      <button class="ctrl-btn" id="dp-export">Export decisions (JSONL)</button>
+    </div>
+    <div id="dp-body"></div>
+  </div>
 </div>
 
 <!-- Stack popup -->
@@ -57,6 +67,12 @@
     <p>Start a new game from the standard position, or enter a GSFEN string for a custom starting position.</p>
     <input type="text" placeholder="Leave empty for standard start, or paste a GSFEN string">
     <div class="ng-actions">
+      <select id="ng-ai" title="AI opponent (Track B observability)">
+        <option value="none">AI: none</option>
+        <option value="black">AI: black</option>
+        <option value="white">AI: white</option>
+        <option value="both">AI: both (watch)</option>
+      </select>
       <button class="btn-cancel" id="ng-cancel">Cancel</button>
       <button class="btn-primary" id="ng-confirm">Start Game</button>
     </div>

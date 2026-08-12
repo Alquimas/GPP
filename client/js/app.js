@@ -5,7 +5,7 @@
  * Board rendering, hand zones, move list, controls, and game flow.
  */
 
-import { fetchState as apiFetchState, sendAction, undo as apiUndo, gotoHistory, resetGame as apiReset, applyGAN } from './api.js';
+import { fetchState as apiFetchState, sendAction, undo as apiUndo, gotoHistory, resetGame as apiReset, applyGAN, aiStep as apiAiStep, exportDecisions } from './api.js';
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 
@@ -30,6 +30,9 @@ let currentViewIndex = -1;         // history index currently viewing
 let statusTimer = null;
 let presenting = false;            // presentation mode active
 let presentAbort = null;           // abort function for presentation
+let aiBusy = false;                // Track B: an AI step is in flight
+let aiAuto = true;                 // Track B: auto-step when it's the AI's turn
+let aiStepTimer = null;
 
 /* ── DOM refs ───────────────────────────────────────────────────────── */
 
@@ -115,9 +118,9 @@ async function doGotoHistory(index) {
   }
 }
 
-async function doReset(gsfen) {
+async function doReset(gsfen, aiMode) {
   try {
-    const res = await apiReset(gsfen);
+    const res = await apiReset(gsfen, aiMode);
     if (res.error) { setStatus(res.error, true); return false; }
     serverState = res;
     currentViewIndex = serverState.currentIndex;
@@ -129,6 +132,113 @@ async function doReset(gsfen) {
   } catch (e) {
     setStatus('Failed to reset game' + (e?.message ? ': ' + e.message : ''), true);
     return false;
+  }
+}
+
+/* ── Track B: AI play + decision strip ─────────────────────────────── */
+
+async function doAiStep() {
+  if (aiBusy || !serverState?.aiTurn || serverState.isTerminal) return false;
+  aiBusy = true;
+  try {
+    const res = await apiAiStep();
+    if (res.error) { setStatus(res.error, true); return false; }
+    serverState = res;
+    currentViewIndex = serverState.currentIndex;
+    renderAll();
+    return true;
+  } catch (e) {
+    setStatus('AI step failed' + (e?.message ? ': ' + e.message : ''), true);
+    return false;
+  } finally {
+    aiBusy = false;
+  }
+}
+
+/** Auto-step: when it's the AI's turn (and we're at the live position),
+ * schedule one AI move. Human-vs-AI and watch ("both") both use this. */
+function maybeScheduleAiStep() {
+  clearTimeout(aiStepTimer);
+  aiStepTimer = null;
+  if (!aiAuto || !serverState) return;
+  if (!serverState.aiTurn || serverState.isTerminal) return;
+  if (currentViewIndex !== serverState.currentIndex) return; // viewing the past
+  if (pendingAction || presenting || aiBusy) return;
+  aiStepTimer = setTimeout(() => { doAiStep().then(() => maybeScheduleAiStep()); }, 350);
+}
+
+function evBadge(cls, label) {
+  return `<span class="ev-badge ${cls}">${label}</span>`;
+}
+
+function renderDecisionPanel() {
+  const panel = $('decision-panel');
+  if (!serverState?.lastDecision) { panel.classList.add('hidden'); return; }
+  const d = serverState.lastDecision;
+  panel.classList.remove('hidden');
+  let html = '';
+
+  if (d.phase === 'deploy') {
+    html += `<div class="dp-row">${evBadge('ev-fact', 'fact')} AI placed <b>${escapeHtml(d.move_gan)}</b></div>`;
+    $('dp-body').innerHTML = html;
+    return;
+  }
+
+  const sc = d.score ?? '—';
+  const resid = d.residual ?? '—';
+  const pv = (d.pv || []).join(' → ') || '—';
+  const nodes = d.nodes ?? 0;
+  const budget = d.budget ?? 0;
+  const trunc = d.truncated ? 'yes (search truncated by the budget)' : 'no';
+  html += `
+    <div class="dp-row">
+      <span>${evBadge('ev-fact', 'fact')} move <b>${escapeHtml(d.move_gan ?? '—')}</b></span>
+      <span>${evBadge('ev-search', 'search record')} score <b>${sc}</b> @ d${d.last_depth ?? 3} · nodes ${nodes}/${budget} · truncated: ${trunc}</span>
+      <span>${evBadge('ev-attr', 'attribution')} local eval delta <b>${d.analysis?.[d.move_gan]?.local_delta ?? '—'}</b> · search residual <b>${resid}</b></span>
+    </div>
+    <div class="dp-row">${evBadge('ev-search', 'search record')} PV (TT-derived, approximate): <code>${escapeHtml(pv)}</code></div>
+  `;
+
+  // Candidate table (final-depth scores + key deltas).
+  const scores = d.scores || {};
+  const ranked = [];
+  if (Object.keys(scores).length) {
+    const last = String(Math.max(...Object.keys(scores).map(Number)));
+    ranked.push(...Object.entries(scores[last]).sort((a, b) => b[1] - a[1]).slice(0, 4));
+  }
+  if (ranked.length) {
+    html += `<table class="dp-cands"><tr><th>candidate</th><th>score</th><th>Δ material</th><th>Δ stack</th><th>Δ attack</th></tr>`;
+    for (const [gan, score] of ranked) {
+      const a = d.analysis?.[gan];
+      const isChosen = gan === d.move_gan;
+      const deltas = a?.deltas || {};
+      html += `<tr class="${isChosen ? 'dp-chosen' : ''}">
+        <td>${escapeHtml(gan)}${isChosen ? ' ✓' : ''}</td>
+        <td>${score}</td>
+        <td>${deltas.material_total ?? '—'}</td>
+        <td>${deltas.stack_bonus_total ?? '—'}</td>
+        <td>${deltas.attack ? deltas.attack[`${d.player}1`] : '—'}</td>
+      </tr>`;
+    }
+    html += `</table>`;
+    html += `<div class="dp-note">${evBadge('ev-attr', 'attribution')} Δ attack = mover's newly-attacked squares (size≥1). Ties mean the ordering, not the eval, decided.</div>`;
+  }
+  $('dp-body').innerHTML = html;
+}
+
+async function doExportDecisions() {
+  try {
+    const text = await exportDecisions();
+    const blob = new Blob([text], { type: 'application/x-ndjson' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'decisions.jsonl';
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus(`Exported ${text.split('\n').filter(Boolean).length} decision records`);
+  } catch (e) {
+    setStatus('Export failed: ' + (e?.message ?? e), true);
   }
 }
 
@@ -158,7 +268,9 @@ function renderAll() {
   renderHandZone('white');
   renderMoveList();
   renderControls();
+  renderDecisionPanel();
   renderGameOver();
+  maybeScheduleAiStep();
 }
 
 /* ── Info Bar ───────────────────────────────────────────────────────── */
@@ -969,6 +1081,19 @@ function renderControls() {
     `;
   }
 
+  // Track B: AI controls (visible whenever the AI is assigned)
+  if (!isTerminal && s.aiMode && s.aiMode !== 'none') {
+    html += `
+      <div style="display:flex;gap:6px;width:100%;margin-top:4px;border-top:1px solid var(--border-color);padding-top:6px;align-items:center;">
+        <button class="ctrl-btn confirm" id="btn-ai-step" ${s.aiTurn && !isViewingPast ? '' : 'disabled'} style="flex:0;padding:4px 10px;font-size:11px;">▶ AI move</button>
+        <label style="font-size:11px;display:flex;align-items:center;gap:4px;color:var(--color-text);">
+          <input type="checkbox" id="btn-ai-auto" ${aiAuto ? 'checked' : ''}> AI auto
+        </label>
+        <span style="font-size:11px;opacity:.7;">${s.aiTurn ? 'AI to move' : 'your turn'}</span>
+      </div>
+    `;
+  }
+
   // Present input row (shown when not presenting/pending/terminal)
   if (!presenting && !pendingAction && !isTerminal) {
     html += `
@@ -1004,6 +1129,14 @@ function renderControls() {
   bind('btn-confirm', onConfirm);
   bind('btn-cancel', onCancelUndo);
   bind('btn-present', startPresentation);
+  bind('btn-ai-step', () => { doAiStep(); });
+  const autoChk = document.getElementById('btn-ai-auto');
+  if (autoChk) autoChk.addEventListener('change', () => {
+    aiAuto = autoChk.checked;
+    maybeScheduleAiStep();
+  });
+  const dpExport = document.getElementById('dp-export');
+  if (dpExport) dpExport.addEventListener('click', doExportDecisions);
   bind('btn-stop-present', stopPresentation);
 }
 
@@ -1076,9 +1209,10 @@ function closeNewGameDialog() {
 
 async function confirmNewGame() {
   const input = $('newgame-dialog').querySelector('input').value.trim();
+  const ai = $('ng-ai').value;
   closeNewGameDialog();
   pendingAction = null;
-  await doReset(input || undefined);
+  await doReset(input || undefined, ai);
 }
 
 /* ── Keyboard Shortcuts ─────────────────────────────────────────────── */

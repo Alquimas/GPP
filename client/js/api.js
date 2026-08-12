@@ -47,10 +47,27 @@ export async function gotoHistory(index) {
   return api('POST', '/api/goto', { index });
 }
 
-export async function resetGame(gsfen) {
-  return api('POST', '/api/reset', { gsfen: gsfen || undefined });
+export async function resetGame(gsfen, ai) {
+  return api('POST', '/api/reset', { gsfen: gsfen || undefined, ai: ai || 'none' });
 }
 
 export async function applyGAN(gan) {
   return api('POST', '/api/apply-gan', { gan });
+}
+
+export async function aiStep() {
+  return api('POST', '/api/ai-step', {});
+}
+
+export async function exportDecisions() {
+  const res = await fetch(BASE + '/api/export-decisions');
+  if (!res.ok) {
+    let msg = `${res.status} ${res.statusText}`;
+    try {
+      const err = await res.json();
+      if (err && typeof err.error === 'string') msg = err.error;
+    } catch { /* keep status text */ }
+    throw new Error(msg);
+  }
+  return res.text();
 }

@@ -9,6 +9,7 @@
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // ── Oracle imports ──────────────────────────────────────────────────
@@ -48,14 +49,82 @@ interface HistoryEntry {
   actionLabel: string | null;
   /** Acting player for this entry's action (player to move for the initial entry). */
   player: "white" | "black";
+  /** Track B: the AI decision record for this move, if the move was AI-made. */
+  decision: any | null;
 }
 
 let game: Game;
 let fullHistory: HistoryEntry[];
 let currentGameIndex: number;
+/** Track B: which side(s) the AI plays ("none" | "white" | "black" | "both"). */
+let aiMode: "none" | "white" | "black" | "both" = "none";
 
 /** GAN parser (loaded async at startup). */
 let _parseGAN: ((s: string) => any) | null = null;
+
+// ── Track B: the AI bridge (frontend observability plan §13/§15) ────
+
+const AI_DIR = path.resolve(__dirname, "..", "ai");
+const AI_PY = path.join(AI_DIR, "py");
+const AI_TIMEOUT_MS = 60_000;
+
+/** One deterministic decision record for the current state, via the
+ * Python analyze CLI (ai/ subrepo). The oracle history GSFENs restore
+ * the repetition context (the C core re-derives the zkeys). */
+function runAIDecision(gsfen: string, historyGsfens: string[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      "python3",
+      ["-m", "gppai.analyze", "--gsfen", gsfen,
+       "--history", JSON.stringify(historyGsfens),
+       "--depth", "3", "--budget-ms", "300"],
+      { cwd: AI_DIR, env: { ...process.env, PYTHONPATH: AI_PY },
+        timeout: AI_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(new Error("AI analyze failed: " + (stderr || err.message)));
+          return;
+        }
+        try {
+          resolve(JSON.parse(stdout));
+        } catch {
+          reject(new Error("AI returned invalid JSON: " + stdout.slice(0, 200)));
+        }
+      },
+    );
+  });
+}
+
+/** Apply a GAN through the oracle (the existing apply-gan path). */
+function applyGanToSession(gan: string): { ok: true } | { ok: false; error: string } {
+  const parsed = _parseGAN?.(gan);
+  if (!parsed?.ok) {
+    return { ok: false, error: "Invalid GAN: " + (parsed?.error ?? "parse failed") };
+  }
+  return doAction(parsed.action);
+}
+
+/** Whether the side to move is AI-assigned (game ongoing). */
+function aiToMove(): boolean {
+  if (game.result.kind !== "ongoing") return false;
+  return aiMode === "both" || aiMode === game.state.turn.activePlayer;
+}
+
+/** Compute and apply one AI move for the side to move. Attaches the
+ * decision record to the new history entry. Throws on failure. */
+async function stepAI(): Promise<any> {
+  const histGsfens = fullHistory.map((e) => e.gsfen);
+  const record = await runAIDecision(game.toGsfen(), histGsfens);
+  if (!record.move_gan) {
+    throw new Error("AI found no move (record: " + JSON.stringify(record).slice(0, 200) + ")");
+  }
+  const r = applyGanToSession(record.move_gan);
+  if (!r.ok) {
+    throw new Error("AI move rejected by the oracle (" + record.move_gan + "): " + r.error);
+  }
+  fullHistory[currentGameIndex].decision = record;
+  return record;
+}
 
 // ── Session management ──────────────────────────────────────────────
 
@@ -68,6 +137,7 @@ function startNewGame(gsfen?: string): void {
       actionLabel: null,
       // Initial entry has no action, so record the player to move there.
       player: game.state.turn.activePlayer,
+      decision: null,
     },
   ];
   currentGameIndex = 0;
@@ -116,6 +186,7 @@ function doAction(action: Action): { ok: true } | { ok: false; error: string } {
     actionGAN: ganStr,
     actionLabel: pn,
     player: actingPlayer,
+    decision: null,
   });
   currentGameIndex = fullHistory.length - 1;
 
@@ -260,6 +331,7 @@ function buildStateResponse(): object {
     actionGAN: entry.actionGAN,
     player: entry.player,
     isCurrent: i === currentGameIndex,
+    hasDecision: entry.decision !== null,
   }));
 
   return {
@@ -284,6 +356,10 @@ function buildStateResponse(): object {
     currentIndex: currentGameIndex,
     historySize: fullHistory.length,
     canUndo: currentGameIndex > 0,
+    // Track B: AI mode + the most recent decision record (for the strip).
+    aiMode,
+    aiTurn: aiToMove(),
+    lastDecision: fullHistory[currentGameIndex]?.decision ?? null,
   };
 }
 
@@ -512,7 +588,40 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/reset" && method === "POST") {
       const body = await parseBody(req);
       startNewGame(body?.gsfen);
+      if (body?.ai === "white" || body?.ai === "black" || body?.ai === "both" || body?.ai === "none") {
+        aiMode = body.ai;
+      }
       json(res, 200, buildStateResponse());
+      return;
+    }
+
+    if (url.pathname === "/api/ai-step" && method === "POST") {
+      // Track B: one AI move for the side to move (if AI-assigned).
+      if (!aiToMove()) {
+        json(res, 422, { error: "Not the AI's turn (or game over)" });
+        return;
+      }
+      try {
+        await stepAI();
+      } catch (e: any) {
+        console.error("AI step failed:", e);
+        json(res, 500, { error: String(e?.message ?? e) });
+        return;
+      }
+      json(res, 200, buildStateResponse());
+      return;
+    }
+
+    if (url.pathname === "/api/export-decisions" && method === "GET") {
+      // Track B: JSONL dump of every recorded AI decision this session.
+      const lines = fullHistory
+        .filter((e) => e.decision !== null)
+        .map((e) => JSON.stringify(e.decision));
+      res.writeHead(200, {
+        "Content-Type": "application/x-ndjson",
+        "Content-Disposition": 'attachment; filename="decisions.jsonl"',
+      });
+      res.end(lines.join("\n") + (lines.length ? "\n" : ""));
       return;
     }
 
