@@ -741,6 +741,11 @@ the [Opponent's](<#opponent>) edge:
   largest [Row](<#row>) containing any of [Black's](<#player>)
   [Pieces](<#piece>), inclusive.
 
+Only the **top** [Piece](<#piece>) of each [Stack](<#stack>) counts toward
+the frontier: a [Piece](<#piece>) buried underneath another [Piece](<#piece>)
+is inert and does not extend the zone. This matches the "playable piece"
+reading — the top [Piece](<#piece>) is the only one that can act.
+
 #### BR-ARATA-004 - Arata on empty squares
 An [Arata](<#arata>) may place a [Piece](<#piece>) on any empty
 [Square](<#square>) within the [Arata](<#arata>) placement zone.

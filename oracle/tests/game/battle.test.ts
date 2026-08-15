@@ -638,6 +638,54 @@ describe('validateArata', () => {
     });
   });
 
+  it('does not extend the zone for a buried piece (BR-ARATA-003)', () => {
+    // BATTLE_MID_VARIANT: White's most advanced TOP piece is at row 4 (Archer),
+    // so the zone is rows 4-9. Bury a White Pawn at row 3 UNDER a Black top:
+    // the buried piece is inert and must NOT extend the zone to row 3.
+    const base = gsfenState(BATTLE_MID_VARIANT);
+    const pos = setStack(
+      base.position,
+      { col: 5, row: 3 },
+      createStack([
+        { type: 'P', owner: 'white' },
+        { type: 'P', owner: 'black' },
+      ]),
+    );
+    const state: GameState = {
+      ...base,
+      position: pos,
+      hands: {
+        white: { ...base.hands.white, P: 2 },
+        black: { ...base.hands.black },
+      },
+    };
+    // Arata onto an EMPTY square at row 3 (col 1) so only the zone check runs.
+    const r = validateArata(state, arata('P', 1, 3));
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.rule).toBe('BR-ARATA-003');
+  });
+
+  it('does extend the zone for a top piece (BR-ARATA-003)', () => {
+    // Same base, but the White Pawn at row 3 is the TOP of the stack (friendly
+    // top, no enemy above it): it is playable and must extend the zone to row 3.
+    const base = gsfenState(BATTLE_MID_VARIANT);
+    const pos = setStack(
+      base.position,
+      { col: 5, row: 3 },
+      createStack([{ type: 'P', owner: 'white' }]),
+    );
+    const state: GameState = {
+      ...base,
+      position: pos,
+      hands: {
+        white: { ...base.hands.white, P: 2 },
+        black: { ...base.hands.black },
+      },
+    };
+    const r = validateArata(state, arata('P', 1, 3));
+    expect(r.ok).toBe(true);
+  });
+
   it('rejects arata onto enemy-topped square (BR-ARATA-006)', () => {
     // Use a position where (5,7) is within White's arata zone AND has an enemy top.
     // White's most advanced piece is at row 5 (General), zone = rows 5-9.

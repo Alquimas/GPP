@@ -86,6 +86,11 @@ function validateOutcome(
  *   - Black: from row 1 (own edge) up to the most advanced
  *            (largest-row) Black piece's row.
  *
+ * Only the TOP piece of each stack counts toward the frontier: a piece
+ * buried underneath another piece is inert and does not extend the zone.
+ * This matches the frontier feature (gs_frontier) and the "playable piece"
+ * reading of BR-ARATA-003.
+ *
  * INVENTION: BR-ARATA-003 does not specify behavior when the player
  * has no board pieces. The zone collapses to the player's own edge
  * row only. This case is unreachable in legal play (the first action
@@ -96,18 +101,18 @@ function getArataZone(
   state: GameState,
 ): { minRow: BoardCoord; maxRow: BoardCoord } {
   if (player === 'white') {
-    // White: between Row 9 (own edge) and the smallest Row containing any White piece
+    // White: between Row 9 (own edge) and the smallest Row containing any
+    // White TOP piece (the playable piece of each stack).
     let mostAdvanced: BoardCoord = 9; // default: no pieces -> own edge only
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         const stack = state.position[r][c];
-        if (stack !== null) {
-          for (const piece of stack) {
-            if (piece.owner === 'white') {
-              const row = squareFromIndex(r, c).row;
-              if (row < mostAdvanced) {
-                mostAdvanced = row;
-              }
+        if (stack !== null && stack.length > 0) {
+          const top = stack[stack.length - 1];
+          if (top.owner === 'white') {
+            const row = squareFromIndex(r, c).row;
+            if (row < mostAdvanced) {
+              mostAdvanced = row;
             }
           }
         }
@@ -115,18 +120,18 @@ function getArataZone(
     }
     return { minRow: mostAdvanced, maxRow: 9 };
   } else {
-    // Black: between Row 1 (own edge) and the largest Row containing any Black piece
+    // Black: between Row 1 (own edge) and the largest Row containing any
+    // Black TOP piece (the playable piece of each stack).
     let mostAdvanced: BoardCoord = 1; // default: no pieces -> own edge only
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
         const stack = state.position[r][c];
-        if (stack !== null) {
-          for (const piece of stack) {
-            if (piece.owner === 'black') {
-              const row = squareFromIndex(r, c).row;
-              if (row > mostAdvanced) {
-                mostAdvanced = row;
-              }
+        if (stack !== null && stack.length > 0) {
+          const top = stack[stack.length - 1];
+          if (top.owner === 'black') {
+            const row = squareFromIndex(r, c).row;
+            if (row > mostAdvanced) {
+              mostAdvanced = row;
             }
           }
         }
